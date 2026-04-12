@@ -1237,8 +1237,13 @@ function bindDrag(card){
     if(!drag) return; drag=false;
     document.getElementById('likeStamp').style.opacity=0;
     document.getElementById('nopeStamp').style.opacity=0;
-    if(Math.abs(cx)>110){ cx>0?swipe('right'):swipe('left'); }
-    else{ card.style.transition='transform .35s cubic-bezier(.34,1.56,.64,1)'; card.style.transform=''; }
+    const threshold = window.innerWidth * 0.28;
+    if(cx > threshold){ swipeCard(card, 'right'); }
+    else if(cx < -threshold){ swipeCard(card, 'left'); }
+    else{
+      card.style.transition='transform .4s cubic-bezier(.34,1.56,.64,1)';
+      card.style.transform='';
+    }
     cx=0;
   };
   card.addEventListener('mousedown',onStart);
@@ -1250,15 +1255,23 @@ function bindDrag(card){
 }
 
 // ─── Swipe / Save ─────────────────────────────────────────────────
+// Chamado pelos botões (busca o card do topo)
 function swipe(dir){
   const card=document.querySelector('.place-card[data-top="1"]');
   if(!card) return;
+  swipeCard(card, dir);
+}
+
+// Chamado pelo drag (recebe o card diretamente)
+function swipeCard(card, dir){
   const p=place();
-  card.style.transition='transform .4s cubic-bezier(.25,.46,.45,.94),opacity .35s';
-  card.style.transform=dir==='right'?'translateX(650px) rotate(24deg)':'translateX(-650px) rotate(-24deg)';
+  card.style.transition='transform .38s cubic-bezier(.25,.46,.45,.94),opacity .32s';
+  card.style.transform=dir==='right'
+    ? 'translateX(110%) rotate(20deg)'
+    : 'translateX(-110%) rotate(-20deg)';
   card.style.opacity='0';
   if(dir==='right') doSave(p);
-  setTimeout(()=>{ idx=(idx+1)%filtered.length; renderCard(); renderProgress(); },370);
+  setTimeout(()=>{ idx=(idx+1)%filtered.length; renderCard(); renderProgress(); },350);
 }
 
 function savePlace(){ doSave(place()); swipe('right'); }
