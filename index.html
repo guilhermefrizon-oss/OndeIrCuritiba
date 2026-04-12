@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OndeIr Curitiba</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0A0810;--bg2:#100D1A;--bg3:#181324;--bg4:#221B33;--bg5:#2E2445;
+  --p100:#DDD5FF;--p200:#C4B5FD;--p300:#A78BFA;--p400:#8B5CF6;--p500:#7C3AED;
+  --acc:#A78BFA;--acc2:#C4B5FD;--acc3:#7C3AED;
+  --text:#F2EEFF;--text2:#9C8FC0;--text3:#564E70;
+  --green:#34D399;--red:#F87171;--card-h:470px;--r:26px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overscroll-behavior:none;}
+.phone{max-width:390px;margin:0 auto;min-height:100dvh;background:var(--bg);position:relative;display:flex;flex-direction:column;}
+.phone::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px;}
+.status{display:flex;justify-content:space-between;align-items:center;padding:12px 24px 4px;font-size:11px;color:var(--text3);font-weight:500;}
+.topbar{padding:8px 22px 14px;display:flex;align-items:center;justify-content:space-between;}
+.wordmark{font-size:20px;font-weight:800;letter-spacing:-0.8px;}
+.wordmark em{color:var(--acc);font-style:normal;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.icon-btn{width:38px;height:38px;border-radius:14px;background:var(--bg3);border:1px solid var(--bg5);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;}
+.notif-dot{position:absolute;top:8px;right:8px;width:7px;height:7px;background:var(--acc);border-radius:50%;border:2px solid var(--bg);}
+.avatar{width:38px;height:38px;border-radius:14px;background:linear-gradient(135deg,var(--p500),var(--p300));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;cursor:pointer;}
+.location-row{padding:0 22px 14px;display:flex;align-items:center;}
+.loc-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bg5);border-radius:100px;padding:7px 14px;font-size:13px;color:var(--text2);}
+.loc-dot{width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc);}
+.cats-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:0 22px 10px;}
+.cats-scroll{display:flex;gap:8px;padding:0 22px 18px;overflow-x:auto;scrollbar-width:none;}
+.cats-scroll::-webkit-scrollbar{display:none;}
+.cat-pill{flex-shrink:0;padding:7px 15px;border-radius:100px;border:1px solid var(--bg5);background:var(--bg2);font-size:13px;font-weight:400;color:var(--text2);cursor:pointer;transition:all .18s;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.cat-pill.on{background:var(--p500);border-color:var(--p500);color:#fff;font-weight:600;box-shadow:0 4px 20px rgba(124,58,237,.4);}
+.stack-wrap{flex:1;position:relative;padding:0 18px;display:flex;align-items:flex-start;justify-content:center;}
+.stack{position:relative;width:100%;height:var(--card-h);}
+.place-card{position:absolute;width:100%;height:var(--card-h);border-radius:var(--r);overflow:hidden;cursor:grab;border:1px solid rgba(255,255,255,.06);transform-origin:50% 115%;will-change:transform;box-shadow:0 24px 60px rgba(0,0,0,.6);}
+.place-card:active{cursor:grabbing;}
+.card-bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform .3s;}
+.card-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,16,0) 0%,rgba(10,8,16,.05) 35%,rgba(10,8,16,.7) 62%,rgba(10,8,16,.97) 100%);}
+/* fallback gradients por categoria */
+.bg-rooftop{background:linear-gradient(160deg,#1a0f35 0%,#2d1a5c 40%,#5b2d8c 75%,#8b5cf6 100%);}
+.bg-cafe{background:linear-gradient(160deg,#180e30 0%,#2a1850 40%,#4a2878 75%,#7c3aed 100%);}
+.bg-bar{background:linear-gradient(160deg,#0f0d25 0%,#1e1845 40%,#352d7a 75%,#6d5af0 100%);}
+.bg-balada{background:linear-gradient(160deg,#1a0830 0%,#340e5e 40%,#6b1fa0 75%,#a855f7 100%);}
+.bg-romantico{background:linear-gradient(160deg,#1a0d2e 0%,#2f1555 40%,#5c2894 75%,#9333ea 100%);}
+.bg-barato{background:linear-gradient(160deg,#0d1030 0%,#181d52 40%,#2d3890 75%,#6366f1 100%);}
+.bg-alta{background:linear-gradient(160deg,#150e28 0%,#261848 40%,#4a2e82 75%,#7c3aed 100%);}
+.bg-vegano{background:linear-gradient(160deg,#0e1820 0%,#162d3c 40%,#1d5060 75%,#2dd4bf 100%);}
+.bg-pet{background:linear-gradient(160deg,#180f2e 0%,#2e1852 40%,#5a2e96 75%,#a78bfa 100%);}
+.bg-insta{background:linear-gradient(160deg,#1a0a28 0%,#380f52 40%,#6e1f8a 75%,#c026d3 100%);}
+.card-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 70% 20%,rgba(167,139,250,.15) 0%,transparent 60%);}
+.card-emoji-bg{position:absolute;right:-10px;top:40px;font-size:120px;opacity:.12;filter:blur(2px);pointer-events:none;line-height:1;}
+.card-top{position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;align-items:center;}
+.cat-tag{background:rgba(167,139,250,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(167,139,250,.3);color:var(--p100);font-size:11px;font-weight:600;padding:5px 12px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase;}
+.price-tag{background:rgba(0,0,0,.35);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);color:var(--acc2);font-size:13px;font-weight:700;padding:5px 12px;border-radius:100px;}
+.card-bottom{position:absolute;bottom:0;left:0;right:0;padding:22px 22px 20px;}
+.card-name{font-size:26px;font-weight:800;color:#fff;line-height:1.05;margin-bottom:4px;letter-spacing:-0.8px;}
+.card-addr{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px;}
+.card-meta{font-size:13px;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.meta-sep{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.25);}
+.card-footer{display:flex;align-items:center;justify-content:space-between;}
+.ig-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:100px;padding:6px 12px;font-size:12px;color:rgba(255,255,255,.7);font-weight:500;}
+.stamp{position:absolute;top:28px;padding:8px 18px;border-radius:12px;font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;opacity:0;pointer-events:none;backdrop-filter:blur(8px);}
+.stamp-like{left:22px;background:rgba(52,211,153,.12);border:2.5px solid var(--green);color:var(--green);transform:rotate(-14deg);}
+.stamp-nope{right:22px;background:rgba(248,113,113,.12);border:2.5px solid var(--red);color:var(--red);transform:rotate(14deg);}
+.progress-row{display:flex;justify-content:center;gap:5px;padding:10px 0 4px;}
+.pdot{width:6px;height:6px;border-radius:50%;background:var(--bg5);transition:all .2s;}
+.pdot.on{background:var(--acc);width:18px;border-radius:3px;}
+.btns{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 24px 12px;}
+.abtn{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;background:none;border:none;}
+.abtn .c{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid;transition:transform .12s,background .15s;}
+.abtn:active .c{transform:scale(.91);}
+.abtn .lbl{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;}
+.b-pass .c{border-color:var(--bg5);background:var(--bg2);color:var(--text3);}
+.b-pass .lbl{color:var(--text3);}
+.b-save .c{border-color:var(--p300);background:rgba(167,139,250,.08);color:var(--p300);}
+.b-save .lbl{color:var(--p300);}
+.b-like .c{border-color:var(--green);background:rgba(52,211,153,.08);color:var(--green);}
+.b-like .lbl{color:var(--green);}
+.b-pass:hover .c{background:var(--bg3);}
+.b-like:hover .c{background:rgba(52,211,153,.14);}
+.b-save:hover .c{background:rgba(167,139,250,.14);}
+.nav{display:flex;padding:6px 16px 18px;gap:4px;}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px 4px;border-radius:16px;transition:background .15s;background:none;border:none;}
+.ni.on{background:var(--bg3);}
+.ni-icon{font-size:19px;line-height:1;}
+.ni-lbl{font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
+.ni.on .ni-lbl{color:var(--acc);}
+.nbadge{background:var(--p500);color:#fff;font-size:9px;font-weight:700;border-radius:100px;padding:1px 6px;}
+.saved-view{display:none;flex:1;flex-direction:column;overflow-y:auto;}
+.saved-header{padding:4px 22px 14px;}
+.saved-title{font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.saved-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+.saved-grid{display:flex;flex-direction:column;gap:8px;padding:0 18px 8px;}
+.saved-row{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--bg4);border-radius:20px;padding:12px 14px;cursor:pointer;transition:background .15s;}
+.saved-row:hover{background:var(--bg3);}
+.saved-thumb{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;background-size:cover;background-position:center;}
+.saved-name{font-size:15px;font-weight:700;letter-spacing:-.3px;}
+.saved-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+.saved-price{margin-left:auto;font-size:13px;font-weight:700;color:var(--acc);}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 40px;}
+.empty-ico{width:72px;height:72px;border-radius:24px;background:var(--bg3);border:1px solid var(--bg5);display:flex;align-items:center;justify-content:center;font-size:32px;}
+.empty-title{font-size:17px;font-weight:700;}
+.empty-sub{font-size:13px;color:var(--text2);text-align:center;line-height:1.6;}
+.photo-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;opacity:.3;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.su{animation:slideUp .32s cubic-bezier(.22,1,.36,1) both;}
+</style>
+</head>
+<body>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, deleteDoc, getDocs, collection }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCz1Ti_twBmtDxGOc9cGiXHBNbFTOdvYAg",
+    authDomain: "ondeircuritiba-91390.firebaseapp.com",
+    projectId: "ondeircuritiba-91390",
+    storageBucket: "ondeircuritiba-91390.firebasestorage.app",
+    messagingSenderId: "208330257440",
+    appId: "1:208330257440:web:6df311fc5c60c389117845",
+    measurementId: "G-05C4VFDWMK"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  let userId = localStorage.getItem('cwb_uid');
+  if (!userId) { userId = crypto.randomUUID(); localStorage.setItem('cwb_uid', userId); }
+
+  window.fsSave = async (place) => {
+    try { await setDoc(doc(db, 'favorites', userId, 'places', place.id), place); }
+    catch(e) { console.warn('fsSave:', e); }
+  };
+
+  window.fsRemove = async (placeId) => {
+    try { await deleteDoc(doc(db, 'favorites', userId, 'places', placeId)); }
+    catch(e) { console.warn('fsRemove:', e); }
+  };
+
+  window.fsLoadAll = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'favorites', userId, 'places'));
+      return snap.docs.map(d => d.data());
+    } catch(e) { console.warn('fsLoadAll:', e); return []; }
+  };
+</script>
+
+<div class="phone">
+  <div class="status">
+    <span>9:41</span>
+    <span style="display:flex;gap:4px;align-items:center"><span>●●●</span><span>5G</span><span>■■■■</span></span>
+  </div>
+
+  <div class="topbar">
+    <div class="wordmark">OndeIr<em>Curitiba</em></div>
+    <div class="topbar-right">
+      <div class="icon-btn">
+        <svg width="16" height="16" fill="none" stroke="var(--text2)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
+      <div class="avatar">VR</div>
+    </div>
+  </div>
+
+  <div class="location-row">
+    <div class="loc-pill"><div class="loc-dot"></div>Curitiba, PR</div>
+  </div>
+
+  <div class="cats-label">Categoria</div>
+  <div class="cats-scroll" id="catsRow"></div>
+
+  <div id="discoverView" style="display:flex;flex-direction:column;flex:1;">
+    <div class="stack-wrap">
+      <div class="stack" id="cardStack">
+        <div class="stamp stamp-like" id="likeStamp">Curtir</div>
+        <div class="stamp stamp-nope" id="nopeStamp">Passar</div>
+      </div>
+    </div>
+    <div class="progress-row" id="progressRow"></div>
+    <div class="btns">
+      <button class="abtn b-pass" onclick="swipe('left')">
+        <div class="c"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+        <div class="lbl">Passar</div>
+      </button>
+      <button class="abtn b-save" onclick="savePlace()">
+        <div class="c"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="lbl">Salvar</div>
+      </button>
+      <button class="abtn b-like" onclick="swipe('right')">
+        <div class="c"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+        <div class="lbl">Curtir</div>
+      </button>
+    </div>
+  </div>
+
+  <div class="saved-view" id="savedView">
+    <div class="saved-header">
+      <div class="saved-title">Meus lugares</div>
+      <div class="saved-sub" id="savedSubtitle">Nenhum lugar ainda</div>
+    </div>
+    <div class="empty" id="emptyMsg">
+      <div class="empty-ico">🗂️</div>
+      <div class="empty-title">Lista vazia</div>
+      <div class="empty-sub">Deslize e curta lugares para<br>salvar aqui.</div>
+    </div>
+    <div class="saved-grid" id="savedGrid"></div>
+  </div>
+
+  <div class="nav">
+    <button class="ni on" id="navDiscover" onclick="showTab('discover')">
+      <span class="ni-icon">◎</span><span class="ni-lbl">Descobrir</span>
+    </button>
+    <button class="ni" id="navSaved" onclick="showTab('saved')">
+      <span class="ni-icon">🔖</span>
+      <span class="ni-lbl">Salvos <span class="nbadge" id="nbadge" style="display:none">0</span></span>
+    </button>
+    <button class="ni" id="navMap">
+      <span class="ni-icon">🗺️</span><span class="ni-lbl">Mapa</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ─── Google Places API Key ─────────────────────────────────────────
+const GOOGLE_API_KEY = 'AIzaSyDiLhxU3veHWvx3fvA6kk6TluFFHYWHEzs';
+
+// ─── Cache de fotos (sessionStorage) ──────────────────────────────
+const photoCache = {};
+
+async function fetchPlacePhoto(placeId, bgClass) {
+  if (!placeId || placeId.startsWith('ID_GOOGLE_')) return null;
+  if (photoCache[placeId]) return photoCache[placeId];
+
+  try {
+    const url = `https://places.googleapis.com/v1/places/${placeId}?fields=photos&key=${GOOGLE_API_KEY}`;
+    const res = await fetch(url, {
+      headers: { 'X-Goog-FieldMask': 'photos' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.photos || !data.photos.length) return null;
+
+    const photoRef = data.photos[0].name;
+    const photoUrl = `https://places.googleapis.com/v1/${photoRef}/media?maxHeightPx=800&maxWidthPx=600&key=${GOOGLE_API_KEY}`;
+    photoCache[placeId] = photoUrl;
+    return photoUrl;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ─── Dados dos 90 lugares ─────────────────────────────────────────
+const P = [
+  {id:"1",n:"Terrazza 40",c:"Céu aberto",p:"$$$$",b:"Bigorrilho",a:"Rua Padre Anchieta 1287",h:"Seg-Dom 12h-15h e 19h-23h",ig:"@terrazza40",e:"🌆",bg:"rooftop",pid:"ChIJe4Q-kGrj3JQRvgQODR0GUdc"},
+  {id:"2",n:"Gards Rooftop",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. do Batel 1868",h:"Ter-Sab 17h-01h",ig:"@gardsrooftop",e:"🌇",bg:"rooftop",pid:"ChIJW2d2vXrj3JQRXuz0lvifxE4"},
+  {id:"3",n:"Souq Curitiba",c:"Céu aberto",p:"$$",b:"Vila Izabel",a:"Av. Iguaçu 4399",h:"Ter-Dom 17h-23h",ig:"@souqcuritiba",e:"🏙️",bg:"rooftop",pid:"ChIJQYo5of3j3JQRw9xpkSEtGvY"},
+  {id:"31",n:"The Five Lounge",c:"Céu aberto",p:"$$$",b:"Centro",a:"Rua Nunes Machado 68",h:"Seg-Sab 15h-23h",ig:"@thefivelounge",e:"🍹",bg:"rooftop",pid:"ChIJtW_qWVvl3JQR9NAuuA2gBJQ"},
+  {id:"32",n:"Porks Museu do Olho",c:"Céu aberto",p:"$",b:"Centro Cívico",a:"Rua Marechal Hermes 1092",h:"Ter-Dom 17h-00h",ig:"@porks_museudoolho",e:"🐷",bg:"rooftop",pid:"ChIJo7CGz5Pl3JQRf47RQL8OOj4"},
+  {id:"33",n:"Santa Villa Gastronomia",c:"Céu aberto",p:"$$",b:"Xaxim",a:"Rua Francisco Derosso 3488",h:"Ter-Dom 18h-23h",ig:"@santavillagastronomia",e:"🌿",bg:"rooftop",pid:"ChIJ4YMRoUj73JQRWTdFO51Fi4g"},
+  {id:"61",n:"+55 Bar",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. Vicente Machado 866",h:"Qua-Dom 18h-02h",ig:"@mais55bar",e:"🎶",bg:"rooftop",pid:"ChIJwTDOvYrj3JQRv9pItkT-cI8"},
+  {id:"62",n:"Umbar",c:"Céu aberto",p:"$$",b:"Ahú",a:"Rua Prof. João Cândido Ferreira 123",h:"Ter-Dom 17h-23h",ig:"@umbar_curitiba",e:"🌙",bg:"rooftop",pid:"ChIJJxaL7rH-3JQRfM5b2k1kOBQ"},
+  {id:"63",n:"Pátio Faivre",c:"Céu aberto",p:"$",b:"Centro",a:"Rua Doutor Faivre 229",h:"Seg-Sab 11h-23h",ig:"@patiofaivre",e:"☀️",bg:"rooftop",pid:"ChIJCeAtMz7k3JQRwxfqSwHfYus"},
+  {id:"4",n:"Lucca Cafés Especiais",c:"Café da tarde",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 40",h:"Seg-Dom 08h-20h",ig:"@luccacafesespeciais",e:"☕",bg:"cafe",pid:"ChIJ67SzWiDl3JQR-Xa2kN5Ujhw"},
+  {id:"5",n:"Prestinaria",c:"Café da tarde",p:"$$",b:"Bigorrilho",a:"Rua Euclides da Cunha 699",h:"Seg-Dom 07h-20h",ig:"@prestinaria",e:"🥐",bg:"cafe",pid:"ChIJoxBMMO3j3JQRSjOnxx6TOLg"},
+  {id:"6",n:"Café do Viajante",c:"Café da tarde",p:"$$",b:"Centro Cívico",a:"Rua Comendador Fontana 229",h:"Ter-Dom 12h-19h",ig:"@cafedoviajante",e:"✈️",bg:"cafe",pid:"ChIJ1fFa0xnk3JQREbP9TwcrX84"},
+  {id:"34",n:"Supernova Coffee",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Coronel Dulcídio 544",h:"Seg-Dom 08h-19h",ig:"@supernovacoffee",e:"🌟",bg:"cafe",pid:"ChIJiURL83Xk3JQRzfy9UC-8XVY"},
+  {id:"35",n:"Fábrica Cafeteria",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Comendador Araújo 143",h:"Seg-Sab 08h-20h",ig:"@fabricacafeteria",e:"🏭",bg:"cafe",pid:"ChIJmTIGcjHl3JQRYZPp6cphBMU"},
+  {id:"36",n:"Rause Café + Vinho",c:"Café da tarde",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 696",h:"Seg-Sab 09h-20h",ig:"@rausecafe",e:"🍷",bg:"cafe",pid:"ChIJ0WMwKQvk3JQRKscraBW4ma0"},
+  {id:"64",n:"Café Cultura",c:"Café da tarde",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 558",h:"Seg-Dom 09h-20h",ig:"@cafecultura",e:"📚",bg:"cafe",pid:"ChIJ_YMu3jzl3JQRtc0SXD41Vo4"},
+  {id:"65",n:"The Coffee",c:"Café da tarde",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1227",h:"Seg-Dom 07h-20h",ig:"@thecoffee.jp",e:"☕",bg:"cafe",pid:"ChIJYX0n55Hj3JQRbQrFhn59EXE"},
+  {id:"66",n:"Go Coffee",c:"Café da tarde",p:"$",b:"Centro Cívico",a:"Rua Ernâni Santiago de Oliveira 130",h:"Seg-Sab 08h-19h",ig:"@gocoffeebrasil",e:"🚀",bg:"cafe",pid:"ChIJTeVf2c393JQRrow6_YNMyYY"},
+  {id:"7",n:"Ponto Gin",c:"Barzinho",p:"$$",b:"Mercês",a:"Rua Brigadeiro Franco 1193",h:"Ter-Sab 18h-00h",ig:"@pontogin",e:"🍸",bg:"bar",pid:"ChIJW_KeYbfj3JQRgju7RRPX6_s"},
+  {id:"8",n:"Sirène Fish & Chips",c:"Barzinho",p:"$",b:"Centro",a:"Rua Trajano Reis 150",h:"Ter-Dom 18h-23h",ig:"@sirenebrazil",e:"🐟",bg:"bar",pid:"ChIJ28g1OXXk3JQRhcQ4NKLF3Dc"},
+  {id:"9",n:"A Ostra Bêbada",c:"Barzinho",p:"$$",b:"Centro",a:"Rua Ermelino de Leão 95",h:"Ter-Sab 11h-23h",ig:"@aostrabebada",e:"🦪",bg:"bar",pid:"ChIJ3as1SA3k3JQRbbnoTQgzp2E"},
+  {id:"37",n:"We Are Bastards Pub",c:"Barzinho",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2300",h:"Ter-Dom 18h-01h",ig:"@wearebastardspub",e:"🍺",bg:"bar",pid:"ChIJQ6V_jnjk3JQR7PJen5oxpus"},
+  {id:"38",n:"Izakaya Hyotan",c:"Barzinho",p:"$$$",b:"Bigorrilho",a:"Alameda Augusto Stellfeld 2051",h:"Ter-Sab 18h-23h",ig:"@izakayahyotan",e:"🍜",bg:"bar",pid:"ChIJl7nur_Xj3JQRepJhcGX115c"},
+  {id:"39",n:"Janela Bar",c:"Barzinho",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1239",h:"Ter-Dom 17h-01h",ig:"@janelabar",e:"🪟",bg:"bar",pid:"ChIJeZkZOwvk3JQRatYyRL6KZvo"},
+  {id:"67",n:"Bossa Bar",c:"Barzinho",p:"$$$",b:"Centro Cívico",a:"Rua Senador Xavier da Silva 210",h:"Sex-Sab 21h-04h",ig:"@bossabarcuritiba",e:"🎵",bg:"bar",pid:"ChIJOa7Vnhrk3JQRQbbZYgvuIr4"},
+  {id:"68",n:"Bar do Victor",c:"Barzinho",p:"$$$",b:"São Lourenço",a:"Rua Lívio Moreira 284",h:"Ter-Sab 18h-23h",ig:"@bardovictor",e:"🥃",bg:"bar",pid:"ChIJbY90vLvm3JQRKbr0ro5yjOk"},
+  {id:"69",n:"O Torto Bar",c:"Barzinho",p:"$",b:"Centro Cívico",a:"Rua Paula Gomes 794",h:"Seg-Sab 17h-00h",ig:"@otortobar",e:"🍻",bg:"bar",pid:"ChIJs5vD1xHk3JQRdr1udu27ocQ"},
+  {id:"10",n:"Sheridans Irish Pub",c:"Balada",p:"$$",b:"Batel",a:"Rua Bispo Dom José 2258",h:"Seg-Sab 18h-02h",ig:"@sheridansirishpub",e:"🎸",bg:"balada",pid:"ChIJaxXC2ZHj3JQRXMrXsDwH18Q"},
+  {id:"11",n:"Crossroads",c:"Balada",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2304",h:"Qua-Sab 20h-04h",ig:"@barcrossroads",e:"🎵",bg:"balada",pid:"ChIJ-UuJj3jk3JQRywQ-1G40fW4"},
+  {id:"12",n:"Paradis Club",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Paula Gomes 306",h:"Qui-Sab 22h-05h",ig:"@paradisclub",e:"🎉",bg:"balada",pid:"ID_GOOGLE_012"},
+  {id:"40",n:"James Bar",c:"Balada",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 680",h:"Qua-Sab 22h-05h",ig:"@jamesbarcwb",e:"🕺",bg:"balada",pid:"ChIJi-dKvorj3JQRXctwoAzT6Sg"},
+  {id:"41",n:"Club Vibe",c:"Balada",p:"$$$",b:"Batel",a:"Rua Desembargador Motta 2311",h:"Sex-Sab 23h-06h",ig:"@clubvibe",e:"💃",bg:"balada",pid:"ChIJF7T3S3Xk3JQRaXviIl8YfDA"},
+  {id:"42",n:"VU Bar",c:"Balada",p:"$",b:"Centro",a:"Av. Manoel Ribas 146",h:"Qui-Sab 22h-05h",ig:"@vubar",e:"🔊",bg:"balada",pid:"ChIJT3WJPAbk3JQRgH4yw1ryeTM"},
+  {id:"70",n:"Jokers Pub",c:"Balada",p:"$$",b:"Centro",a:"Rua São Francisco 164",h:"Ter-Sab 18h-03h",ig:"@jokerspub",e:"🃏",bg:"balada",pid:"ChIJrzqodBPk3JQRVGhS1QIiRuc"},
+  {id:"71",n:"Basement Cultural",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Des. Benvindo Valente 260",h:"Qui-Sab 20h-04h",ig:"@basementcultural",e:"🎤",bg:"balada",pid:"ChIJuYjb8ATk3JQRpi3Q65JR838"},
+  {id:"72",n:"Vale da Música",c:"Balada",p:"$$",b:"Abranches",a:"Rua João Gava 920",h:"Ter-Dom 10h-18h",ig:"@valedamusica",e:"🎻",bg:"balada",pid:"ChIJ9VsTK2jn3JQRkEQgTpixey4"},
+  {id:"13",n:"L'Épicerie",c:"Romântico",p:"$$$$",b:"Bigorrilho",a:"Rua Fernando Simas 340",h:"Ter-Sab 19h-23h",ig:"@lepiceriecuritiba",e:"🕯️",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
+  {id:"14",n:"Ile de France",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1550",h:"Seg-Sab 19h-23h",ig:"@iledefrancecuritiba",e:"🥂",bg:"romantico",pid:"ChIJNf4NZRLk3JQRVt5N3tnCDUg"},
+  {id:"15",n:"Poco Tapas",c:"Romântico",p:"$$$",b:"Batel",a:"Av. Vicente Machado 2786",h:"Seg-Sab 19h-23h",ig:"@pocotapas",e:"🍷",bg:"romantico",pid:"ChIJf_rYp5Xj3JQR2cNkEgSO2lk"},
+  {id:"43",n:"Nomade Restaurante",c:"Romântico",p:"$$$$",b:"Batel",a:"Rua Gutemberg 168",h:"Seg-Dom 19h-23h",ig:"@nomaderestaurante",e:"🌍",bg:"romantico",pid:"ChIJVVVF_orj3JQRuvICUUVDKLs"},
+  {id:"44",n:"Chalet Suisse",c:"Romântico",p:"$$$$",b:"Santa Felicidade",a:"Rua Francisco Dallalibera 1428",h:"Ter-Sab 19h-23h",ig:"@chaletsuissecwb",e:"🏔️",bg:"romantico",pid:"ChIJV3TitFLg3JQRNdAOy12Bnto"},
+  {id:"45",n:"Avenida Paulista Pizzeria",c:"Romântico",p:"$$$",b:"Centro",a:"Rua Emiliano Perneta 680",h:"Seg-Dom 18h-00h",ig:"@avenidapaulistapizzeria",e:"🍕",bg:"romantico",pid:"ChIJ5_JL53Pk3JQRcgKFrzAdJj0"},
+  {id:"73",n:"La Varenne",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Dom 12h-23h",ig:"@lavarenneoficial",e:"🥩",bg:"romantico",pid:"ChIJn_vck47j3JQRAp0-oujzOFg"},
+  {id:"74",n:"Barolo Trattoria",c:"Romântico",p:"$$$",b:"Água Verde",a:"Av. Silva Jardim 2487",h:"Seg-Dom 12h-00h",ig:"@barolotrattoria",e:"🍝",bg:"romantico",pid:"ChIJlXv0iofj3JQRc24bbmersAA"},
+  {id:"75",n:"L'Entrecôte de Paris",c:"Romântico",p:"$$$",b:"Batel",a:"Alameda Dr. Carlos de Carvalho 1362",h:"Ter-Dom 12h-23h",ig:"@lentrecotedeparis",e:"🥗",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
+  {id:"16",n:"Bife Sujo",c:"Baratinho",p:"$",b:"Centro",a:"Rua Emiliano Perneta 714",h:"Seg-Sab 11h-23h",ig:"@bifesujocuritiba",e:"🍔",bg:"barato",pid:"ChIJYxb3BQ3k3JQRO4gfaOGZ2xg"},
+  {id:"17",n:"Bar Palácio",c:"Baratinho",p:"$$",b:"Centro",a:"Rua André de Barros 500",h:"Ter-Sab 19h-01h",ig:"@barpalacio",e:"🍺",bg:"barato",pid:"ChIJ9TMZVWnk3JQRnbTa9HLZBG0"},
+  {id:"18",n:"Pastelaria Juvevê",c:"Baratinho",p:"$",b:"Juvevê",a:"Av. João Gualberto 1817",h:"Seg-Sab 09h-21h",ig:"@pastelariajuveve",e:"🥟",bg:"barato",pid:"ChIJqVgsDiTk3JQRmP3qNRLvSoI"},
+  {id:"46",n:"Restaurante Imperial",c:"Baratinho",p:"$",b:"Centro",a:"Rua José Loureiro 135",h:"Seg-Sab 11h-15h",ig:"@restauranteimperial",e:"👑",bg:"barato",pid:"ChIJORUYVmzk3JQR02ILWQoLmqI"},
+  {id:"47",n:"Cantina do Délio",c:"Baratinho",p:"$$",b:"Alto da XV",a:"Rua Itupava 1094",h:"Ter-Dom 11h-15h e 18h-23h",ig:"@cantinadodelio",e:"🍝",bg:"barato",pid:"ChIJF-N-EDbk3JQRxIdQ5RBj6iI"},
+  {id:"48",n:"Al-Sultan",c:"Baratinho",p:"$",b:"Centro",a:"Rua São Francisco 32",h:"Seg-Sab 10h-20h",ig:"@alsultancwb",e:"🥙",bg:"barato",pid:"ChIJJSTgNnnj3JQR9ZvvSsx7C1o"},
+  {id:"76",n:"Comendador Grill",c:"Baratinho",p:"$",b:"Centro",a:"Rua Comendador Macedo 178",h:"Seg-Sab 11h-15h",ig:"@comendadorgrill",e:"🔥",bg:"barato",pid:"ChIJQUtpcwDl3JQRKYmjkZ6GM6A"},
+  {id:"77",n:"Baggio Pizzeria",c:"Baratinho",p:"$$",b:"Água Verde",a:"Rua Salgado Filho 383",h:"Seg-Dom 18h-23h",ig:"@pizzariabaggio",e:"🍕",bg:"barato",pid:"ChIJLSDfcUD73JQR2PJArxwNKhU"},
+  {id:"78",n:"Whatafuck Hamburgueria",c:"Baratinho",p:"$",b:"Centro",a:"Av. Vicente Machado 845",h:"Ter-Dom 18h-01h",ig:"@whatafuck",e:"🍔",bg:"barato",pid:"ChIJ2ysVmIrj3JQRHpjplDbJY_o"},
+  {id:"19",n:"Durski",c:"Alta gastronomia",p:"$$$$$",b:"Centro Histórico",a:"Av. Jaime Reis 254",h:"Qua-Sab 19h-23h",ig:"@restaurantedurski",e:"👨‍🍳",bg:"alta",pid:"ChIJD5hDYQ7k3JQRmBpFUqD7xFI"},
+  {id:"20",n:"Manu",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Alameda Dom Pedro II 317",h:"Qua-Sab 19h-23h",ig:"@restaurantemanu",e:"⭐",bg:"alta",pid:"ChIJHeVzMwjl3JQRiFIbAh_hREk"},
+  {id:"21",n:"Obst.",c:"Alta gastronomia",p:"$$$$",b:"Centro",a:"Alameda Prudente de Moraes 983",h:"Ter-Sab 19h-23h",ig:"@obst.lugar",e:"🍽️",bg:"alta",pid:"ID_GOOGLE_021"},
+  {id:"49",n:"Bobardí",c:"Alta gastronomia",p:"$$$$",b:"Cabral",a:"Av. Munhoz da Rocha 53",h:"Ter-Dom 19h-23h",ig:"@bobardi",e:"🌟",bg:"alta",pid:"ChIJ050Ozyjk3JQRuwiwNz-6s14"},
+  {id:"50",n:"K.sa Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Fernando Simas 260",h:"Ter-Sab 19h-23h",ig:"@ksarestaurante",e:"🏠",bg:"alta",pid:"ChIJQQb3DUbj3JQR1MO5Y5hy_o4"},
+  {id:"51",n:"Aisō",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Bispo Dom José 2772",h:"Ter-Sab 19h-23h",ig:"@aisorestaurante",e:"🎌",bg:"alta",pid:"ChIJT0LGv6bl3JQR_Fx3RVkYIfg"},
+  {id:"79",n:"Emy by Kazuo",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Sab 19h-23h",ig:"@emybykazuo",e:"🍣",bg:"alta",pid:"ChIJizTylLvj3JQRx53Pg785h70"},
+  {id:"80",n:"Igor Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Água Verde",a:"Rua Gutemberg 151",h:"Ter-Sab 19h-23h",ig:"@igor.restaurante",e:"🍴",bg:"alta",pid:"ChIJAQADV4rj3JQRyUsQ_Zhl4lA"},
+  {id:"81",n:"Ninna Cozinha",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Desembargador Motta 2500",h:"Ter-Sab 19h-23h",ig:"@ninnacozinha",e:"🧑‍🍳",bg:"alta",pid:"ChIJlVVNLSfl3JQRMOK5gS1nz_k"},
+  {id:"22",n:"Veg Veg",c:"Vegano",p:"$$",b:"Centro",a:"Rua Visconde de Nácar 655",h:"Seg-Sab 11h-20h",ig:"@vegvegcuritiba",e:"🥗",bg:"vegano",pid:"ChIJ08dZL3Pk3JQRdS4b1N_Pim8"},
+  {id:"23",n:"Bouquet Garni",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Alameda Dr. Carlos de Carvalho 271",h:"Seg-Sab 11h-15h",ig:"@bouquetgarnicuritiba",e:"🌿",bg:"vegano",pid:"ChIJx7TgUu7j3JQRCzZ-nRtN44c"},
+  {id:"24",n:"Verd&Co",c:"Vegano",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 588",h:"Seg-Sab 11h-22h",ig:"@verd.co",e:"🌱",bg:"vegano",pid:"ChIJyUGbftzl3JQRyp-QQrjgA5Q"},
+  {id:"52",n:"Semente de Girassol",c:"Vegano",p:"$",b:"Centro",a:"Rua Treze de Maio 512",h:"Seg-Sab 11h-15h",ig:"@sementedegirassolcwb",e:"🌻",bg:"vegano",pid:"ChIJKb3zyRPk3JQRSFeyinHEksU"},
+  {id:"53",n:"Mornings",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Coronel Agostinho Macedo 60",h:"Seg-Dom 09h-16h",ig:"@morningscwb",e:"🌅",bg:"vegano",pid:"ChIJT1YKvdLl3JQRp9HnoRUX3CI"},
+  {id:"54",n:"Oidê",c:"Vegano",p:"$$",b:"Centro",a:"Rua Cruz Machado 274",h:"Ter-Sab 18h-23h",ig:"@oide.cwb",e:"🫐",bg:"vegano",pid:"ChIJo5jeKbXl3JQRIHQHoaWF0Qs"},
+  {id:"82",n:"Veg e Lev",c:"Vegano",p:"$$",b:"Centro",a:"Alameda Prudente de Moraes 1218",h:"Seg-Sab 11h-15h",ig:"@vegelev",e:"🥦",bg:"vegano",pid:"ChIJRRGAHgvk3JQRKdSg7FiEPpE"},
+  {id:"83",n:"Sorella",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 728",h:"Seg-Sab 11h-15h",ig:"@sorellacwb",e:"🍃",bg:"vegano",pid:"ChIJO8gl3oTj3JQRxdgCcApX8lI"},
+  {id:"84",n:"Amora",c:"Vegano",p:"$$",b:"Mercês",a:"Rua Pe. Agostinho 185",h:"Seg-Sab 11h-15h",ig:"@amoracwb",e:"🫒",bg:"vegano",pid:"ChIJoxh_pznl3JQRMsD3UeIE7KM"},
+  {id:"25",n:"Degusto Café",c:"Pet friendly",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 536",h:"Seg-Sab 09h-20h",ig:"@degustocafe",e:"🐾",bg:"pet",pid:"ChIJ-XRO4Irj3JQRTpTPfLMg3ao"},
+  {id:"26",n:"Garden Hamburgueria",c:"Pet friendly",p:"$$",b:"São Francisco",a:"Av. Jaime Reis 22",h:"Seg-Dom 17h-00h",ig:"@gardencwb",e:"🐶",bg:"pet",pid:"ChIJU31M-A3k3JQR0GUk0uNwiuA"},
+  {id:"27",n:"SFCO 179",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua São Francisco 179",h:"Ter-Dom 10h-23h",ig:"@sfco179",e:"🏡",bg:"pet",pid:"ChIJd1MDPRbl3JQRHY4YL026jBI"},
+  {id:"55",n:"Goodies Bakery",c:"Pet friendly",p:"$$",b:"Ahú",a:"Rua Brasilino Moura 382",h:"Seg-Sab 12h-19h",ig:"@goodiesbakery",e:"🧁",bg:"pet",pid:"ChIJT2QGaaPm3JQRjg79LGc0lB4"},
+  {id:"56",n:"Brisket Smokehouse",c:"Pet friendly",p:"$$$",b:"Juvevê",a:"Rua Augusto Stresser 318",h:"Ter-Dom 18h-23h",ig:"@brisketcwb",e:"🥩",bg:"pet",pid:"ChIJMTD2Y97v3JQRnfnzpo0DWoM"},
+  {id:"57",n:"O Barba Hamburgueria",c:"Pet friendly",p:"$$",b:"Centro",a:"Av. Vicente Machado 578",h:"Seg-Dom 18h-00h",ig:"@obarbahamburgueria",e:"🧔",bg:"pet",pid:"ChIJaRm8I3Xk3JQR8nJGYgeElLk"},
+  {id:"85",n:"Chelsea Burgers",c:"Pet friendly",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 113",h:"Seg-Dom 11h-22h",ig:"@chelseaburgerbr",e:"🍔",bg:"pet",pid:"ChIJBYvDORjk3JQRj3IKFvjvwmY"},
+  {id:"86",n:"Mercado Sal",c:"Pet friendly",p:"$$",b:"Portão",a:"Rua Itacolomi 1515",h:"Ter-Dom 17h-23h",ig:"@mercadosal",e:"🧂",bg:"pet",pid:"ChIJ8QOlrRXj3JQR8isKhBdzevo"},
+  {id:"87",n:"Vila Urbana",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua Marechal Deodoro 686",h:"Seg-Dom 11h-23h",ig:"@vilaurbana",e:"🌇",bg:"pet",pid:"ChIJtY5fvVjj3JQRisz1QOnkY7c"},
+  {id:"28",n:"Botanique",c:"Instagramável",p:"$$",b:"Centro",a:"Rua Brigadeiro Franco 1193",h:"Seg-Dom 10h-23h",ig:"@botaniquecafebar",e:"🌺",bg:"insta",pid:"ChIJAQAU9Qrk3JQRtHKuC8egp1U"},
+  {id:"29",n:"Cosmos Gastrobar",c:"Instagramável",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 543",h:"Ter-Sab 18h-00h",ig:"@cosmosgastrobar",e:"✨",bg:"insta",pid:"ChIJvcfsMPXj3JQRuQEovdrZExY"},
+  {id:"30",n:"Officina Restô Bar",c:"Instagramável",p:"$$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 1154",h:"Ter-Sab 18h-00h",ig:"@officinarestobar",e:"📸",bg:"insta",pid:"ChIJ3680MvXj3JQRXbyzKyeftns"},
+  {id:"58",n:"Lolla Bar",c:"Instagramável",p:"$$",b:"Bom Retiro",a:"Rua Fernando Amaro 84",h:"Ter-Sab 18h-01h",ig:"@lollabar",e:"🌈",bg:"insta",pid:"ChIJGUdSUWD73JQR_KuSjDuXnbo"},
+  {id:"59",n:"Ginger Bowtie",c:"Instagramável",p:"$$$",b:"Centro",a:"Rua Saldanha Marinho 1220",h:"Ter-Sab 19h-01h",ig:"@gingerbowtie",e:"🎀",bg:"insta",pid:"ChIJKcf4kQrk3JQRIIWoz1z9DdQ"},
+  {id:"60",n:"O Pão Que O Viado Amassou",c:"Instagramável",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 74",h:"Seg-Sab 09h-20h",ig:"@opaoqueoviadoamassou",e:"🥖",bg:"insta",pid:"ChIJqzM_TQDl3JQRynSUhyiIdlk"},
+  {id:"88",n:"Café das Orquídeas",c:"Instagramável",p:"$$",b:"Seminário",a:"Rua Machado de Assis 223",h:"Ter-Dom 12h-19h",ig:"@cafedasorquideas",e:"🌸",bg:"insta",pid:"ChIJh0860U3v3JQRAtSXVzaSIg0"},
+  {id:"89",n:"Hard Rock Cafe",c:"Instagramável",p:"$$$",b:"Batel",a:"Rua Buenos Aires 50",h:"Seg-Dom 11h-00h",ig:"@hrccuritiba",e:"🎸",bg:"insta",pid:"ChIJeVmuOnTk3JQRspABB4pSZeQ"},
+  {id:"90",n:"Chō Street Food",c:"Instagramável",p:"$$",b:"Batel",a:"Av. Vicente Machado 521",h:"Ter-Sab 18h-23h",ig:"@cho.streetfood",e:"🍡",bg:"insta",pid:"ChIJc2lTdnbk3JQRPXYL2HlXLQ8"},
+];
+
+const CATS = ["Todos","Café da tarde","Barzinho","Céu aberto","Balada","Romântico","Baratinho","Alta gastronomia","Vegano","Pet friendly","Instagramável"];
+const CE   = {"Todos":"🗺️","Café da tarde":"☕","Barzinho":"🍸","Céu aberto":"🌆","Balada":"🎵","Romântico":"🕯️","Baratinho":"🍔","Alta gastronomia":"⭐","Vegano":"🌱","Pet friendly":"🐾","Instagramável":"📸"};
+
+let cat="Todos", filtered=[...P], idx=0, saved=[], ratings={};
+let drag=false, sx=0, cx=0;
+
+// ─── Init ──────────────────────────────────────────────────────────
+function init(){
+  const row = document.getElementById('catsRow');
+  CATS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'cat-pill' + (c === cat ? ' on' : '');
+    b.innerHTML = `<span style="font-size:13px">${CE[c]||''}</span>${c}`;
+    b.onclick = () => setCat(c);
+    row.appendChild(b);
+  });
+  renderCard();
+  renderProgress();
+
+  // Carrega favoritos do Firestore
+  if (typeof window.fsLoadAll === 'function') {
+    window.fsLoadAll().then(places => {
+      if (places && places.length) {
+        saved = places;
+        const b = document.getElementById('nbadge');
+        b.style.display = 'inline';
+        b.textContent = saved.length;
+      }
+    });
+  }
+}
+
+function setCat(c){
+  cat = c;
+  document.querySelectorAll('.cat-pill').forEach((b,i) => b.classList.toggle('on', CATS[i] === c));
+  filtered = c === 'Todos' ? [...P] : P.filter(p => p.c === c);
+  idx = 0;
+  renderCard();
+  renderProgress();
+}
+
+function place(){ return filtered[idx % filtered.length]; }
+
+function renderProgress(){
+  const row   = document.getElementById('progressRow');
+  const total = Math.min(filtered.length, 5);
+  row.innerHTML = '';
+  for(let i = 0; i < total; i++){
+    const d = document.createElement('div');
+    d.className = 'pdot' + (i === idx % total ? ' on' : '');
+    row.appendChild(d);
+  }
+}
+
+// ─── Renderiza cards ───────────────────────────────────────────────
+function renderCard(){
+  const stack = document.getElementById('cardStack');
+  stack.querySelectorAll('.place-card').forEach(e => e.remove());
+  if(!filtered.length) return;
+
+  for(let i = Math.min(2, filtered.length - 1); i >= 0; i--){
+    const p    = filtered[(idx + i) % filtered.length];
+    const card = makeCard(p);
+    if(i > 0){
+      card.style.transform    = `translateY(${i*10}px) scale(${1 - i*0.04})`;
+      card.style.zIndex       = 10 - i;
+      card.style.opacity      = 1 - i * 0.2;
+      card.style.pointerEvents = 'none';
+    } else {
+      card.style.zIndex = 20;
+      bindDrag(card);
+    }
+    stack.appendChild(card);
+  }
+
+  // Busca foto do card do topo de forma assíncrona
+  const top = filtered[idx % filtered.length];
+  if(top.pid && !top.pid.startsWith('ID_GOOGLE_')){
+    fetchPlacePhoto(top.pid, top.bg).then(url => {
+      if(!url) return;
+      const bg = stack.querySelector('.place-card[style*="z-index: 20"] .card-bg');
+      if(bg){
+        bg.style.backgroundImage = `url("${url}")`;
+        bg.style.backgroundSize  = 'cover';
+      }
+    });
+  }
+}
+
+function makeCard(p){
+  const el   = document.createElement('div');
+  el.className = 'place-card su';
+  el.innerHTML = `
+    <div class="card-bg bg-${p.bg}">
+      <div class="photo-loading">${p.e}</div>
+    </div>
+    <div class="card-overlay"></div>
+    <div class="card-glow"></div>
+    <div class="card-top">
+      <div class="cat-tag">${p.c}</div>
+      <div class="price-tag">${p.p}</div>
+    </div>
+    <div class="card-bottom">
+      <div class="card-name">${p.n}</div>
+      <div class="card-addr">📍 ${p.a}</div>
+      <div class="card-meta">
+        <span>${p.b}</span>
+        <div class="meta-sep"></div>
+        <span>🕐 ${p.h}</span>
+      </div>
+      <div class="card-footer">
+        <div class="ig-chip"><span style="font-size:12px">📷</span>${p.ig}</div>
+      </div>
+    </div>`;
+  return el;
+}
+
+// ─── Drag ──────────────────────────────────────────────────────────
+function bindDrag(card){
+  const onStart = e => { drag=true; sx=(e.touches?e.touches[0].clientX:e.clientX); cx=0; card.style.transition='none'; };
+  const onMove  = e => {
+    if(!drag) return;
+    cx = (e.touches?e.touches[0].clientX:e.clientX) - sx;
+    const rot = cx * .065, ty = Math.abs(cx) * .04;
+    card.style.transform = `translateX(${cx}px) rotate(${rot}deg) translateY(${ty}px)`;
+    const ls = document.getElementById('likeStamp'), ns = document.getElementById('nopeStamp');
+    const t  = Math.abs(cx) > 50 ? Math.min((Math.abs(cx)-50)/80, 1) : 0;
+    if(cx > 50)       { ls.style.opacity=t; ns.style.opacity=0; }
+    else if(cx < -50) { ns.style.opacity=t; ls.style.opacity=0; }
+    else              { ls.style.opacity=0; ns.style.opacity=0; }
+  };
+  const onEnd = () => {
+    if(!drag) return; drag=false;
+    document.getElementById('likeStamp').style.opacity=0;
+    document.getElementById('nopeStamp').style.opacity=0;
+    if(Math.abs(cx) > 110){ cx > 0 ? swipe('right') : swipe('left'); }
+    else { card.style.transition='transform .35s cubic-bezier(.34,1.56,.64,1)'; card.style.transform=''; }
+    cx = 0;
+  };
+  card.addEventListener('mousedown', onStart);
+  card.addEventListener('touchstart', onStart, {passive:true});
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, {passive:true});
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+}
+
+// ─── Swipe / Save ──────────────────────────────────────────────────
+function swipe(dir){
+  const card = document.querySelector('.place-card[style*="z-index: 20"]');
+  if(!card) return;
+  const p = place();
+  card.style.transition = 'transform .4s cubic-bezier(.25,.46,.45,.94),opacity .35s';
+  card.style.transform  = dir==='right' ? 'translateX(650px) rotate(24deg)' : 'translateX(-650px) rotate(-24deg)';
+  card.style.opacity    = '0';
+  if(dir === 'right') doSave(p);
+  setTimeout(() => { idx = (idx+1) % filtered.length; renderCard(); renderProgress(); }, 370);
+}
+
+function savePlace(){ doSave(place()); swipe('right'); }
+
+function doSave(p){
+  if(!saved.find(s => s.id === p.id)){
+    saved.push(p);
+    const b = document.getElementById('nbadge');
+    b.style.display = 'inline';
+    b.textContent   = saved.length;
+    if(typeof window.fsSave === 'function') window.fsSave(p);
+  }
+}
+
+// ─── Aba Salvos ───────────────────────────────────────────────────
+function renderSaved(){
+  const g   = document.getElementById('savedGrid');
+  const e   = document.getElementById('emptyMsg');
+  const sub = document.getElementById('savedSubtitle');
+  g.innerHTML = '';
+  if(!saved.length){ e.style.display='flex'; sub.textContent='Nenhum lugar ainda'; return; }
+  e.style.display = 'none';
+  sub.textContent = `${saved.length} lugar${saved.length>1?'es':''} salvo${saved.length>1?'s':''}`;
+  saved.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'saved-row su';
+    const thumb = `<div class="saved-thumb bg-${p.bg}" id="thumb-${p.id}">${p.e}</div>`;
+    row.innerHTML = `${thumb}
+      <div>
+        <div class="saved-name">${p.n}</div>
+        <div class="saved-meta">${p.c} · ${p.b} · ${p.h}</div>
+      </div>
+      <div class="saved-price">${p.p}</div>`;
+    g.appendChild(row);
+
+    // Foto no thumbnail
+    if(p.pid && !p.pid.startsWith('ID_GOOGLE_')){
+      fetchPlacePhoto(p.pid, p.bg).then(url => {
+        if(!url) return;
+        const t = document.getElementById(`thumb-${p.id}`);
+        if(t){ t.style.backgroundImage=`url("${url}")`; t.textContent=''; }
+      });
+    }
+  });
+}
+
+function showTab(t){
+  const disc = document.getElementById('discoverView');
+  const sv   = document.getElementById('savedView');
+  ['navDiscover','navSaved','navMap'].forEach(id => document.getElementById(id)?.classList.remove('on'));
+  document.getElementById(t==='discover'?'navDiscover':t==='saved'?'navSaved':'navMap')?.classList.add('on');
+  disc.style.display = t==='discover' ? 'flex' : 'none';
+  sv.style.display   = t==='saved'    ? 'flex' : 'none';
+  if(t === 'saved') renderSaved();
+}
+
+init();
+</script>
+</body>
+</html>
