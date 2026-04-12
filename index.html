@@ -243,6 +243,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);-we
 }
 .ig-btn-icon{font-size:20px;}
 
+/* Card photo tap zones */
+.card-photo-tap{position:absolute;top:0;width:40%;z-index:15;cursor:pointer;}
+.card-photo-tap{bottom:160px;} /* só na área de foto, não sobrepõe o bottom */
+.card-photo-tap-left{left:0;}
+.card-photo-tap-right{right:0;}
+
+/* Story bars no card */
+.card-story-bars{
+  position:absolute;top:14px;left:14px;right:14px;
+  display:flex;gap:4px;z-index:16;pointer-events:none;
+}
+.card-sbar{flex:1;height:2px;border-radius:2px;background:rgba(255,255,255,.22);overflow:hidden;}
+.card-sbar-fill{height:100%;width:0;background:#fff;}
+.card-sbar-fill.done{width:100%;}
+
+/* Card bottom clicável */
+.card-bottom-tap{cursor:pointer;transition:background .15s;}
+.card-bottom-tap:hover{background:rgba(255,255,255,.04);}
+.card-profile-hint{font-size:11px;font-weight:600;color:rgba(255,255,255,.35);letter-spacing:.5px;}
+
 /* Card name clickable */
 .card-name-tap{cursor:pointer;position:relative;}
 .card-name-tap::after{
@@ -620,7 +640,13 @@ function renderCard(){
       }
     });
   }
+  // Inicializa navegação de fotos no card
+  initCardPhotos(top);
 }
+
+// Estado das fotos do card principal
+let cardPhotos = [];
+let cardPhotoIdx = 0;
 
 function makeCard(p){
   const el   = document.createElement('div');
@@ -635,8 +661,11 @@ function makeCard(p){
       <div class="cat-tag">${p.c}</div>
       <div class="price-tag">${p.p}</div>
     </div>
-    <div class="card-bottom">
-      <div class="card-name card-name-tap" onclick="event.stopPropagation();openProfile(filtered[idx % filtered.length])">${p.n}</div>
+    <div class="card-photo-tap card-photo-tap-left" id="cardTapLeft"></div>
+    <div class="card-photo-tap card-photo-tap-right" id="cardTapRight"></div>
+    <div class="card-story-bars" id="cardStoryBars"></div>
+    <div class="card-bottom card-bottom-tap" onclick="event.stopPropagation();openProfile(filtered[idx % filtered.length])">
+      <div class="card-name">${p.n}</div>
       <div class="card-addr">📍 ${p.a}</div>
       <div class="card-meta">
         <span>${p.b}</span>
@@ -645,14 +674,87 @@ function makeCard(p){
       </div>
       <div class="card-footer">
         <div class="ig-chip"><span style="font-size:12px">📷</span>${p.ig}</div>
+        <div class="card-profile-hint">Ver perfil →</div>
       </div>
     </div>`;
   return el;
 }
 
+function initCardPhotos(p) {
+  cardPhotos = [];
+  cardPhotoIdx = 0;
+  updateCardStoryBars();
+
+  // Tap zones
+  const tapLeft  = document.getElementById('cardTapLeft');
+  const tapRight = document.getElementById('cardTapRight');
+  if (tapLeft)  tapLeft.onclick  = (e) => { e.stopPropagation(); cardPhotoPrev(); };
+  if (tapRight) tapRight.onclick = (e) => { e.stopPropagation(); cardPhotoNext(); };
+
+  if (!p.pid || p.pid.startsWith('ID_GOOGLE_')) return;
+
+  fetchAllPhotos(p.pid).then(urls => {
+    if (!urls.length) return;
+    cardPhotos = urls;
+    cardPhotoIdx = 0;
+    updateCardStoryBars();
+    // Já tem a primeira foto do cache normal, não precisa recarregar
+  });
+}
+
+function setCardPhoto(idx) {
+  const stack = document.getElementById('cardStack');
+  const bg = stack.querySelector('.place-card[style*="z-index: 20"] .card-bg');
+  const fallback = stack.querySelector('.place-card[style*="z-index: 20"] .photo-loading');
+  if (!bg || !cardPhotos.length) return;
+  bg.style.transition = 'opacity .2s';
+  bg.style.opacity = '0';
+  setTimeout(() => {
+    bg.style.backgroundImage = `url("${cardPhotos[idx]}")`;
+    bg.style.backgroundSize = 'cover';
+    bg.style.opacity = '1';
+    if (fallback) fallback.style.opacity = '0';
+  }, 150);
+}
+
+function updateCardStoryBars() {
+  const bars = document.getElementById('cardStoryBars');
+  if (!bars) return;
+  const total = cardPhotos.length;
+  if (total <= 1) { bars.innerHTML = ''; return; }
+  bars.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'card-sbar';
+    const fill = document.createElement('div');
+    fill.className = 'card-sbar-fill' + (i <= cardPhotoIdx ? ' done' : '');
+    bar.appendChild(fill);
+    bars.appendChild(bar);
+  }
+}
+
+function cardPhotoNext() {
+  if (!cardPhotos.length || cardPhotoIdx >= cardPhotos.length - 1) return;
+  cardPhotoIdx++;
+  setCardPhoto(cardPhotoIdx);
+  updateCardStoryBars();
+}
+
+function cardPhotoPrev() {
+  if (!cardPhotos.length || cardPhotoIdx <= 0) return;
+  cardPhotoIdx--;
+  setCardPhoto(cardPhotoIdx);
+  updateCardStoryBars();
+}
+
 // ─── Drag ──────────────────────────────────────────────────────────
 function bindDrag(card){
-  const onStart = e => { drag=true; sx=(e.touches?e.touches[0].clientX:e.clientX); cx=0; card.style.transition='none'; };
+  const onStart = e => {
+    const t = e.target;
+    // Não inicia drag se clicou no bottom, nas tap zones ou no perfil hint
+    if(t.closest('.card-bottom-tap') || t.closest('.card-photo-tap')) return;
+    drag=true; sx=(e.touches?e.touches[0].clientX:e.clientX); cx=0; card.style.transition='none';
+  };
   const onMove  = e => {
     if(!drag) return;
     cx = (e.touches?e.touches[0].clientX:e.clientX) - sx;
