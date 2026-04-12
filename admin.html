@@ -586,6 +586,29 @@ td {
 .form-textarea { resize: vertical; min-height: 80px; }
 .form-hint { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
+/* Category toggle grid */
+.cat-toggle-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.cat-toggle {
+  padding: 7px 14px;
+  border-radius: 100px;
+  background: var(--bg4);
+  border: 1.5px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.cat-toggle:hover { background: var(--bg5); color: var(--text); }
+.cat-toggle.on {
+  background: rgba(124,58,237,.25);
+  border-color: var(--acc2);
+  color: var(--acc3);
+  font-weight: 600;
+}
+
 /* Emoji picker row */
 .emoji-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .emoji-opt {
@@ -974,20 +997,20 @@ loadPlacesFromFirestore();</pre>
           <label class="form-label">Nome do lugar *</label>
           <input class="form-input" id="f_n" placeholder="ex: Terrazza 40">
         </div>
-        <div class="form-group">
-          <label class="form-label">Categoria *</label>
-          <select class="form-select" id="f_c">
-            <option value="Café da tarde">☕ Café da tarde</option>
-            <option value="Barzinho">🍸 Barzinho</option>
-            <option value="Céu aberto">🌆 Céu aberto</option>
-            <option value="Balada">🎵 Balada</option>
-            <option value="Romântico">🕯️ Romântico</option>
-            <option value="Baratinho">🍔 Baratinho</option>
-            <option value="Alta gastronomia">⭐ Alta gastronomia</option>
-            <option value="Vegano">🌱 Vegano</option>
-            <option value="Pet friendly">🐾 Pet friendly</option>
-            <option value="Instagramável">📸 Instagramável</option>
-          </select>
+        <div class="form-group full">
+          <label class="form-label">Categorias * <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— selecione uma ou mais</span></label>
+          <div class="cat-toggle-grid" id="f_cats">
+            <button type="button" class="cat-toggle" data-cat="Café da tarde">☕ Café da tarde</button>
+            <button type="button" class="cat-toggle" data-cat="Barzinho">🍸 Barzinho</button>
+            <button type="button" class="cat-toggle" data-cat="Céu aberto">🌆 Céu aberto</button>
+            <button type="button" class="cat-toggle" data-cat="Balada">🎵 Balada</button>
+            <button type="button" class="cat-toggle" data-cat="Romântico">🕯️ Romântico</button>
+            <button type="button" class="cat-toggle" data-cat="Baratinho">🍔 Baratinho</button>
+            <button type="button" class="cat-toggle" data-cat="Alta gastronomia">⭐ Alta gastronomia</button>
+            <button type="button" class="cat-toggle" data-cat="Vegano">🌱 Vegano</button>
+            <button type="button" class="cat-toggle" data-cat="Pet friendly">🐾 Pet friendly</button>
+            <button type="button" class="cat-toggle" data-cat="Instagramável">📸 Instagramável</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Faixa de preço *</label>
@@ -1185,6 +1208,11 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
+// ── Cat toggles ─────────────────────────────────────────────────
+document.querySelectorAll('.cat-toggle').forEach(btn => {
+  btn.addEventListener('click', () => btn.classList.toggle('on'));
+});
+
 // ── Load Places ─────────────────────────────────────────────────
 async function loadPlaces() {
   document.getElementById('tableLoading').style.display = 'block';
@@ -1200,14 +1228,21 @@ async function loadPlaces() {
     document.getElementById('tableContent').style.display = 'block';
     document.getElementById('placesSubtitle').textContent = `${allPlaces.length} lugares cadastrados`;
   } catch(e) {
-    document.getElementById('tableLoading').innerHTML = `<div style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
+    const isPermErr = e.message?.includes('permission') || e.message?.includes('Missing');
+    document.getElementById('tableLoading').innerHTML = isPermErr
+      ? `<div style="color:var(--yellow); line-height:1.8">
+           ⚠️ <strong>Coleção "places" ainda não existe no Firestore.</strong><br>
+           <span style="color:var(--text3); font-size:13px">Vá em <strong style="color:var(--acc3)">Migrar Dados</strong> para importar os 90 lugares e criar a coleção.</span>
+         </div>`
+      : `<div style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
   }
 }
 
 function updateStats() {
   document.getElementById('statTotal').textContent = allPlaces.length;
   document.getElementById('statWithPid').textContent = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_')).length;
-  document.getElementById('statCats').textContent = [...new Set(allPlaces.map(p=>p.c))].length;
+  const allCats = allPlaces.flatMap(p => Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []));
+  document.getElementById('statCats').textContent = [...new Set(allCats)].length;
   // Today count
   const today = new Date(); today.setHours(0,0,0,0);
   const todayCount = allPlaces.filter(p => {
@@ -1220,7 +1255,7 @@ function updateStats() {
 
 function populateCatFilter() {
   const sel = document.getElementById('catFilter');
-  const cats = [...new Set(allPlaces.map(p=>p.c))].sort();
+  const cats = [...new Set(allPlaces.flatMap(p => Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : [])))].sort();
   sel.innerHTML = '<option value="">Todas as categorias</option>';
   cats.forEach(c => {
     const o = document.createElement('option');
@@ -1236,7 +1271,10 @@ window.filterPlaces = () => {
   const prc = document.getElementById('priceFilter').value;
   filteredPlaces = allPlaces.filter(p => {
     if (q   && !`${p.n} ${p.b} ${p.a}`.toLowerCase().includes(q)) return false;
-    if (cat && p.c !== cat) return false;
+    if (cat) {
+      const placeCats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+      if (!placeCats.includes(cat)) return false;
+    }
     if (prc && p.p !== prc) return false;
     return true;
   });
@@ -1272,7 +1310,7 @@ function renderTable() {
         <div class="place-name">${p.e||''} ${p.n||'—'}</div>
         <div class="place-addr">${p.a||'—'}</div>
       </td>
-      <td><span class="cat-chip">${p.c||'—'}</span></td>
+      <td>${(Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : ['—'])).map(c => `<span class="cat-chip">${c}</span>`).join(' ')}</td>
       <td style="color:var(--text2); font-size:13px">${p.b||'—'}</td>
       <td><span class="price-chip">${p.p||'—'}</span></td>
       <td>
@@ -1334,7 +1372,10 @@ window.openEditModal = (docId) => {
   editingId = docId;
   document.getElementById('modalTitle').textContent = 'Editar: ' + (p.n||'');
   document.getElementById('f_n').value  = p.n  || '';
-  document.getElementById('f_c').value  = p.c  || '';
+  const selectedCats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+  document.querySelectorAll('.cat-toggle').forEach(btn => {
+    btn.classList.toggle('on', selectedCats.includes(btn.dataset.cat));
+  });
   document.getElementById('f_p').value  = p.p  || '';
   document.getElementById('f_a').value  = p.a  || '';
   document.getElementById('f_b').value  = p.b  || '';
@@ -1353,9 +1394,9 @@ function clearForm() {
   ['f_n','f_a','f_b','f_ig','f_h','f_pid','f_e'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('f_c').value = 'Café da tarde';
   document.getElementById('f_p').value = '$$';
   document.getElementById('f_bg').value = 'cafe';
+  document.querySelectorAll('.cat-toggle').forEach(el => el.classList.remove('on'));
   document.querySelectorAll('.emoji-opt').forEach(el => el.classList.remove('selected'));
 }
 
@@ -1377,13 +1418,17 @@ window.savePlace = async () => {
   const n = document.getElementById('f_n').value.trim();
   if (!n) { showToast('Nome é obrigatório', 'error'); return; }
 
+  const selectedCats = [...document.querySelectorAll('.cat-toggle.on')].map(b => b.dataset.cat);
+  if (!selectedCats.length) { showToast('Selecione ao menos uma categoria', 'error'); return; }
+
   const btn = document.getElementById('btnSave');
   btn.disabled = true;
   btn.textContent = 'Salvando…';
 
   const data = {
     n,
-    c:   document.getElementById('f_c').value,
+    cats: selectedCats,
+    c:    selectedCats[0], // retrocompatibilidade com index.html atual
     p:   document.getElementById('f_p').value,
     a:   document.getElementById('f_a').value.trim(),
     b:   document.getElementById('f_b').value.trim(),
@@ -1562,7 +1607,8 @@ window.runMigration = async () => {
 
   for (const p of PLACES_DATA) {
     try {
-      await setDoc(doc(db, 'places', p.id), { ...p, _createdAt: serverTimestamp(), _updatedAt: serverTimestamp() });
+    const placeData = { ...p, cats: [p.c], _createdAt: serverTimestamp(), _updatedAt: serverTimestamp() };
+      await setDoc(doc(db, 'places', p.id), placeData);
       addLog(`[OK] ${p.id} — ${p.n}`, 'log-ok');
       ok++;
     } catch(e) {
