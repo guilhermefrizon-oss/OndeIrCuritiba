@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OndeIr · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0C0B10;
+  --bg2:     #13111A;
+  --bg3:     #1C1926;
+  --bg4:     #252233;
+  --bg5:     #302D42;
+  --border:  rgba(255,255,255,.07);
+  --acc:     #7C3AED;
+  --acc2:    #A78BFA;
+  --acc3:    #C4B5FD;
+  --acc-glow:rgba(124,58,237,.35);
+  --text:    #F0ECFF;
+  --text2:   #9C8FC0;
+  --text3:   #5A5270;
+  --green:   #34D399;
+  --red:     #F87171;
+  --yellow:  #FCD34D;
+  --r:       14px;
+  --r2:      10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Login Screen ─────────────────────────────────────────────── */
+#loginScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+#loginScreen::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,58,237,.18) 0%, transparent 70%);
+  top: -200px; left: -200px;
+  pointer-events: none;
+}
+#loginScreen::after {
+  content: '';
+  position: absolute;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167,139,250,.12) 0%, transparent 70%);
+  bottom: -100px; right: -100px;
+  pointer-events: none;
+}
+
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 56px 48px;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 32px 80px rgba(0,0,0,.5);
+  position: relative;
+  z-index: 1;
+}
+
+.login-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 6px;
+}
+.login-logo em { color: var(--acc2); font-style: normal; }
+.login-badge {
+  display: inline-block;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--acc3);
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-bottom: 40px;
+}
+.login-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.login-sub {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+.btn-google {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: var(--r);
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all .2s;
+}
+.btn-google:hover {
+  background: var(--bg5);
+  border-color: rgba(255,255,255,.15);
+  transform: translateY(-1px);
+}
+
+.login-error {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--red);
+  display: none;
+}
+
+/* ── App Shell ────────────────────────────────────────────────── */
+#app { display: none; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 16px;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  padding: 0 12px;
+  margin-bottom: 4px;
+}
+.sidebar-logo em { color: var(--acc2); font-style: normal; }
+.sidebar-badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 0 12px;
+  margin-bottom: 32px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r2);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .15s;
+  margin-bottom: 2px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: rgba(124,58,237,.2); color: var(--acc3); }
+.nav-item svg { flex-shrink: 0; opacity: .7; }
+.nav-item.active svg { opacity: 1; }
+
+.sidebar-spacer { flex: 1; }
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r2);
+  border: 1px solid var(--border);
+  background: var(--bg3);
+}
+.user-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff;
+  overflow: hidden; flex-shrink: 0;
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.user-name { font-size: 12px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-role { font-size: 10px; color: var(--acc3); font-weight: 600; letter-spacing: .5px; }
+.btn-logout {
+  margin-left: auto; flex-shrink: 0;
+  background: none; border: none;
+  color: var(--text3); cursor: pointer;
+  padding: 4px; border-radius: 6px;
+  transition: color .15s;
+}
+.btn-logout:hover { color: var(--red); }
+
+/* Main */
+.main {
+  margin-left: 240px;
+  min-height: 100vh;
+  padding: 36px 40px;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+.page-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.page-subtitle { font-size: 14px; color: var(--text2); margin-top: 2px; }
+
+/* Stats bar */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--acc), var(--acc2));
+  opacity: 0;
+  transition: opacity .3s;
+}
+.stat-card:hover::before { opacity: 1; }
+.stat-icon { font-size: 22px; margin-bottom: 12px; }
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+.stat-label { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-wrap {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+.search-wrap svg {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: .4;
+}
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 42px;
+  border-radius: var(--r2);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+}
+.search-input::placeholder { color: var(--text3); }
+.search-input:focus { border-color: var(--acc); }
+
+.filter-select {
+  padding: 10px 16px;
+  border-radius: var(--r2);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+.filter-select:focus { border-color: var(--acc); }
+.filter-select option { background: var(--bg3); }
+
+.btn {
+  padding: 10px 20px;
+  border-radius: var(--r2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--acc);
+  color: #fff;
+  box-shadow: 0 4px 16px var(--acc-glow);
+}
+.btn-primary:hover {
+  background: #6D28D9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--acc-glow);
+}
+.btn-secondary {
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--bg4); color: var(--text); }
+.btn-danger {
+  background: rgba(248,113,113,.15);
+  color: var(--red);
+  border: 1px solid rgba(248,113,113,.2);
+}
+.btn-danger:hover { background: rgba(248,113,113,.25); }
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+
+/* Table */
+.table-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.table-loading {
+  padding: 60px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 14px;
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--bg5);
+  border-top-color: var(--acc2);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,.025); }
+td {
+  padding: 14px 16px;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.place-name { font-weight: 600; color: var(--text); }
+.place-addr { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: var(--bg4);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.price-chip {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--acc3);
+}
+
+.pid-chip {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text3);
+  background: var(--bg3);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.pid-ok { color: var(--green); }
+.pid-missing { color: var(--yellow); }
+
+.actions { display: flex; gap: 8px; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text3);
+}
+.page-btns { display: flex; gap: 6px; }
+.page-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.page-btn:hover { background: var(--bg4); color: var(--text); }
+.page-btn.active { background: var(--acc); border-color: var(--acc); color: #fff; }
+.page-btn:disabled { opacity: .3; cursor: default; }
+
+/* Modal */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 40px 100px rgba(0,0,0,.6);
+  animation: slideUp .2s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-header {
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--bg4);
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  transition: all .15s;
+}
+.modal-close:hover { background: var(--bg5); color: var(--text); }
+
+.modal-body { padding: 24px 28px; }
+.modal-footer {
+  padding: 16px 28px 24px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+}
+
+/* Form */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.form-input, .form-select, .form-textarea {
+  padding: 10px 14px;
+  border-radius: var(--r2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+}
+.form-input::placeholder { color: var(--text3); }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--acc); }
+.form-select option { background: var(--bg3); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-hint { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* Emoji picker row */
+.emoji-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.emoji-opt {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--bg4);
+  border: 1.5px solid transparent;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.emoji-opt:hover { background: var(--bg5); }
+.emoji-opt.selected { border-color: var(--acc); background: rgba(124,58,237,.2); }
+
+/* Toast */
+.toast-container { position: fixed; bottom: 28px; right: 28px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.toast {
+  padding: 14px 20px;
+  border-radius: var(--r2);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  animation: toastIn .2s ease;
+  min-width: 260px;
+}
+@keyframes toastIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.toast.success { background: rgba(52,211,153,.15); border: 1px solid rgba(52,211,153,.3); color: var(--green); }
+.toast.error   { background: rgba(248,113,113,.15); border: 1px solid rgba(248,113,113,.3); color: var(--red); }
+.toast.info    { background: rgba(124,58,237,.15);  border: 1px solid rgba(124,58,237,.3);  color: var(--acc3); }
+
+/* Migrate page */
+.migrate-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 32px;
+  max-width: 700px;
+}
+.migrate-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.migrate-sub { font-size: 14px; color: var(--text2); margin-bottom: 28px; line-height: 1.6; }
+.migrate-log {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text2);
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 20px;
+  display: none;
+}
+.log-line { line-height: 2; }
+.log-ok   { color: var(--green); }
+.log-err  { color: var(--red); }
+.log-info { color: var(--acc3); }
+
+/* Confirm modal */
+.confirm-text { font-size: 15px; color: var(--text2); line-height: 1.6; margin-bottom: 4px; }
+.confirm-name { font-weight: 700; color: var(--text); }
+
+/* Empty state */
+.empty-state {
+  padding: 60px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 14px;
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+/* Rules page */
+.rules-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px 32px;
+  max-width: 700px;
+  margin-bottom: 20px;
+}
+.rules-card h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--acc3);
+}
+pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 20px;
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--text2);
+  overflow-x: auto;
+  line-height: 1.7;
+}
+.copy-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
+}
+.copy-btn:hover { background: var(--bg5); color: var(--text); }
+
+.alert-box {
+  padding: 14px 18px;
+  border-radius: var(--r2);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.alert-box.warn { background: rgba(252,211,77,.08); border: 1px solid rgba(252,211,77,.2); color: var(--yellow); }
+.alert-box.info { background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.25); color: var(--acc3); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg5); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ══ Login Screen ══════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Onde<em>Ir</em> Curitiba</div>
+    <div class="login-badge">Admin Panel</div>
+    <div class="login-title">Entrar como administrador</div>
+    <div class="login-sub">Acesso restrito. Use sua conta Google autorizada para gerenciar os lugares do app.</div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Continuar com Google
+    </button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ══ App ═══════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">Onde<em>Ir</em></div>
+    <div class="sidebar-badge">Admin Panel</div>
+
+    <button class="nav-item active" onclick="showPage('places')" id="nav-places">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Lugares
+    </button>
+    <button class="nav-item" onclick="showPage('migrate')" id="nav-migrate">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+      Migrar Dados
+    </button>
+    <button class="nav-item" onclick="showPage('rules')" id="nav-rules">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Regras / Admins
+    </button>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="user-info">
+      <div class="user-avatar" id="sidebarAvatar">?</div>
+      <div>
+        <div class="user-name" id="sidebarName">—</div>
+        <div class="user-role">Admin</div>
+      </div>
+      <button class="btn-logout" title="Sair" onclick="logout()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── Places Page ── -->
+    <div id="page-places">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Lugares</div>
+          <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Lugar
+        </button>
+      </div>
+
+      <div class="stats-bar" id="statsBar">
+        <div class="stat-card"><div class="stat-icon">📍</div><div class="stat-num" id="statTotal">—</div><div class="stat-label">Total de lugares</div></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-num" id="statWithPid">—</div><div class="stat-label">Com Google ID</div></div>
+        <div class="stat-card"><div class="stat-icon">🗂️</div><div class="stat-num" id="statCats">—</div><div class="stat-label">Categorias</div></div>
+        <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-num" id="statRecent">—</div><div class="stat-label">Adicionados hoje</div></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="searchInput" placeholder="Buscar por nome, bairro…" oninput="filterPlaces()">
+        </div>
+        <select class="filter-select" id="catFilter" onchange="filterPlaces()">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select class="filter-select" id="priceFilter" onchange="filterPlaces()">
+          <option value="">Todos os preços</option>
+          <option value="$">$ Barato</option>
+          <option value="$$">$$ Moderado</option>
+          <option value="$$$">$$$ Caro</option>
+          <option value="$$$$">$$$$ Muito caro</option>
+          <option value="$$$$$">$$$$$ Fino</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-loading" id="tableLoading">
+          <div class="spinner"></div>
+          Carregando lugares do Firestore…
+        </div>
+        <div id="tableContent" style="display:none">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome / Endereço</th>
+                <th>Categoria</th>
+                <th>Bairro</th>
+                <th>Preço</th>
+                <th>Google ID</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="placesTableBody"></tbody>
+          </table>
+          <div class="pagination">
+            <div id="paginationInfo"></div>
+            <div class="page-btns" id="paginationBtns"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Migrate Page ── -->
+    <div id="page-migrate" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Migrar Dados</div>
+          <div class="page-subtitle">Importar os 90 lugares do código para o Firestore</div>
+        </div>
+      </div>
+
+      <div class="alert-box warn">
+        <span>⚠️</span>
+        <div><strong>Execute uma vez!</strong> Este processo lê o array hardcoded do <code>index.html</code> e salva cada lugar como documento na coleção <code>places</code> do Firestore. Se já existirem documentos, serão sobrescritos pelo ID.</div>
+      </div>
+
+      <div class="migrate-card">
+        <div class="migrate-title">Importar lugares para o Firestore</div>
+        <div class="migrate-sub">Ao clicar em Iniciar Migração, todos os 90 lugares definidos no código serão salvos no Firestore. Depois disso, o <code>index.html</code> deverá ser atualizado para buscar do Firestore (veja a aba Regras).</div>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <button class="btn btn-primary" id="btnMigrate" onclick="runMigration()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+            Iniciar Migração
+          </button>
+          <span id="migrateStatus" style="font-size:13px; color:var(--text3)"></span>
+        </div>
+        <div class="migrate-log" id="migrateLog"></div>
+      </div>
+    </div>
+
+    <!-- ── Rules Page ── -->
+    <div id="page-rules" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Regras & Admins</div>
+          <div class="page-subtitle">Configure o Firebase para proteger o painel</div>
+        </div>
+      </div>
+
+      <div class="alert-box info">
+        <span>💡</span>
+        <div>Aplique as regras abaixo no <strong>Firebase Console → Firestore → Rules</strong> para garantir que apenas admins autorizados possam escrever na coleção <code>places</code>.</div>
+      </div>
+
+      <div class="rules-card">
+        <h3>1. Adicionar admins autorizados</h3>
+        <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.6">Crie uma coleção <code>admins</code> no Firestore. Cada documento deve ter o <strong>e-mail do admin como ID</strong> e um campo <code>role: "admin"</code>.</p>
+        <pre>Firestore → Adicionar coleção: "admins"
+Documento ID: seuemail@gmail.com
+Campo: role = "admin"</pre>
+      </div>
+
+      <div class="rules-card">
+        <h3>2. Regras de segurança do Firestore</h3>
+        <pre id="rulesCode">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Apenas admins leem a lista de admins
+    match /admins/{email} {
+      allow read: if request.auth != null
+                  && request.auth.token.email == email;
+      allow write: if false;
+    }
+
+    // Lugares: leitura pública, escrita só para admins
+    match /places/{placeId} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    // Favoritos dos usuários
+    match /favorites/{userId}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // Comentários
+    match /comments/{document=**} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+                            && request.auth.uid == resource.data.uid;
+    }
+  }
+}</pre>
+        <button class="copy-btn" onclick="copyRules()">📋 Copiar regras</button>
+      </div>
+
+      <div class="rules-card">
+        <h3>3. Atualizar o index.html</h3>
+        <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.6">Após migrar, substitua o array <code>const P = [...]</code> do <code>index.html</code> por este código que busca do Firestore:</p>
+        <pre id="indexCode">// Substitua "const P = [...]" por:
+let P = [];
+
+async function loadPlacesFromFirestore() {
+  const { getFirestore, collection, getDocs } =
+    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+  const db = getFirestore();
+  const snap = await getDocs(collection(db, 'places'));
+  P = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  filtered = [...P];
+  renderCard();
+  renderProgress();
+  renderCats();
+}
+
+// Chame no init():
+loadPlacesFromFirestore();</pre>
+        <button class="copy-btn" onclick="copyIndex()">📋 Copiar código</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ Modal: Add / Edit ═════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModalOnBackdrop(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Novo Lugar</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Nome do lugar *</label>
+          <input class="form-input" id="f_n" placeholder="ex: Terrazza 40">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoria *</label>
+          <select class="form-select" id="f_c">
+            <option value="Café da tarde">☕ Café da tarde</option>
+            <option value="Barzinho">🍸 Barzinho</option>
+            <option value="Céu aberto">🌆 Céu aberto</option>
+            <option value="Balada">🎵 Balada</option>
+            <option value="Romântico">🕯️ Romântico</option>
+            <option value="Baratinho">🍔 Baratinho</option>
+            <option value="Alta gastronomia">⭐ Alta gastronomia</option>
+            <option value="Vegano">🌱 Vegano</option>
+            <option value="Pet friendly">🐾 Pet friendly</option>
+            <option value="Instagramável">📸 Instagramável</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Faixa de preço *</label>
+          <select class="form-select" id="f_p">
+            <option value="$">$ — Barato</option>
+            <option value="$$">$$ — Moderado</option>
+            <option value="$$$">$$$ — Caro</option>
+            <option value="$$$$">$$$$ — Muito caro</option>
+            <option value="$$$$$">$$$$$ — Fino</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Endereço *</label>
+          <input class="form-input" id="f_a" placeholder="ex: Rua Padre Anchieta 1287">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bairro *</label>
+          <input class="form-input" id="f_b" placeholder="ex: Bigorrilho">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Instagram</label>
+          <input class="form-input" id="f_ig" placeholder="@perfil">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Horário de funcionamento</label>
+          <input class="form-input" id="f_h" placeholder="ex: Seg-Dom 12h-23h">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Google Place ID</label>
+          <input class="form-input" id="f_pid" placeholder="ChIJ…">
+          <div class="form-hint">Encontre em <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" style="color:var(--acc2)">Place ID Finder</a></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor do card (bg)</label>
+          <select class="form-select" id="f_bg">
+            <option value="rooftop">rooftop (roxo)</option>
+            <option value="cafe">cafe (amarelo)</option>
+            <option value="bar">bar (azul)</option>
+            <option value="balada">balada (rosa)</option>
+            <option value="romantico">romantico (vermelho)</option>
+            <option value="barato">barato (verde)</option>
+            <option value="alta">alta (violeta)</option>
+            <option value="vegano">vegano (esmeralda)</option>
+            <option value="pet">pet (laranja)</option>
+            <option value="insta">insta (fúcsia)</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Emoji do card</label>
+          <input class="form-input" id="f_e" placeholder="ex: 🌆" maxlength="4" style="font-size:22px; width:80px">
+          <div class="emoji-row">
+            <span class="emoji-opt" onclick="pickEmoji('🌆')">🌆</span>
+            <span class="emoji-opt" onclick="pickEmoji('☕')">☕</span>
+            <span class="emoji-opt" onclick="pickEmoji('🍸')">🍸</span>
+            <span class="emoji-opt" onclick="pickEmoji('🎵')">🎵</span>
+            <span class="emoji-opt" onclick="pickEmoji('🕯️')">🕯️</span>
+            <span class="emoji-opt" onclick="pickEmoji('🍔')">🍔</span>
+            <span class="emoji-opt" onclick="pickEmoji('⭐')">⭐</span>
+            <span class="emoji-opt" onclick="pickEmoji('🌱')">🌱</span>
+            <span class="emoji-opt" onclick="pickEmoji('🐾')">🐾</span>
+            <span class="emoji-opt" onclick="pickEmoji('📸')">📸</span>
+            <span class="emoji-opt" onclick="pickEmoji('🍷')">🍷</span>
+            <span class="emoji-opt" onclick="pickEmoji('🌟')">🌟</span>
+            <span class="emoji-opt" onclick="pickEmoji('🥂')">🥂</span>
+            <span class="emoji-opt" onclick="pickEmoji('🎸')">🎸</span>
+            <span class="emoji-opt" onclick="pickEmoji('🥐')">🥐</span>
+            <span class="emoji-opt" onclick="pickEmoji('🍺')">🍺</span>
+            <span class="emoji-opt" onclick="pickEmoji('🐶')">🐶</span>
+            <span class="emoji-opt" onclick="pickEmoji('🌺')">🌺</span>
+            <span class="emoji-opt" onclick="pickEmoji('✨')">✨</span>
+            <span class="emoji-opt" onclick="pickEmoji('🥩')">🥩</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btnSave" onclick="savePlace()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Confirm Delete ════════════════════════════════════ -->
+<div class="modal-backdrop" id="confirmBackdrop" onclick="closeConfirmOnBackdrop(event)">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Confirmar exclusão</div>
+      <button class="modal-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text">Tem certeza que quer excluir <span class="confirm-name" id="confirmName"></span>? Esta ação não pode ser desfeita.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmDelete" onclick="confirmDelete()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Excluir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ══ Firebase + App Logic ══════════════════════════════════════ -->
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, Timestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCz1Ti_twBmtDxGOc9cGiXHBNbFTOdvYAg",
+  authDomain: "ondeircuritiba-91390.firebaseapp.com",
+  projectId: "ondeircuritiba-91390",
+  storageBucket: "ondeircuritiba-91390.firebasestorage.app",
+  appId: "1:208330257440:web:6df311fc5c60c389117845"
+};
+
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── State ───────────────────────────────────────────────────────
+let allPlaces = [];
+let filteredPlaces = [];
+let currentPage = 1;
+const PAGE_SIZE = 15;
+let editingId = null;
+let deleteId  = null;
+
+// ── Auth ────────────────────────────────────────────────────────
+window.loginGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    const el = document.getElementById('loginError');
+    el.textContent = 'Erro ao entrar: ' + e.message;
+    el.style.display = 'block';
+  }
+};
+
+window.logout = async () => {
+  await signOut(auth);
+};
+
+async function isAdmin(email) {
+  try {
+    const snap = await getDocs(query(collection(db, 'admins'), where('__name__', '==', email)));
+    // fallback: if no admins collection yet, allow first user (dev mode)
+    if (snap.empty) {
+      // Check if admins collection even exists
+      const allAdmins = await getDocs(collection(db, 'admins'));
+      if (allAdmins.empty) return true; // no admins set up yet → allow
+      return false;
+    }
+    return true;
+  } catch(e) {
+    // If permission denied on admins, still allow (Firestore rules may block)
+    return true;
+  }
+}
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    const admin = await isAdmin(user.email);
+    if (!admin) {
+      showToast('Acesso negado. Sua conta não tem permissão de admin.', 'error');
+      await signOut(auth);
+      return;
+    }
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    // Set user info in sidebar
+    const nameEl = document.getElementById('sidebarName');
+    const avatarEl = document.getElementById('sidebarAvatar');
+    nameEl.textContent = user.displayName || user.email;
+    if (user.photoURL) {
+      avatarEl.innerHTML = `<img src="${user.photoURL}" alt="">`;
+    } else {
+      avatarEl.textContent = (user.displayName || user.email)[0].toUpperCase();
+    }
+
+    loadPlaces();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+});
+
+// ── Load Places ─────────────────────────────────────────────────
+async function loadPlaces() {
+  document.getElementById('tableLoading').style.display = 'block';
+  document.getElementById('tableContent').style.display = 'none';
+  try {
+    const snap = await getDocs(collection(db, 'places'));
+    allPlaces = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+    allPlaces.sort((a,b) => (a.n||'').localeCompare(b.n||''));
+    updateStats();
+    populateCatFilter();
+    filterPlaces();
+    document.getElementById('tableLoading').style.display = 'none';
+    document.getElementById('tableContent').style.display = 'block';
+    document.getElementById('placesSubtitle').textContent = `${allPlaces.length} lugares cadastrados`;
+  } catch(e) {
+    document.getElementById('tableLoading').innerHTML = `<div style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = allPlaces.length;
+  document.getElementById('statWithPid').textContent = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_')).length;
+  document.getElementById('statCats').textContent = [...new Set(allPlaces.map(p=>p.c))].length;
+  // Today count
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayCount = allPlaces.filter(p => {
+    if (!p._createdAt) return false;
+    const d = p._createdAt.toDate ? p._createdAt.toDate() : new Date(p._createdAt);
+    return d >= today;
+  }).length;
+  document.getElementById('statRecent').textContent = todayCount;
+}
+
+function populateCatFilter() {
+  const sel = document.getElementById('catFilter');
+  const cats = [...new Set(allPlaces.map(p=>p.c))].sort();
+  sel.innerHTML = '<option value="">Todas as categorias</option>';
+  cats.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+}
+
+// ── Filter / Render ─────────────────────────────────────────────
+window.filterPlaces = () => {
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  const prc = document.getElementById('priceFilter').value;
+  filteredPlaces = allPlaces.filter(p => {
+    if (q   && !`${p.n} ${p.b} ${p.a}`.toLowerCase().includes(q)) return false;
+    if (cat && p.c !== cat) return false;
+    if (prc && p.p !== prc) return false;
+    return true;
+  });
+  currentPage = 1;
+  renderTable();
+};
+
+function renderTable() {
+  const tbody = document.getElementById('placesTableBody');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const end   = start + PAGE_SIZE;
+  const page  = filteredPlaces.slice(start, end);
+
+  if (!filteredPlaces.length) {
+    tbody.innerHTML = '';
+    document.getElementById('tableContent').querySelector('table').style.display = 'none';
+    document.getElementById('placesTableBody').closest('.table-wrap').querySelector('.empty-state')?.remove();
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<div class="empty-icon">🔍</div><div>Nenhum lugar encontrado</div>';
+    document.getElementById('tableContent').appendChild(empty);
+    document.getElementById('paginationInfo').textContent = '';
+    document.getElementById('paginationBtns').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('tableContent').querySelector('table').style.display = 'table';
+  document.getElementById('tableContent').querySelector('.empty-state')?.remove();
+
+  tbody.innerHTML = page.map(p => `
+    <tr>
+      <td>
+        <div class="place-name">${p.e||''} ${p.n||'—'}</div>
+        <div class="place-addr">${p.a||'—'}</div>
+      </td>
+      <td><span class="cat-chip">${p.c||'—'}</span></td>
+      <td style="color:var(--text2); font-size:13px">${p.b||'—'}</td>
+      <td><span class="price-chip">${p.p||'—'}</span></td>
+      <td>
+        ${p.pid && !p.pid.startsWith('ID_GOOGLE_')
+          ? `<span class="pid-chip pid-ok" title="${p.pid}">✓ ${p.pid.substring(0,10)}…</span>`
+          : p.pid
+            ? `<span class="pid-chip pid-missing" title="${p.pid}">⚠ temporário</span>`
+            : `<span class="pid-chip" style="color:var(--text3)">— sem ID</span>`
+        }
+      </td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p._docId}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="openConfirm('${p._docId}', '${(p.n||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}')">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  // Pagination
+  const totalPages = Math.ceil(filteredPlaces.length / PAGE_SIZE);
+  document.getElementById('paginationInfo').textContent =
+    `Mostrando ${start+1}–${Math.min(end, filteredPlaces.length)} de ${filteredPlaces.length}`;
+
+  const btns = document.getElementById('paginationBtns');
+  btns.innerHTML = '';
+
+  const addBtn = (label, page, active, disabled) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active?' active':'');
+    b.textContent = label;
+    b.disabled = disabled;
+    if (!disabled && !active) b.onclick = () => { currentPage = page; renderTable(); };
+    btns.appendChild(b);
+  };
+
+  addBtn('‹', currentPage-1, false, currentPage===1);
+  for (let i=1; i<=totalPages; i++) {
+    if (totalPages > 7 && Math.abs(i - currentPage) > 2 && i !== 1 && i !== totalPages) {
+      if (i === 2 || i === totalPages-1) { const d = document.createElement('span'); d.textContent='…'; d.style.cssText='padding:0 6px;color:var(--text3);font-size:13px'; btns.appendChild(d); }
+      continue;
+    }
+    addBtn(i, i, i===currentPage, false);
+  }
+  addBtn('›', currentPage+1, false, currentPage===totalPages);
+}
+
+// ── Add / Edit Modal ────────────────────────────────────────────
+window.openAddModal = () => {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Novo Lugar';
+  clearForm();
+  document.getElementById('modalBackdrop').classList.add('open');
+};
+
+window.openEditModal = (docId) => {
+  const p = allPlaces.find(x => x._docId === docId);
+  if (!p) return;
+  editingId = docId;
+  document.getElementById('modalTitle').textContent = 'Editar: ' + (p.n||'');
+  document.getElementById('f_n').value  = p.n  || '';
+  document.getElementById('f_c').value  = p.c  || '';
+  document.getElementById('f_p').value  = p.p  || '';
+  document.getElementById('f_a').value  = p.a  || '';
+  document.getElementById('f_b').value  = p.b  || '';
+  document.getElementById('f_ig').value = p.ig || '';
+  document.getElementById('f_h').value  = p.h  || '';
+  document.getElementById('f_pid').value= p.pid|| '';
+  document.getElementById('f_bg').value = p.bg || '';
+  document.getElementById('f_e').value  = p.e  || '';
+  document.querySelectorAll('.emoji-opt').forEach(el => {
+    el.classList.toggle('selected', el.textContent === p.e);
+  });
+  document.getElementById('modalBackdrop').classList.add('open');
+};
+
+function clearForm() {
+  ['f_n','f_a','f_b','f_ig','f_h','f_pid','f_e'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f_c').value = 'Café da tarde';
+  document.getElementById('f_p').value = '$$';
+  document.getElementById('f_bg').value = 'cafe';
+  document.querySelectorAll('.emoji-opt').forEach(el => el.classList.remove('selected'));
+}
+
+window.closeModal = () => {
+  document.getElementById('modalBackdrop').classList.remove('open');
+};
+window.closeModalOnBackdrop = (e) => {
+  if (e.target === document.getElementById('modalBackdrop')) closeModal();
+};
+
+window.pickEmoji = (em) => {
+  document.getElementById('f_e').value = em;
+  document.querySelectorAll('.emoji-opt').forEach(el => {
+    el.classList.toggle('selected', el.textContent === em);
+  });
+};
+
+window.savePlace = async () => {
+  const n = document.getElementById('f_n').value.trim();
+  if (!n) { showToast('Nome é obrigatório', 'error'); return; }
+
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = 'Salvando…';
+
+  const data = {
+    n,
+    c:   document.getElementById('f_c').value,
+    p:   document.getElementById('f_p').value,
+    a:   document.getElementById('f_a').value.trim(),
+    b:   document.getElementById('f_b').value.trim(),
+    ig:  document.getElementById('f_ig').value.trim(),
+    h:   document.getElementById('f_h').value.trim(),
+    pid: document.getElementById('f_pid').value.trim(),
+    bg:  document.getElementById('f_bg').value,
+    e:   document.getElementById('f_e').value.trim(),
+  };
+
+  if (!editingId) {
+    data._createdAt = serverTimestamp();
+    data.id = Date.now().toString();
+  }
+  data._updatedAt = serverTimestamp();
+
+  try {
+    const docId = editingId || data.id;
+    await setDoc(doc(db, 'places', docId), data, { merge: true });
+    showToast(editingId ? 'Lugar atualizado!' : 'Lugar adicionado!', 'success');
+    closeModal();
+    loadPlaces();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar';
+  }
+};
+
+// ── Delete ──────────────────────────────────────────────────────
+window.openConfirm = (docId, name) => {
+  deleteId = docId;
+  document.getElementById('confirmName').textContent = `"${name}"`;
+  document.getElementById('confirmBackdrop').classList.add('open');
+};
+
+window.closeConfirm = () => {
+  document.getElementById('confirmBackdrop').classList.remove('open');
+  deleteId = null;
+};
+window.closeConfirmOnBackdrop = (e) => {
+  if (e.target === document.getElementById('confirmBackdrop')) closeConfirm();
+};
+
+window.confirmDelete = async () => {
+  if (!deleteId) return;
+  const btn = document.getElementById('btnConfirmDelete');
+  btn.disabled = true;
+  btn.textContent = 'Excluindo…';
+  try {
+    await deleteDoc(doc(db, 'places', deleteId));
+    showToast('Lugar excluído.', 'success');
+    closeConfirm();
+    loadPlaces();
+  } catch(e) {
+    showToast('Erro ao excluir: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🗑️ Excluir';
+  }
+};
+
+// ── Migration ───────────────────────────────────────────────────
+const PLACES_DATA = [
+  {id:"1",n:"Terrazza 40",c:"Céu aberto",p:"$$$$",b:"Bigorrilho",a:"Rua Padre Anchieta 1287",h:"Seg-Dom 12h-15h e 19h-23h",ig:"@terrazza40",e:"🌆",bg:"rooftop",pid:"ChIJe4Q-kGrj3JQRvgQODR0GUdc"},
+  {id:"2",n:"Gards Rooftop",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. do Batel 1868",h:"Ter-Sab 17h-01h",ig:"@gardsrooftop",e:"🌇",bg:"rooftop",pid:"ChIJW2d2vXrj3JQRXuz0lvifxE4"},
+  {id:"3",n:"Souq Curitiba",c:"Céu aberto",p:"$$",b:"Vila Izabel",a:"Av. Iguaçu 4399",h:"Ter-Dom 17h-23h",ig:"@souqcuritiba",e:"🏙️",bg:"rooftop",pid:"ChIJQYo5of3j3JQRw9xpkSEtGvY"},
+  {id:"31",n:"The Five Lounge",c:"Céu aberto",p:"$$$",b:"Centro",a:"Rua Nunes Machado 68",h:"Seg-Sab 15h-23h",ig:"@thefivelounge",e:"🍹",bg:"rooftop",pid:"ChIJtW_qWVvl3JQR9NAuuA2gBJQ"},
+  {id:"32",n:"Porks Museu do Olho",c:"Céu aberto",p:"$",b:"Centro Cívico",a:"Rua Marechal Hermes 1092",h:"Ter-Dom 17h-00h",ig:"@porks_museudoolho",e:"🐷",bg:"rooftop",pid:"ChIJo7CGz5Pl3JQRf47RQL8OOj4"},
+  {id:"33",n:"Santa Villa Gastronomia",c:"Céu aberto",p:"$$",b:"Xaxim",a:"Rua Francisco Derosso 3488",h:"Ter-Dom 18h-23h",ig:"@santavillagastronomia",e:"🌿",bg:"rooftop",pid:"ChIJ4YMRoUj73JQRWTdFO51Fi4g"},
+  {id:"61",n:"+55 Bar",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. Vicente Machado 866",h:"Qua-Dom 18h-02h",ig:"@mais55bar",e:"🎶",bg:"rooftop",pid:"ChIJwTDOvYrj3JQRv9pItkT-cI8"},
+  {id:"62",n:"Umbar",c:"Céu aberto",p:"$$",b:"Ahú",a:"Rua Prof. João Cândido Ferreira 123",h:"Ter-Dom 17h-23h",ig:"@umbar_curitiba",e:"🌙",bg:"rooftop",pid:"ChIJJxaL7rH-3JQRfM5b2k1kOBQ"},
+  {id:"63",n:"Pátio Faivre",c:"Céu aberto",p:"$",b:"Centro",a:"Rua Doutor Faivre 229",h:"Seg-Sab 11h-23h",ig:"@patiofaivre",e:"☀️",bg:"rooftop",pid:"ChIJCeAtMz7k3JQRwxfqSwHfYus"},
+  {id:"4",n:"Lucca Cafés Especiais",c:"Café da tarde",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 40",h:"Seg-Dom 08h-20h",ig:"@luccacafesespeciais",e:"☕",bg:"cafe",pid:"ChIJ67SzWiDl3JQR-Xa2kN5Ujhw"},
+  {id:"5",n:"Prestinaria",c:"Café da tarde",p:"$$",b:"Bigorrilho",a:"Rua Euclides da Cunha 699",h:"Seg-Dom 07h-20h",ig:"@prestinaria",e:"🥐",bg:"cafe",pid:"ChIJoxBMMO3j3JQRSjOnxx6TOLg"},
+  {id:"6",n:"Café do Viajante",c:"Café da tarde",p:"$$",b:"Centro Cívico",a:"Rua Comendador Fontana 229",h:"Ter-Dom 12h-19h",ig:"@cafedoviajante",e:"✈️",bg:"cafe",pid:"ChIJ1fFa0xnk3JQREbP9TwcrX84"},
+  {id:"34",n:"Supernova Coffee",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Coronel Dulcídio 544",h:"Seg-Dom 08h-19h",ig:"@supernovacoffee",e:"🌟",bg:"cafe",pid:"ChIJiURL83Xk3JQRzfy9UC-8XVY"},
+  {id:"35",n:"Fábrica Cafeteria",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Comendador Araújo 143",h:"Seg-Sab 08h-20h",ig:"@fabricacafeteria",e:"🏭",bg:"cafe",pid:"ChIJmTIGcjHl3JQRYZPp6cphBMU"},
+  {id:"36",n:"Rause Café + Vinho",c:"Café da tarde",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 696",h:"Seg-Sab 09h-20h",ig:"@rausecafe",e:"🍷",bg:"cafe",pid:"ChIJ0WMwKQvk3JQRKscraBW4ma0"},
+  {id:"64",n:"Café Cultura",c:"Café da tarde",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 558",h:"Seg-Dom 09h-20h",ig:"@cafecultura",e:"📚",bg:"cafe",pid:"ChIJ_YMu3jzl3JQRtc0SXD41Vo4"},
+  {id:"65",n:"The Coffee",c:"Café da tarde",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1227",h:"Seg-Dom 07h-20h",ig:"@thecoffee.jp",e:"☕",bg:"cafe",pid:"ChIJYX0n55Hj3JQRbQrFhn59EXE"},
+  {id:"66",n:"Go Coffee",c:"Café da tarde",p:"$",b:"Centro Cívico",a:"Rua Ernâni Santiago de Oliveira 130",h:"Seg-Sab 08h-19h",ig:"@gocoffeebrasil",e:"🚀",bg:"cafe",pid:"ChIJTeVf2c393JQRrow6_YNMyYY"},
+  {id:"7",n:"Ponto Gin",c:"Barzinho",p:"$$",b:"Mercês",a:"Rua Brigadeiro Franco 1193",h:"Ter-Sab 18h-00h",ig:"@pontogin",e:"🍸",bg:"bar",pid:"ChIJW_KeYbfj3JQRgju7RRPX6_s"},
+  {id:"8",n:"Sirène Fish & Chips",c:"Barzinho",p:"$",b:"Centro",a:"Rua Trajano Reis 150",h:"Ter-Dom 18h-23h",ig:"@sirenebrazil",e:"🐟",bg:"bar",pid:"ChIJ28g1OXXk3JQRhcQ4NKLF3Dc"},
+  {id:"9",n:"A Ostra Bêbada",c:"Barzinho",p:"$$",b:"Centro",a:"Rua Ermelino de Leão 95",h:"Ter-Sab 11h-23h",ig:"@aostrabebada",e:"🦪",bg:"bar",pid:"ChIJ3as1SA3k3JQRbbnoTQgzp2E"},
+  {id:"37",n:"We Are Bastards Pub",c:"Barzinho",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2300",h:"Ter-Dom 18h-01h",ig:"@wearebastardspub",e:"🍺",bg:"bar",pid:"ChIJQ6V_jnjk3JQR7PJen5oxpus"},
+  {id:"38",n:"Izakaya Hyotan",c:"Barzinho",p:"$$$",b:"Bigorrilho",a:"Alameda Augusto Stellfeld 2051",h:"Ter-Sab 18h-23h",ig:"@izakayahyotan",e:"🍜",bg:"bar",pid:"ChIJl7nur_Xj3JQRepJhcGX115c"},
+  {id:"39",n:"Janela Bar",c:"Barzinho",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1239",h:"Ter-Dom 17h-01h",ig:"@janelabar",e:"🪟",bg:"bar",pid:"ChIJeZkZOwvk3JQRatYyRL6KZvo"},
+  {id:"67",n:"Bossa Bar",c:"Barzinho",p:"$$$",b:"Centro Cívico",a:"Rua Senador Xavier da Silva 210",h:"Sex-Sab 21h-04h",ig:"@bossabarcuritiba",e:"🎵",bg:"bar",pid:"ChIJOa7Vnhrk3JQRQbbZYgvuIr4"},
+  {id:"68",n:"Bar do Victor",c:"Barzinho",p:"$$$",b:"São Lourenço",a:"Rua Lívio Moreira 284",h:"Ter-Sab 18h-23h",ig:"@bardovictor",e:"🥃",bg:"bar",pid:"ChIJbY90vLvm3JQRKbr0ro5yjOk"},
+  {id:"69",n:"O Torto Bar",c:"Barzinho",p:"$",b:"Centro Cívico",a:"Rua Paula Gomes 794",h:"Seg-Sab 17h-00h",ig:"@otortobar",e:"🍻",bg:"bar",pid:"ChIJs5vD1xHk3JQRdr1udu27ocQ"},
+  {id:"10",n:"Sheridans Irish Pub",c:"Balada",p:"$$",b:"Batel",a:"Rua Bispo Dom José 2258",h:"Seg-Sab 18h-02h",ig:"@sheridansirishpub",e:"🎸",bg:"balada",pid:"ChIJaxXC2ZHj3JQRXMrXsDwH18Q"},
+  {id:"11",n:"Crossroads",c:"Balada",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2304",h:"Qua-Sab 20h-04h",ig:"@barcrossroads",e:"🎵",bg:"balada",pid:"ChIJ-UuJj3jk3JQRywQ-1G40fW4"},
+  {id:"12",n:"Paradis Club",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Paula Gomes 306",h:"Qui-Sab 22h-05h",ig:"@paradisclub",e:"🎉",bg:"balada",pid:"ID_GOOGLE_012"},
+  {id:"40",n:"James Bar",c:"Balada",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 680",h:"Qua-Sab 22h-05h",ig:"@jamesbarcwb",e:"🕺",bg:"balada",pid:"ChIJi-dKvorj3JQRXctwoAzT6Sg"},
+  {id:"41",n:"Club Vibe",c:"Balada",p:"$$$",b:"Batel",a:"Rua Desembargador Motta 2311",h:"Sex-Sab 23h-06h",ig:"@clubvibe",e:"💃",bg:"balada",pid:"ChIJF7T3S3Xk3JQRaXviIl8YfDA"},
+  {id:"42",n:"VU Bar",c:"Balada",p:"$",b:"Centro",a:"Av. Manoel Ribas 146",h:"Qui-Sab 22h-05h",ig:"@vubar",e:"🔊",bg:"balada",pid:"ChIJT3WJPAbk3JQRgH4yw1ryeTM"},
+  {id:"70",n:"Jokers Pub",c:"Balada",p:"$$",b:"Centro",a:"Rua São Francisco 164",h:"Ter-Sab 18h-03h",ig:"@jokerspub",e:"🃏",bg:"balada",pid:"ChIJrzqodBPk3JQRVGhS1QIiRuc"},
+  {id:"71",n:"Basement Cultural",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Des. Benvindo Valente 260",h:"Qui-Sab 20h-04h",ig:"@basementcultural",e:"🎤",bg:"balada",pid:"ChIJuYjb8ATk3JQRpi3Q65JR838"},
+  {id:"72",n:"Vale da Música",c:"Balada",p:"$$",b:"Abranches",a:"Rua João Gava 920",h:"Ter-Dom 10h-18h",ig:"@valedamusica",e:"🎻",bg:"balada",pid:"ChIJ9VsTK2jn3JQRkEQgTpixey4"},
+  {id:"13",n:"L'Épicerie",c:"Romântico",p:"$$$$",b:"Bigorrilho",a:"Rua Fernando Simas 340",h:"Ter-Sab 19h-23h",ig:"@lepiceriecuritiba",e:"🕯️",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
+  {id:"14",n:"Ile de France",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1550",h:"Seg-Sab 19h-23h",ig:"@iledefrancecuritiba",e:"🥂",bg:"romantico",pid:"ChIJNf4NZRLk3JQRVt5N3tnCDUg"},
+  {id:"15",n:"Poco Tapas",c:"Romântico",p:"$$$",b:"Batel",a:"Av. Vicente Machado 2786",h:"Seg-Sab 19h-23h",ig:"@pocotapas",e:"🍷",bg:"romantico",pid:"ChIJf_rYp5Xj3JQR2cNkEgSO2lk"},
+  {id:"43",n:"Nomade Restaurante",c:"Romântico",p:"$$$$",b:"Batel",a:"Rua Gutemberg 168",h:"Seg-Dom 19h-23h",ig:"@nomaderestaurante",e:"🌍",bg:"romantico",pid:"ChIJVVVF_orj3JQRuvICUUVDKLs"},
+  {id:"44",n:"Chalet Suisse",c:"Romântico",p:"$$$$",b:"Santa Felicidade",a:"Rua Francisco Dallalibera 1428",h:"Ter-Sab 19h-23h",ig:"@chaletsuissecwb",e:"🏔️",bg:"romantico",pid:"ChIJV3TitFLg3JQRNdAOy12Bnto"},
+  {id:"45",n:"Avenida Paulista Pizzeria",c:"Romântico",p:"$$$",b:"Centro",a:"Rua Emiliano Perneta 680",h:"Seg-Dom 18h-00h",ig:"@avenidapaulistapizzeria",e:"🍕",bg:"romantico",pid:"ChIJ5_JL53Pk3JQRcgKFrzAdJj0"},
+  {id:"73",n:"La Varenne",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Dom 12h-23h",ig:"@lavarenneoficial",e:"🥩",bg:"romantico",pid:"ChIJn_vck47j3JQRAp0-oujzOFg"},
+  {id:"74",n:"Barolo Trattoria",c:"Romântico",p:"$$$",b:"Água Verde",a:"Av. Silva Jardim 2487",h:"Seg-Dom 12h-00h",ig:"@barolotrattoria",e:"🍝",bg:"romantico",pid:"ChIJlXv0iofj3JQRc24bbmersAA"},
+  {id:"75",n:"L'Entrecôte de Paris",c:"Romântico",p:"$$$",b:"Batel",a:"Alameda Dr. Carlos de Carvalho 1362",h:"Ter-Dom 12h-23h",ig:"@lentrecotedeparis",e:"🥗",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
+  {id:"16",n:"Bife Sujo",c:"Baratinho",p:"$",b:"Centro",a:"Rua Emiliano Perneta 714",h:"Seg-Sab 11h-23h",ig:"@bifesujocuritiba",e:"🍔",bg:"barato",pid:"ChIJYxb3BQ3k3JQRO4gfaOGZ2xg"},
+  {id:"17",n:"Bar Palácio",c:"Baratinho",p:"$$",b:"Centro",a:"Rua André de Barros 500",h:"Ter-Sab 19h-01h",ig:"@barpalacio",e:"🍺",bg:"barato",pid:"ChIJ9TMZVWnk3JQRnbTa9HLZBG0"},
+  {id:"18",n:"Pastelaria Juvevê",c:"Baratinho",p:"$",b:"Juvevê",a:"Av. João Gualberto 1817",h:"Seg-Sab 09h-21h",ig:"@pastelariajuveve",e:"🥟",bg:"barato",pid:"ChIJqVgsDiTk3JQRmP3qNRLvSoI"},
+  {id:"46",n:"Restaurante Imperial",c:"Baratinho",p:"$",b:"Centro",a:"Rua José Loureiro 135",h:"Seg-Sab 11h-15h",ig:"@restauranteimperial",e:"👑",bg:"barato",pid:"ChIJORUYVmzk3JQR02ILWQoLmqI"},
+  {id:"47",n:"Cantina do Délio",c:"Baratinho",p:"$$",b:"Alto da XV",a:"Rua Itupava 1094",h:"Ter-Dom 11h-15h e 18h-23h",ig:"@cantinadodelio",e:"🍝",bg:"barato",pid:"ChIJF-N-EDbk3JQRxIdQ5RBj6iI"},
+  {id:"48",n:"Al-Sultan",c:"Baratinho",p:"$",b:"Centro",a:"Rua São Francisco 32",h:"Seg-Sab 10h-20h",ig:"@alsultancwb",e:"🥙",bg:"barato",pid:"ChIJJSTgNnnj3JQR9ZvvSsx7C1o"},
+  {id:"76",n:"Comendador Grill",c:"Baratinho",p:"$",b:"Centro",a:"Rua Comendador Macedo 178",h:"Seg-Sab 11h-15h",ig:"@comendadorgrill",e:"🔥",bg:"barato",pid:"ChIJQUtpcwDl3JQRKYmjkZ6GM6A"},
+  {id:"77",n:"Baggio Pizzeria",c:"Baratinho",p:"$$",b:"Água Verde",a:"Rua Salgado Filho 383",h:"Seg-Dom 18h-23h",ig:"@pizzariabaggio",e:"🍕",bg:"barato",pid:"ChIJLSDfcUD73JQR2PJArxwNKhU"},
+  {id:"78",n:"Whatafuck Hamburgueria",c:"Baratinho",p:"$",b:"Centro",a:"Av. Vicente Machado 845",h:"Ter-Dom 18h-01h",ig:"@whatafuck",e:"🍔",bg:"barato",pid:"ChIJ2ysVmIrj3JQRHpjplDbJY_o"},
+  {id:"19",n:"Durski",c:"Alta gastronomia",p:"$$$$$",b:"Centro Histórico",a:"Av. Jaime Reis 254",h:"Qua-Sab 19h-23h",ig:"@restaurantedurski",e:"👨‍🍳",bg:"alta",pid:"ChIJD5hDYQ7k3JQRmBpFUqD7xFI"},
+  {id:"20",n:"Manu",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Alameda Dom Pedro II 317",h:"Qua-Sab 19h-23h",ig:"@restaurantemanu",e:"⭐",bg:"alta",pid:"ChIJHeVzMwjl3JQRiFIbAh_hREk"},
+  {id:"21",n:"Obst.",c:"Alta gastronomia",p:"$$$$",b:"Centro",a:"Alameda Prudente de Moraes 983",h:"Ter-Sab 19h-23h",ig:"@obst.lugar",e:"🍽️",bg:"alta",pid:"ID_GOOGLE_021"},
+  {id:"49",n:"Bobardí",c:"Alta gastronomia",p:"$$$$",b:"Cabral",a:"Av. Munhoz da Rocha 53",h:"Ter-Dom 19h-23h",ig:"@bobardi",e:"🌟",bg:"alta",pid:"ChIJ050Ozyjk3JQRuwiwNz-6s14"},
+  {id:"50",n:"K.sa Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Fernando Simas 260",h:"Ter-Sab 19h-23h",ig:"@ksarestaurante",e:"🏠",bg:"alta",pid:"ChIJQQb3DUbj3JQR1MO5Y5hy_o4"},
+  {id:"51",n:"Aisō",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Bispo Dom José 2772",h:"Ter-Sab 19h-23h",ig:"@aisorestaurante",e:"🎌",bg:"alta",pid:"ChIJT0LGv6bl3JQR_Fx3RVkYIfg"},
+  {id:"79",n:"Emy by Kazuo",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Sab 19h-23h",ig:"@emybykazuo",e:"🍣",bg:"alta",pid:"ChIJizTylLvj3JQRx53Pg785h70"},
+  {id:"80",n:"Igor Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Água Verde",a:"Rua Gutemberg 151",h:"Ter-Sab 19h-23h",ig:"@igor.restaurante",e:"🍴",bg:"alta",pid:"ChIJAQADV4rj3JQRyUsQ_Zhl4lA"},
+  {id:"81",n:"Ninna Cozinha",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Desembargador Motta 2500",h:"Ter-Sab 19h-23h",ig:"@ninnacozinha",e:"🧑‍🍳",bg:"alta",pid:"ChIJlVVNLSfl3JQRMOK5gS1nz_k"},
+  {id:"22",n:"Veg Veg",c:"Vegano",p:"$$",b:"Centro",a:"Rua Visconde de Nácar 655",h:"Seg-Sab 11h-20h",ig:"@vegvegcuritiba",e:"🥗",bg:"vegano",pid:"ChIJ08dZL3Pk3JQRdS4b1N_Pim8"},
+  {id:"23",n:"Bouquet Garni",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Alameda Dr. Carlos de Carvalho 271",h:"Seg-Sab 11h-15h",ig:"@bouquetgarnicuritiba",e:"🌿",bg:"vegano",pid:"ChIJx7TgUu7j3JQRCzZ-nRtN44c"},
+  {id:"24",n:"Verd&Co",c:"Vegano",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 588",h:"Seg-Sab 11h-22h",ig:"@verd.co",e:"🌱",bg:"vegano",pid:"ChIJyUGbftzl3JQRyp-QQrjgA5Q"},
+  {id:"52",n:"Semente de Girassol",c:"Vegano",p:"$",b:"Centro",a:"Rua Treze de Maio 512",h:"Seg-Sab 11h-15h",ig:"@sementedegirassolcwb",e:"🌻",bg:"vegano",pid:"ChIJKb3zyRPk3JQRSFeyinHEksU"},
+  {id:"53",n:"Mornings",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Coronel Agostinho Macedo 60",h:"Seg-Dom 09h-16h",ig:"@morningscwb",e:"🌅",bg:"vegano",pid:"ChIJT1YKvdLl3JQRp9HnoRUX3CI"},
+  {id:"54",n:"Oidê",c:"Vegano",p:"$$",b:"Centro",a:"Rua Cruz Machado 274",h:"Ter-Sab 18h-23h",ig:"@oide.cwb",e:"🫐",bg:"vegano",pid:"ChIJo5jeKbXl3JQRIHQHoaWF0Qs"},
+  {id:"82",n:"Veg e Lev",c:"Vegano",p:"$$",b:"Centro",a:"Alameda Prudente de Moraes 1218",h:"Seg-Sab 11h-15h",ig:"@vegelev",e:"🥦",bg:"vegano",pid:"ChIJRRGAHgvk3JQRKdSg7FiEPpE"},
+  {id:"83",n:"Sorella",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 728",h:"Seg-Sab 11h-15h",ig:"@sorellacwb",e:"🍃",bg:"vegano",pid:"ChIJO8gl3oTj3JQRxdgCcApX8lI"},
+  {id:"84",n:"Amora",c:"Vegano",p:"$$",b:"Mercês",a:"Rua Pe. Agostinho 185",h:"Seg-Sab 11h-15h",ig:"@amoracwb",e:"🫒",bg:"vegano",pid:"ChIJoxh_pznl3JQRMsD3UeIE7KM"},
+  {id:"25",n:"Degusto Café",c:"Pet friendly",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 536",h:"Seg-Sab 09h-20h",ig:"@degustocafe",e:"🐾",bg:"pet",pid:"ChIJ-XRO4Irj3JQRTpTPfLMg3ao"},
+  {id:"26",n:"Garden Hamburgueria",c:"Pet friendly",p:"$$",b:"São Francisco",a:"Av. Jaime Reis 22",h:"Seg-Dom 17h-00h",ig:"@gardencwb",e:"🐶",bg:"pet",pid:"ChIJU31M-A3k3JQR0GUk0uNwiuA"},
+  {id:"27",n:"SFCO 179",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua São Francisco 179",h:"Ter-Dom 10h-23h",ig:"@sfco179",e:"🏡",bg:"pet",pid:"ChIJd1MDPRbl3JQRHY4YL026jBI"},
+  {id:"55",n:"Goodies Bakery",c:"Pet friendly",p:"$$",b:"Ahú",a:"Rua Brasilino Moura 382",h:"Seg-Sab 12h-19h",ig:"@goodiesbakery",e:"🧁",bg:"pet",pid:"ChIJT2QGaaPm3JQRjg79LGc0lB4"},
+  {id:"56",n:"Brisket Smokehouse",c:"Pet friendly",p:"$$$",b:"Juvevê",a:"Rua Augusto Stresser 318",h:"Ter-Dom 18h-23h",ig:"@brisketcwb",e:"🥩",bg:"pet",pid:"ChIJMTD2Y97v3JQRnfnzpo0DWoM"},
+  {id:"57",n:"O Barba Hamburgueria",c:"Pet friendly",p:"$$",b:"Centro",a:"Av. Vicente Machado 578",h:"Seg-Dom 18h-00h",ig:"@obarbahamburgueria",e:"🧔",bg:"pet",pid:"ChIJaRm8I3Xk3JQR8nJGYgeElLk"},
+  {id:"85",n:"Chelsea Burgers",c:"Pet friendly",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 113",h:"Seg-Dom 11h-22h",ig:"@chelseaburgerbr",e:"🍔",bg:"pet",pid:"ChIJBYvDORjk3JQRj3IKFvjvwmY"},
+  {id:"86",n:"Mercado Sal",c:"Pet friendly",p:"$$",b:"Portão",a:"Rua Itacolomi 1515",h:"Ter-Dom 17h-23h",ig:"@mercadosal",e:"🧂",bg:"pet",pid:"ChIJ8QOlrRXj3JQR8isKhBdzevo"},
+  {id:"87",n:"Vila Urbana",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua Marechal Deodoro 686",h:"Seg-Dom 11h-23h",ig:"@vilaurbana",e:"🌇",bg:"pet",pid:"ChIJtY5fvVjj3JQRisz1QOnkY7c"},
+  {id:"28",n:"Botanique",c:"Instagramável",p:"$$",b:"Centro",a:"Rua Brigadeiro Franco 1193",h:"Seg-Dom 10h-23h",ig:"@botaniquecafebar",e:"🌺",bg:"insta",pid:"ChIJAQAU9Qrk3JQRtHKuC8egp1U"},
+  {id:"29",n:"Cosmos Gastrobar",c:"Instagramável",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 543",h:"Ter-Sab 18h-00h",ig:"@cosmosgastrobar",e:"✨",bg:"insta",pid:"ChIJvcfsMPXj3JQRuQEovdrZExY"},
+  {id:"30",n:"Officina Restô Bar",c:"Instagramável",p:"$$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 1154",h:"Ter-Sab 18h-00h",ig:"@officinarestobar",e:"📸",bg:"insta",pid:"ChIJ3680MvXj3JQRXbyzKyeftns"},
+  {id:"58",n:"Lolla Bar",c:"Instagramável",p:"$$",b:"Bom Retiro",a:"Rua Fernando Amaro 84",h:"Ter-Sab 18h-01h",ig:"@lollabar",e:"🌈",bg:"insta",pid:"ChIJGUdSUWD73JQR_KuSjDuXnbo"},
+  {id:"59",n:"Ginger Bowtie",c:"Instagramável",p:"$$$",b:"Centro",a:"Rua Saldanha Marinho 1220",h:"Ter-Sab 19h-01h",ig:"@gingerbowtie",e:"🎀",bg:"insta",pid:"ChIJKcf4kQrk3JQRIIWoz1z9DdQ"},
+  {id:"60",n:"O Pão Que O Viado Amassou",c:"Instagramável",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 74",h:"Seg-Sab 09h-20h",ig:"@opaoqueoviadoamassou",e:"🥖",bg:"insta",pid:"ChIJqzM_TQDl3JQRynSUhyiIdlk"},
+  {id:"88",n:"Café das Orquídeas",c:"Instagramável",p:"$$",b:"Seminário",a:"Rua Machado de Assis 223",h:"Ter-Dom 12h-19h",ig:"@cafedasorquideas",e:"🌸",bg:"insta",pid:"ChIJh0860U3v3JQRAtSXVzaSIg0"},
+  {id:"89",n:"Hard Rock Cafe",c:"Instagramável",p:"$$$",b:"Batel",a:"Rua Buenos Aires 50",h:"Seg-Dom 11h-00h",ig:"@hrccuritiba",e:"🎸",bg:"insta",pid:"ChIJeVmuOnTk3JQRspABB4pSZeQ"},
+  {id:"90",n:"Chō Street Food",c:"Instagramável",p:"$$",b:"Batel",a:"Av. Vicente Machado 521",h:"Ter-Sab 18h-23h",ig:"@cho.streetfood",e:"🍡",bg:"insta",pid:"ChIJc2lTdnbk3JQRPXYL2HlXLQ8"},
+];
+
+window.runMigration = async () => {
+  const btn = document.getElementById('btnMigrate');
+  const log = document.getElementById('migrateLog');
+  const status = document.getElementById('migrateStatus');
+  btn.disabled = true;
+  log.style.display = 'block';
+  log.innerHTML = '';
+
+  const addLog = (msg, cls='') => {
+    const line = document.createElement('div');
+    line.className = 'log-line ' + cls;
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  addLog(`[INFO] Iniciando migração de ${PLACES_DATA.length} lugares…`, 'log-info');
+  let ok = 0, err = 0;
+
+  for (const p of PLACES_DATA) {
+    try {
+      await setDoc(doc(db, 'places', p.id), { ...p, _createdAt: serverTimestamp(), _updatedAt: serverTimestamp() });
+      addLog(`[OK] ${p.id} — ${p.n}`, 'log-ok');
+      ok++;
+    } catch(e) {
+      addLog(`[ERR] ${p.id} — ${p.n}: ${e.message}`, 'log-err');
+      err++;
+    }
+    status.textContent = `${ok + err}/${PLACES_DATA.length}`;
+    await new Promise(r => setTimeout(r, 80));
+  }
+
+  addLog(`\n[DONE] ${ok} salvos, ${err} erros.`, ok === PLACES_DATA.length ? 'log-ok' : 'log-err');
+  status.textContent = `Concluído: ${ok} ok, ${err} erros`;
+  btn.disabled = false;
+  if (ok > 0) {
+    showToast(`${ok} lugares migrados com sucesso!`, 'success');
+    loadPlaces();
+  }
+};
+
+// ── Navigation ──────────────────────────────────────────────────
+window.showPage = (page) => {
+  ['places','migrate','rules'].forEach(p => {
+    document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
+    document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
+  });
+};
+
+// ── Toast ───────────────────────────────────────────────────────
+window.showToast = (msg, type='info') => {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+};
+
+// ── Copy helpers ─────────────────────────────────────────────────
+window.copyRules = () => {
+  navigator.clipboard.writeText(document.getElementById('rulesCode').textContent);
+  showToast('Regras copiadas!', 'success');
+};
+window.copyIndex = () => {
+  navigator.clipboard.writeText(document.getElementById('indexCode').textContent);
+  showToast('Código copiado!', 'success');
+};
+</script>
+</body>
+</html>
