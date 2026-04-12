@@ -1283,117 +1283,125 @@ function makeCard(p){
 
 // ─── Drag ─────────────────────────────────────────────────────────
 // Referências globais dos listeners para poder remover antes de recriar
-let _dragListeners = null;
+// ─── Drag & Swipe ─────────────────────────────────────────────────
+// Estado global limpo
+let activeCard = null;
+let dragActive  = false;
+let dragStartX  = 0;
+let dragStartY  = 0;
+let dragCurX    = 0;
+let dragLocked  = false; // true = decidiu que é drag horizontal
 
 function bindDrag(card){
-  // Remove listeners anteriores para evitar acumulação
-  if(_dragListeners){
-    document.removeEventListener('mousemove', _dragListeners.move);
-    document.removeEventListener('touchmove', _dragListeners.move);
-    document.removeEventListener('mouseup',   _dragListeners.end);
-    document.removeEventListener('touchend',  _dragListeners.end);
-    _dragListeners = null;
-  }
+  activeCard = card;
 
-  let startX = 0, startY = 0, isDragging = false, deltaX = 0;
+  card.addEventListener('touchstart', onDragStart, {passive:true});
+  card.addEventListener('mousedown',  onDragStart);
+}
 
-  const onStart = e => {
-    // Ignora clique no bottom (abre perfil) mas NÃO ignora tap zones (foto)
-    // As tap zones têm onclick próprio e não devem iniciar drag
-    const t = e.target;
-    if(t.closest('.card-bottom-tap')) return;
+function onDragStart(e){
+  const t = e.target;
+  // Clique no bottom abre perfil, não inicia drag
+  if(t.closest('.card-bottom-tap')) return;
 
-    isDragging = true;
-    drag = true;
-    const pt = e.touches ? e.touches[0] : e;
-    startX = pt.clientX;
-    startY = pt.clientY;
-    deltaX = 0;
-    card.style.transition = 'none';
-    e.stopPropagation();
-  };
+  dragActive = true;
+  dragLocked = false;
+  dragCurX   = 0;
 
-  const onMove = e => {
-    if(!isDragging || !drag) return;
-    const pt = e.touches ? e.touches[0] : e;
-    deltaX = pt.clientX - startX;
-    const deltaY = pt.clientY - startY;
+  const pt   = e.touches ? e.touches[0] : e;
+  dragStartX = pt.clientX;
+  dragStartY = pt.clientY;
 
-    // Se movimento é mais vertical que horizontal, cancela drag
-    if(Math.abs(deltaY) > Math.abs(deltaX) + 10 && Math.abs(deltaX) < 20){
-      isDragging = false; drag = false;
-      card.style.transition = 'transform .3s ease';
-      card.style.transform = '';
+  if(activeCard) activeCard.style.transition = 'none';
+}
+
+function onDragMove(e){
+  if(!dragActive || !activeCard) return;
+
+  const pt  = e.touches ? e.touches[0] : e;
+  const dx  = pt.clientX - dragStartX;
+  const dy  = pt.clientY - dragStartY;
+
+  // Decide direção na primeira movimentação significativa
+  if(!dragLocked){
+    if(Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+    if(Math.abs(dy) > Math.abs(dx)){
+      // Movimento vertical → cancela drag
+      dragActive = false;
       return;
     }
+    dragLocked = true;
+  }
 
-    cx = deltaX;
-    const rot = cx * 0.06;
-    const ty  = Math.abs(cx) * 0.03;
-    card.style.transform = `translateX(${cx}px) rotate(${rot}deg) translateY(${ty}px)`;
+  if(e.cancelable) e.preventDefault();
 
-    const ls = document.getElementById('likeStamp');
-    const ns = document.getElementById('nopeStamp');
-    const t  = Math.abs(cx) > 40 ? Math.min((Math.abs(cx)-40)/80, 1) : 0;
-    if(cx > 40)      { ls.style.opacity=t; ns.style.opacity=0; }
-    else if(cx < -40){ ns.style.opacity=t; ls.style.opacity=0; }
-    else             { ls.style.opacity=0; ns.style.opacity=0; }
+  dragCurX = dx;
+  const rot = dx * 0.055;
+  activeCard.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
 
-    // Previne scroll da página durante drag horizontal
-    if(Math.abs(cx) > 10) e.preventDefault();
-  };
-
-  const onEnd = () => {
-    if(!isDragging && !drag) return;
-    isDragging = false;
-    drag = false;
-
-    document.getElementById('likeStamp').style.opacity = 0;
-    document.getElementById('nopeStamp').style.opacity = 0;
-
-    const threshold = Math.min(window.innerWidth * 0.28, 100);
-    if(cx > threshold){
-      swipeCard(card, 'right');
-    } else if(cx < -threshold){
-      swipeCard(card, 'left');
-    } else {
-      card.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
-      card.style.transform  = '';
-    }
-    cx = 0;
-  };
-
-  card.addEventListener('mousedown',  onStart);
-  card.addEventListener('touchstart', onStart, {passive:true});
-
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('touchmove', onMove, {passive:false});
-  document.addEventListener('mouseup',   onEnd);
-  document.addEventListener('touchend',  onEnd);
-
-  // Guarda referência para cleanup
-  _dragListeners = { move: onMove, end: onEnd };
+  // Stamps
+  const ls = document.getElementById('likeStamp');
+  const ns = document.getElementById('nopeStamp');
+  const t  = Math.abs(dx) > 30 ? Math.min((Math.abs(dx)-30)/90, 1) : 0;
+  if(dx > 30)       { ls.style.opacity = t; ns.style.opacity = 0; }
+  else if(dx < -30) { ns.style.opacity = t; ls.style.opacity = 0; }
+  else              { ls.style.opacity = 0; ns.style.opacity = 0; }
 }
 
-// ─── Swipe / Save ─────────────────────────────────────────────────
-// Chamado pelos botões (busca o card do topo)
+function onDragEnd(){
+  if(!dragActive || !activeCard){ dragActive = false; return; }
+  dragActive = false;
+
+  document.getElementById('likeStamp').style.opacity = 0;
+  document.getElementById('nopeStamp').style.opacity = 0;
+
+  const threshold = window.innerWidth * 0.30;
+  const card = activeCard;
+
+  if(dragCurX > threshold){
+    animateOut(card, 'right');
+    doSave(place());
+    setTimeout(nextCard, 380);
+  } else if(dragCurX < -threshold){
+    animateOut(card, 'left');
+    setTimeout(nextCard, 380);
+  } else {
+    // Volta com mola
+    card.style.transition = 'transform .45s cubic-bezier(.34,1.4,.64,1)';
+    card.style.transform  = '';
+  }
+  dragCurX = 0;
+}
+
+function animateOut(card, dir){
+  const x   = dir === 'right' ? '130%' : '-130%';
+  const rot = dir === 'right' ? '25deg' : '-25deg';
+  card.style.transition = 'transform .38s cubic-bezier(.4,0,.2,1), opacity .35s';
+  card.style.transform  = `translateX(${x}) rotate(${rot})`;
+  card.style.opacity    = '0';
+}
+
+function nextCard(){
+  idx = (idx + 1) % filtered.length;
+  renderCard();
+  renderProgress();
+}
+
+// Listeners globais — adicionados uma única vez
+document.addEventListener('touchmove', onDragMove, {passive:false});
+document.addEventListener('mousemove', onDragMove);
+document.addEventListener('touchend',  onDragEnd);
+document.addEventListener('mouseup',   onDragEnd);
+
+// ─── Swipe pelos botões ────────────────────────────────────────────
 function swipe(dir){
-  const card=document.querySelector('.place-card[data-top="1"]');
-  if(!card) return;
-  swipeCard(card, dir);
+  if(!activeCard) return;
+  if(dir === 'right') doSave(place());
+  animateOut(activeCard, dir);
+  setTimeout(nextCard, 380);
 }
 
-// Chamado pelo drag (recebe o card diretamente)
-function swipeCard(card, dir){
-  const p=place();
-  card.style.transition='transform .38s cubic-bezier(.25,.46,.45,.94),opacity .32s';
-  card.style.transform=dir==='right'
-    ? 'translateX(110%) rotate(20deg)'
-    : 'translateX(-110%) rotate(-20deg)';
-  card.style.opacity='0';
-  if(dir==='right') doSave(p);
-  setTimeout(()=>{ idx=(idx+1)%filtered.length; renderCard(); renderProgress(); },350);
-}
+function swipeCard(card, dir){ swipe(dir); }
 
 function savePlace(){ doSave(place()); swipe('right'); }
 
