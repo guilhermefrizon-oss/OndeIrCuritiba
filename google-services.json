@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "208330257440",
+    "project_id": "ondeircuritiba-91390",
+    "storage_bucket": "ondeircuritiba-91390.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:208330257440:android:49952e7e3c40c714117845",
+        "android_client_info": {
+          "package_name": "Onde.Ir.Curitiba"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADCPYeAPggjxd2vUsXODB0rm58Dm3NKxM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
