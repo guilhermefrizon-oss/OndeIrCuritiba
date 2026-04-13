@@ -476,7 +476,9 @@ body {
       return cats;
     } catch(e) { console.warn('fsLoadCategories:', e); return []; }
   };
-</script>
+
+  // Sinaliza que os módulos Firebase estão prontos
+  window.dispatchEvent(new Event('firebase-ready'));
 
 <!-- Auth + Comments (módulos ES) -->
 <script type="module">
@@ -1104,6 +1106,14 @@ function cardPhotoPrev() {
 
 // ─── Init ─────────────────────────────────────────────────────────
 async function init(){
+  // Mostra loading nos cards enquanto busca do Firestore
+  const stack = document.getElementById('cardStack');
+  if (stack) stack.innerHTML = `
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text3)">
+      <div style="width:36px;height:36px;border:3px solid var(--bg4);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite"></div>
+      <span style="font-size:14px">Carregando lugares…</span>
+    </div>`;
+
   // Carrega categorias e lugares do Firestore em paralelo
   if (typeof window.fsLoadCategories === 'function' && typeof window.fsLoadPlaces === 'function') {
     const [cats, places] = await Promise.all([
@@ -1533,7 +1543,12 @@ function closeAddrSheet(e){
   document.getElementById('addrSheetBackdrop').style.display='none';
 }
 
-init(); // async — carrega Firestore e renderiza
+// Aguarda o módulo Firebase estar pronto antes de inicializar
+if (typeof window.fsLoadPlaces === 'function') {
+  init();
+} else {
+  window.addEventListener('firebase-ready', () => init(), { once: true });
+}
 </script>
 </body>
 </html>
