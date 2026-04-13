@@ -743,6 +743,24 @@ pre {
 .alert-box.warn { background: rgba(252,211,77,.08); border: 1px solid rgba(252,211,77,.2); color: var(--yellow); }
 .alert-box.info { background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.25); color: var(--acc3); }
 
+/* Category cards */
+.cat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .15s;
+  position: relative;
+}
+.cat-card:hover { border-color: var(--bg5); }
+.cat-card-emoji { font-size: 32px; line-height: 1; }
+.cat-card-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.cat-card-meta { font-size: 12px; color: var(--text3); }
+.cat-card-actions { display: flex; gap: 6px; margin-top: 4px; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -777,6 +795,10 @@ pre {
     <button class="nav-item active" onclick="showPage('places')" id="nav-places">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
       Lugares
+    </button>
+    <button class="nav-item" onclick="showPage('categories')" id="nav-categories">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Categorias
     </button>
     <button class="nav-item" onclick="showPage('migrate')" id="nav-migrate">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
@@ -865,6 +887,31 @@ pre {
             <div id="paginationInfo"></div>
             <div class="page-btns" id="paginationBtns"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Categories Page ── -->
+    <div id="page-categories" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Categorias</div>
+          <div class="page-subtitle">Categorias aparecem automaticamente no app após salvar</div>
+        </div>
+        <button class="btn btn-primary" onclick="openCatModal()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Categoria
+        </button>
+      </div>
+
+      <div class="alert-box info" style="max-width:700px">
+        <span>💡</span>
+        <div>Cada categoria tem um <strong>nome</strong>, <strong>emoji</strong> e <strong>cor do card</strong>. Assim que você salvar, ela aparece nos filtros do app e no formulário de lugares.</div>
+      </div>
+
+      <div id="catsGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:14px; max-width:900px">
+        <div class="table-loading" style="grid-column:1/-1">
+          <div class="spinner"></div>Carregando…
         </div>
       </div>
     </div>
@@ -1000,16 +1047,7 @@ loadPlacesFromFirestore();</pre>
         <div class="form-group full">
           <label class="form-label">Categorias * <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— selecione uma ou mais</span></label>
           <div class="cat-toggle-grid" id="f_cats">
-            <button type="button" class="cat-toggle" data-cat="Café da tarde">☕ Café da tarde</button>
-            <button type="button" class="cat-toggle" data-cat="Barzinho">🍸 Barzinho</button>
-            <button type="button" class="cat-toggle" data-cat="Céu aberto">🌆 Céu aberto</button>
-            <button type="button" class="cat-toggle" data-cat="Balada">🎵 Balada</button>
-            <button type="button" class="cat-toggle" data-cat="Romântico">🕯️ Romântico</button>
-            <button type="button" class="cat-toggle" data-cat="Baratinho">🍔 Baratinho</button>
-            <button type="button" class="cat-toggle" data-cat="Alta gastronomia">⭐ Alta gastronomia</button>
-            <button type="button" class="cat-toggle" data-cat="Vegano">🌱 Vegano</button>
-            <button type="button" class="cat-toggle" data-cat="Pet friendly">🐾 Pet friendly</button>
-            <button type="button" class="cat-toggle" data-cat="Instagramável">📸 Instagramável</button>
+            <span style="color:var(--text3); font-size:13px">Carregando categorias…</span>
           </div>
         </div>
         <div class="form-group">
@@ -1089,6 +1127,77 @@ loadPlacesFromFirestore();</pre>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" id="btnSave" onclick="savePlace()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Category ══════════════════════════════════════════ -->
+<div class="modal-backdrop" id="catModalBackdrop" onclick="closeCatModalOnBackdrop(event)">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" id="catModalTitle">Nova Categoria</div>
+      <button class="modal-close" onclick="closeCatModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group">
+          <label class="form-label">Nome da categoria *</label>
+          <input class="form-input" id="fc_name" placeholder="ex: Rooftop, Brunch, Samba…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emoji *</label>
+          <input class="form-input" id="fc_emoji" placeholder="ex: 🌆" maxlength="4" style="font-size:22px; width:80px">
+          <div class="emoji-row" style="margin-top:10px">
+            <span class="emoji-opt" onclick="pickCatEmoji('🌆')">🌆</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('☕')">☕</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🍸')">🍸</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🎵')">🎵</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🕯️')">🕯️</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🍔')">🍔</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('⭐')">⭐</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🌱')">🌱</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🐾')">🐾</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('📸')">📸</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🥂')">🥂</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🎸')">🎸</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🍕')">🍕</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🥁')">🥁</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🎤')">🎤</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🏋️')">🏋️</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🌊')">🌊</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🎨')">🎨</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🎭')">🎭</span>
+            <span class="emoji-opt" onclick="pickCatEmoji('🛍️')">🛍️</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor do card (bg)</label>
+          <select class="form-select" id="fc_bg">
+            <option value="rooftop">rooftop — roxo</option>
+            <option value="cafe">cafe — amarelo</option>
+            <option value="bar">bar — azul</option>
+            <option value="balada">balada — rosa</option>
+            <option value="romantico">romantico — vermelho</option>
+            <option value="barato">barato — verde</option>
+            <option value="alta">alta — violeta</option>
+            <option value="vegano">vegano — esmeralda</option>
+            <option value="pet">pet — laranja</option>
+            <option value="insta">insta — fúcsia</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ordem de exibição</label>
+          <input class="form-input" id="fc_order" type="number" placeholder="ex: 1, 2, 3…" min="1">
+          <div class="form-hint">Número menor aparece primeiro nos filtros do app</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeCatModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btnSaveCat" onclick="saveCat()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         Salvar
       </button>
@@ -1202,16 +1311,164 @@ onAuthStateChanged(auth, async user => {
     }
 
     loadPlaces();
+    loadCategories();
   } else {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
   }
 });
 
-// ── Cat toggles ─────────────────────────────────────────────────
-document.querySelectorAll('.cat-toggle').forEach(btn => {
-  btn.addEventListener('click', () => btn.classList.toggle('on'));
-});
+// ── Categories ──────────────────────────────────────────────────
+const DEFAULT_CATS = [
+  { id:'cat_cafe',    name:'Café da tarde',    emoji:'☕',  bg:'cafe',      order:1 },
+  { id:'cat_bar',     name:'Barzinho',         emoji:'🍸',  bg:'bar',       order:2 },
+  { id:'cat_ceuab',   name:'Céu aberto',       emoji:'🌆',  bg:'rooftop',   order:3 },
+  { id:'cat_balada',  name:'Balada',           emoji:'🎵',  bg:'balada',    order:4 },
+  { id:'cat_rom',     name:'Romântico',        emoji:'🕯️', bg:'romantico', order:5 },
+  { id:'cat_barato',  name:'Baratinho',        emoji:'🍔',  bg:'barato',    order:6 },
+  { id:'cat_alta',    name:'Alta gastronomia', emoji:'⭐',  bg:'alta',      order:7 },
+  { id:'cat_veg',     name:'Vegano',           emoji:'🌱',  bg:'vegano',    order:8 },
+  { id:'cat_pet',     name:'Pet friendly',     emoji:'🐾',  bg:'pet',       order:9 },
+  { id:'cat_insta',   name:'Instagramável',    emoji:'📸',  bg:'insta',     order:10 },
+];
+
+let allCategoriesList = [];
+let editingCatId = null;
+
+async function loadCategories() {
+  try {
+    const snap = await getDocs(collection(db, 'categories'));
+    if (snap.empty) {
+      // First time: seed default categories
+      for (const cat of DEFAULT_CATS) {
+        await setDoc(doc(db, 'categories', cat.id), { ...cat, _createdAt: serverTimestamp() });
+      }
+      allCategoriesList = [...DEFAULT_CATS];
+    } else {
+      allCategoriesList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      allCategoriesList.sort((a,b) => (a.order||99) - (b.order||99));
+    }
+    renderCatsGrid();
+    renderCatToggles();
+    populateCatFilter();
+  } catch(e) {
+    console.warn('loadCategories:', e);
+    // fallback to defaults silently
+    allCategoriesList = [...DEFAULT_CATS];
+    renderCatToggles();
+  }
+}
+
+function renderCatsGrid() {
+  const grid = document.getElementById('catsGrid');
+  if (!allCategoriesList.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂️</div><div>Nenhuma categoria ainda</div></div>';
+    return;
+  }
+  grid.innerHTML = allCategoriesList.map(cat => `
+    <div class="cat-card">
+      <div class="cat-card-emoji">${cat.emoji || '📍'}</div>
+      <div class="cat-card-name">${cat.name}</div>
+      <div class="cat-card-meta">Cor: ${cat.bg || '—'} · Ordem: ${cat.order || '—'}</div>
+      <div class="cat-card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openEditCatModal('${cat.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCat('${cat.id}', '${(cat.name||'').replace(/'/g,"\\'")}')">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCatToggles() {
+  const grid = document.getElementById('f_cats');
+  grid.innerHTML = allCategoriesList.map(cat =>
+    `<button type="button" class="cat-toggle" data-cat="${cat.name}">${cat.emoji || ''} ${cat.name}</button>`
+  ).join('');
+  grid.querySelectorAll('.cat-toggle').forEach(btn => {
+    btn.addEventListener('click', () => btn.classList.toggle('on'));
+  });
+}
+
+// Cat modal
+window.openCatModal = () => {
+  editingCatId = null;
+  document.getElementById('catModalTitle').textContent = 'Nova Categoria';
+  document.getElementById('fc_name').value  = '';
+  document.getElementById('fc_emoji').value = '';
+  document.getElementById('fc_bg').value    = 'cafe';
+  document.getElementById('fc_order').value = allCategoriesList.length + 1;
+  document.querySelectorAll('#catModalBackdrop .emoji-opt').forEach(e => e.classList.remove('selected'));
+  document.getElementById('catModalBackdrop').classList.add('open');
+};
+
+window.openEditCatModal = (id) => {
+  const cat = allCategoriesList.find(c => c.id === id);
+  if (!cat) return;
+  editingCatId = id;
+  document.getElementById('catModalTitle').textContent = 'Editar: ' + cat.name;
+  document.getElementById('fc_name').value  = cat.name  || '';
+  document.getElementById('fc_emoji').value = cat.emoji || '';
+  document.getElementById('fc_bg').value    = cat.bg    || 'cafe';
+  document.getElementById('fc_order').value = cat.order || '';
+  document.querySelectorAll('#catModalBackdrop .emoji-opt').forEach(e => {
+    e.classList.toggle('selected', e.textContent === cat.emoji);
+  });
+  document.getElementById('catModalBackdrop').classList.add('open');
+};
+
+window.closeCatModal = () => document.getElementById('catModalBackdrop').classList.remove('open');
+window.closeCatModalOnBackdrop = (e) => {
+  if (e.target === document.getElementById('catModalBackdrop')) closeCatModal();
+};
+
+window.pickCatEmoji = (em) => {
+  document.getElementById('fc_emoji').value = em;
+  document.querySelectorAll('#catModalBackdrop .emoji-opt').forEach(el => {
+    el.classList.toggle('selected', el.textContent === em);
+  });
+};
+
+window.saveCat = async () => {
+  const name  = document.getElementById('fc_name').value.trim();
+  const emoji = document.getElementById('fc_emoji').value.trim();
+  if (!name)  { showToast('Nome é obrigatório', 'error'); return; }
+  if (!emoji) { showToast('Escolha um emoji', 'error'); return; }
+
+  const btn = document.getElementById('btnSaveCat');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  const data = {
+    name,
+    emoji,
+    bg:    document.getElementById('fc_bg').value,
+    order: parseInt(document.getElementById('fc_order').value) || 99,
+    _updatedAt: serverTimestamp(),
+  };
+
+  try {
+    const docId = editingCatId || ('cat_' + name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') + '_' + Date.now());
+    if (!editingCatId) data._createdAt = serverTimestamp();
+    await setDoc(doc(db, 'categories', docId), data, { merge: true });
+    showToast(editingCatId ? 'Categoria atualizada!' : 'Categoria criada!', 'success');
+    closeCatModal();
+    await loadCategories();
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar';
+  }
+};
+
+window.deleteCat = async (id, name) => {
+  if (!confirm(`Excluir a categoria "${name}"? Lugares que a usam não serão afetados.`)) return;
+  try {
+    await deleteDoc(doc(db, 'categories', id));
+    showToast('Categoria excluída.', 'success');
+    await loadCategories();
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  }
+};
 
 // ── Load Places ─────────────────────────────────────────────────
 async function loadPlaces() {
@@ -1630,7 +1887,7 @@ window.runMigration = async () => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','migrate','rules'].forEach(p => {
+  ['places','categories','migrate','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });

@@ -460,6 +460,22 @@ body {
       return snap.docs.map(d => d.data());
     } catch(e) { console.warn('fsLoadAll:', e); return []; }
   };
+
+  window.fsLoadPlaces = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'places'));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) { console.warn('fsLoadPlaces:', e); return []; }
+  };
+
+  window.fsLoadCategories = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'categories'));
+      const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      cats.sort((a,b) => (a.order||99) - (b.order||99));
+      return cats;
+    } catch(e) { console.warn('fsLoadCategories:', e); return []; }
+  };
 </script>
 
 <!-- Auth + Comments (módulos ES) -->
@@ -987,103 +1003,12 @@ async function fetchAllPhotos(placeId) {
   } catch(e) { return []; }
 }
 
-// ─── Dados dos 90 lugares ─────────────────────────────────────────
-const P = [
-  {id:"1",n:"Terrazza 40",c:"Céu aberto",p:"$$$$",b:"Bigorrilho",a:"Rua Padre Anchieta 1287",h:"Seg-Dom 12h-15h e 19h-23h",ig:"@terrazza40",e:"🌆",bg:"rooftop",pid:"ChIJe4Q-kGrj3JQRvgQODR0GUdc"},
-  {id:"2",n:"Gards Rooftop",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. do Batel 1868",h:"Ter-Sab 17h-01h",ig:"@gardsrooftop",e:"🌇",bg:"rooftop",pid:"ChIJW2d2vXrj3JQRXuz0lvifxE4"},
-  {id:"3",n:"Souq Curitiba",c:"Céu aberto",p:"$$",b:"Vila Izabel",a:"Av. Iguaçu 4399",h:"Ter-Dom 17h-23h",ig:"@souqcuritiba",e:"🏙️",bg:"rooftop",pid:"ChIJQYo5of3j3JQRw9xpkSEtGvY"},
-  {id:"31",n:"The Five Lounge",c:"Céu aberto",p:"$$$",b:"Centro",a:"Rua Nunes Machado 68",h:"Seg-Sab 15h-23h",ig:"@thefivelounge",e:"🍹",bg:"rooftop",pid:"ChIJtW_qWVvl3JQR9NAuuA2gBJQ"},
-  {id:"32",n:"Porks Museu do Olho",c:"Céu aberto",p:"$",b:"Centro Cívico",a:"Rua Marechal Hermes 1092",h:"Ter-Dom 17h-00h",ig:"@porks_museudoolho",e:"🐷",bg:"rooftop",pid:"ChIJo7CGz5Pl3JQRf47RQL8OOj4"},
-  {id:"33",n:"Santa Villa Gastronomia",c:"Céu aberto",p:"$$",b:"Xaxim",a:"Rua Francisco Derosso 3488",h:"Ter-Dom 18h-23h",ig:"@santavillagastronomia",e:"🌿",bg:"rooftop",pid:"ChIJ4YMRoUj73JQRWTdFO51Fi4g"},
-  {id:"61",n:"+55 Bar",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. Vicente Machado 866",h:"Qua-Dom 18h-02h",ig:"@mais55bar",e:"🎶",bg:"rooftop",pid:"ChIJwTDOvYrj3JQRv9pItkT-cI8"},
-  {id:"62",n:"Umbar",c:"Céu aberto",p:"$$",b:"Ahú",a:"Rua Prof. João Cândido Ferreira 123",h:"Ter-Dom 17h-23h",ig:"@umbar_curitiba",e:"🌙",bg:"rooftop",pid:"ChIJJxaL7rH-3JQRfM5b2k1kOBQ"},
-  {id:"63",n:"Pátio Faivre",c:"Céu aberto",p:"$",b:"Centro",a:"Rua Doutor Faivre 229",h:"Seg-Sab 11h-23h",ig:"@patiofaivre",e:"☀️",bg:"rooftop",pid:"ChIJCeAtMz7k3JQRwxfqSwHfYus"},
-  {id:"4",n:"Lucca Cafés Especiais",c:"Café da tarde",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 40",h:"Seg-Dom 08h-20h",ig:"@luccacafesespeciais",e:"☕",bg:"cafe",pid:"ChIJ67SzWiDl3JQR-Xa2kN5Ujhw"},
-  {id:"5",n:"Prestinaria",c:"Café da tarde",p:"$$",b:"Bigorrilho",a:"Rua Euclides da Cunha 699",h:"Seg-Dom 07h-20h",ig:"@prestinaria",e:"🥐",bg:"cafe",pid:"ChIJoxBMMO3j3JQRSjOnxx6TOLg"},
-  {id:"6",n:"Café do Viajante",c:"Café da tarde",p:"$$",b:"Centro Cívico",a:"Rua Comendador Fontana 229",h:"Ter-Dom 12h-19h",ig:"@cafedoviajante",e:"✈️",bg:"cafe",pid:"ChIJ1fFa0xnk3JQREbP9TwcrX84"},
-  {id:"34",n:"Supernova Coffee",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Coronel Dulcídio 544",h:"Seg-Dom 08h-19h",ig:"@supernovacoffee",e:"🌟",bg:"cafe",pid:"ChIJiURL83Xk3JQRzfy9UC-8XVY"},
-  {id:"35",n:"Fábrica Cafeteria",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Comendador Araújo 143",h:"Seg-Sab 08h-20h",ig:"@fabricacafeteria",e:"🏭",bg:"cafe",pid:"ChIJmTIGcjHl3JQRYZPp6cphBMU"},
-  {id:"36",n:"Rause Café + Vinho",c:"Café da tarde",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 696",h:"Seg-Sab 09h-20h",ig:"@rausecafe",e:"🍷",bg:"cafe",pid:"ChIJ0WMwKQvk3JQRKscraBW4ma0"},
-  {id:"64",n:"Café Cultura",c:"Café da tarde",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 558",h:"Seg-Dom 09h-20h",ig:"@cafecultura",e:"📚",bg:"cafe",pid:"ChIJ_YMu3jzl3JQRtc0SXD41Vo4"},
-  {id:"65",n:"The Coffee",c:"Café da tarde",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1227",h:"Seg-Dom 07h-20h",ig:"@thecoffee.jp",e:"☕",bg:"cafe",pid:"ChIJYX0n55Hj3JQRbQrFhn59EXE"},
-  {id:"66",n:"Go Coffee",c:"Café da tarde",p:"$",b:"Centro Cívico",a:"Rua Ernâni Santiago de Oliveira 130",h:"Seg-Sab 08h-19h",ig:"@gocoffeebrasil",e:"🚀",bg:"cafe",pid:"ChIJTeVf2c393JQRrow6_YNMyYY"},
-  {id:"7",n:"Ponto Gin",c:"Barzinho",p:"$$",b:"Mercês",a:"Rua Brigadeiro Franco 1193",h:"Ter-Sab 18h-00h",ig:"@pontogin",e:"🍸",bg:"bar",pid:"ChIJW_KeYbfj3JQRgju7RRPX6_s"},
-  {id:"8",n:"Sirène Fish & Chips",c:"Barzinho",p:"$",b:"Centro",a:"Rua Trajano Reis 150",h:"Ter-Dom 18h-23h",ig:"@sirenebrazil",e:"🐟",bg:"bar",pid:"ChIJ28g1OXXk3JQRhcQ4NKLF3Dc"},
-  {id:"9",n:"A Ostra Bêbada",c:"Barzinho",p:"$$",b:"Centro",a:"Rua Ermelino de Leão 95",h:"Ter-Sab 11h-23h",ig:"@aostrabebada",e:"🦪",bg:"bar",pid:"ChIJ3as1SA3k3JQRbbnoTQgzp2E"},
-  {id:"37",n:"We Are Bastards Pub",c:"Barzinho",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2300",h:"Ter-Dom 18h-01h",ig:"@wearebastardspub",e:"🍺",bg:"bar",pid:"ChIJQ6V_jnjk3JQR7PJen5oxpus"},
-  {id:"38",n:"Izakaya Hyotan",c:"Barzinho",p:"$$$",b:"Bigorrilho",a:"Alameda Augusto Stellfeld 2051",h:"Ter-Sab 18h-23h",ig:"@izakayahyotan",e:"🍜",bg:"bar",pid:"ChIJl7nur_Xj3JQRepJhcGX115c"},
-  {id:"39",n:"Janela Bar",c:"Barzinho",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1239",h:"Ter-Dom 17h-01h",ig:"@janelabar",e:"🪟",bg:"bar",pid:"ChIJeZkZOwvk3JQRatYyRL6KZvo"},
-  {id:"67",n:"Bossa Bar",c:"Barzinho",p:"$$$",b:"Centro Cívico",a:"Rua Senador Xavier da Silva 210",h:"Sex-Sab 21h-04h",ig:"@bossabarcuritiba",e:"🎵",bg:"bar",pid:"ChIJOa7Vnhrk3JQRQbbZYgvuIr4"},
-  {id:"68",n:"Bar do Victor",c:"Barzinho",p:"$$$",b:"São Lourenço",a:"Rua Lívio Moreira 284",h:"Ter-Sab 18h-23h",ig:"@bardovictor",e:"🥃",bg:"bar",pid:"ChIJbY90vLvm3JQRKbr0ro5yjOk"},
-  {id:"69",n:"O Torto Bar",c:"Barzinho",p:"$",b:"Centro Cívico",a:"Rua Paula Gomes 794",h:"Seg-Sab 17h-00h",ig:"@otortobar",e:"🍻",bg:"bar",pid:"ChIJs5vD1xHk3JQRdr1udu27ocQ"},
-  {id:"10",n:"Sheridans Irish Pub",c:"Balada",p:"$$",b:"Batel",a:"Rua Bispo Dom José 2258",h:"Seg-Sab 18h-02h",ig:"@sheridansirishpub",e:"🎸",bg:"balada",pid:"ChIJaxXC2ZHj3JQRXMrXsDwH18Q"},
-  {id:"11",n:"Crossroads",c:"Balada",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2304",h:"Qua-Sab 20h-04h",ig:"@barcrossroads",e:"🎵",bg:"balada",pid:"ChIJ-UuJj3jk3JQRywQ-1G40fW4"},
-  {id:"12",n:"Paradis Club",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Paula Gomes 306",h:"Qui-Sab 22h-05h",ig:"@paradisclub",e:"🎉",bg:"balada",pid:"ID_GOOGLE_012"},
-  {id:"40",n:"James Bar",c:"Balada",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 680",h:"Qua-Sab 22h-05h",ig:"@jamesbarcwb",e:"🕺",bg:"balada",pid:"ChIJi-dKvorj3JQRXctwoAzT6Sg"},
-  {id:"41",n:"Club Vibe",c:"Balada",p:"$$$",b:"Batel",a:"Rua Desembargador Motta 2311",h:"Sex-Sab 23h-06h",ig:"@clubvibe",e:"💃",bg:"balada",pid:"ChIJF7T3S3Xk3JQRaXviIl8YfDA"},
-  {id:"42",n:"VU Bar",c:"Balada",p:"$",b:"Centro",a:"Av. Manoel Ribas 146",h:"Qui-Sab 22h-05h",ig:"@vubar",e:"🔊",bg:"balada",pid:"ChIJT3WJPAbk3JQRgH4yw1ryeTM"},
-  {id:"70",n:"Jokers Pub",c:"Balada",p:"$$",b:"Centro",a:"Rua São Francisco 164",h:"Ter-Sab 18h-03h",ig:"@jokerspub",e:"🃏",bg:"balada",pid:"ChIJrzqodBPk3JQRVGhS1QIiRuc"},
-  {id:"71",n:"Basement Cultural",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Des. Benvindo Valente 260",h:"Qui-Sab 20h-04h",ig:"@basementcultural",e:"🎤",bg:"balada",pid:"ChIJuYjb8ATk3JQRpi3Q65JR838"},
-  {id:"72",n:"Vale da Música",c:"Balada",p:"$$",b:"Abranches",a:"Rua João Gava 920",h:"Ter-Dom 10h-18h",ig:"@valedamusica",e:"🎻",bg:"balada",pid:"ChIJ9VsTK2jn3JQRkEQgTpixey4"},
-  {id:"13",n:"L'Épicerie",c:"Romântico",p:"$$$$",b:"Bigorrilho",a:"Rua Fernando Simas 340",h:"Ter-Sab 19h-23h",ig:"@lepiceriecuritiba",e:"🕯️",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
-  {id:"14",n:"Ile de France",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1550",h:"Seg-Sab 19h-23h",ig:"@iledefrancecuritiba",e:"🥂",bg:"romantico",pid:"ChIJNf4NZRLk3JQRVt5N3tnCDUg"},
-  {id:"15",n:"Poco Tapas",c:"Romântico",p:"$$$",b:"Batel",a:"Av. Vicente Machado 2786",h:"Seg-Sab 19h-23h",ig:"@pocotapas",e:"🍷",bg:"romantico",pid:"ChIJf_rYp5Xj3JQR2cNkEgSO2lk"},
-  {id:"43",n:"Nomade Restaurante",c:"Romântico",p:"$$$$",b:"Batel",a:"Rua Gutemberg 168",h:"Seg-Dom 19h-23h",ig:"@nomaderestaurante",e:"🌍",bg:"romantico",pid:"ChIJVVVF_orj3JQRuvICUUVDKLs"},
-  {id:"44",n:"Chalet Suisse",c:"Romântico",p:"$$$$",b:"Santa Felicidade",a:"Rua Francisco Dallalibera 1428",h:"Ter-Sab 19h-23h",ig:"@chaletsuissecwb",e:"🏔️",bg:"romantico",pid:"ChIJV3TitFLg3JQRNdAOy12Bnto"},
-  {id:"45",n:"Avenida Paulista Pizzeria",c:"Romântico",p:"$$$",b:"Centro",a:"Rua Emiliano Perneta 680",h:"Seg-Dom 18h-00h",ig:"@avenidapaulistapizzeria",e:"🍕",bg:"romantico",pid:"ChIJ5_JL53Pk3JQRcgKFrzAdJj0"},
-  {id:"73",n:"La Varenne",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Dom 12h-23h",ig:"@lavarenneoficial",e:"🥩",bg:"romantico",pid:"ChIJn_vck47j3JQRAp0-oujzOFg"},
-  {id:"74",n:"Barolo Trattoria",c:"Romântico",p:"$$$",b:"Água Verde",a:"Av. Silva Jardim 2487",h:"Seg-Dom 12h-00h",ig:"@barolotrattoria",e:"🍝",bg:"romantico",pid:"ChIJlXv0iofj3JQRc24bbmersAA"},
-  {id:"75",n:"L'Entrecôte de Paris",c:"Romântico",p:"$$$",b:"Batel",a:"Alameda Dr. Carlos de Carvalho 1362",h:"Ter-Dom 12h-23h",ig:"@lentrecotedeparis",e:"🥗",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
-  {id:"16",n:"Bife Sujo",c:"Baratinho",p:"$",b:"Centro",a:"Rua Emiliano Perneta 714",h:"Seg-Sab 11h-23h",ig:"@bifesujocuritiba",e:"🍔",bg:"barato",pid:"ChIJYxb3BQ3k3JQRO4gfaOGZ2xg"},
-  {id:"17",n:"Bar Palácio",c:"Baratinho",p:"$$",b:"Centro",a:"Rua André de Barros 500",h:"Ter-Sab 19h-01h",ig:"@barpalacio",e:"🍺",bg:"barato",pid:"ChIJ9TMZVWnk3JQRnbTa9HLZBG0"},
-  {id:"18",n:"Pastelaria Juvevê",c:"Baratinho",p:"$",b:"Juvevê",a:"Av. João Gualberto 1817",h:"Seg-Sab 09h-21h",ig:"@pastelariajuveve",e:"🥟",bg:"barato",pid:"ChIJqVgsDiTk3JQRmP3qNRLvSoI"},
-  {id:"46",n:"Restaurante Imperial",c:"Baratinho",p:"$",b:"Centro",a:"Rua José Loureiro 135",h:"Seg-Sab 11h-15h",ig:"@restauranteimperial",e:"👑",bg:"barato",pid:"ChIJORUYVmzk3JQR02ILWQoLmqI"},
-  {id:"47",n:"Cantina do Délio",c:"Baratinho",p:"$$",b:"Alto da XV",a:"Rua Itupava 1094",h:"Ter-Dom 11h-15h e 18h-23h",ig:"@cantinadodelio",e:"🍝",bg:"barato",pid:"ChIJF-N-EDbk3JQRxIdQ5RBj6iI"},
-  {id:"48",n:"Al-Sultan",c:"Baratinho",p:"$",b:"Centro",a:"Rua São Francisco 32",h:"Seg-Sab 10h-20h",ig:"@alsultancwb",e:"🥙",bg:"barato",pid:"ChIJJSTgNnnj3JQR9ZvvSsx7C1o"},
-  {id:"76",n:"Comendador Grill",c:"Baratinho",p:"$",b:"Centro",a:"Rua Comendador Macedo 178",h:"Seg-Sab 11h-15h",ig:"@comendadorgrill",e:"🔥",bg:"barato",pid:"ChIJQUtpcwDl3JQRKYmjkZ6GM6A"},
-  {id:"77",n:"Baggio Pizzeria",c:"Baratinho",p:"$$",b:"Água Verde",a:"Rua Salgado Filho 383",h:"Seg-Dom 18h-23h",ig:"@pizzariabaggio",e:"🍕",bg:"barato",pid:"ChIJLSDfcUD73JQR2PJArxwNKhU"},
-  {id:"78",n:"Whatafuck Hamburgueria",c:"Baratinho",p:"$",b:"Centro",a:"Av. Vicente Machado 845",h:"Ter-Dom 18h-01h",ig:"@whatafuck",e:"🍔",bg:"barato",pid:"ChIJ2ysVmIrj3JQRHpjplDbJY_o"},
-  {id:"19",n:"Durski",c:"Alta gastronomia",p:"$$$$$",b:"Centro Histórico",a:"Av. Jaime Reis 254",h:"Qua-Sab 19h-23h",ig:"@restaurantedurski",e:"👨‍🍳",bg:"alta",pid:"ChIJD5hDYQ7k3JQRmBpFUqD7xFI"},
-  {id:"20",n:"Manu",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Alameda Dom Pedro II 317",h:"Qua-Sab 19h-23h",ig:"@restaurantemanu",e:"⭐",bg:"alta",pid:"ChIJHeVzMwjl3JQRiFIbAh_hREk"},
-  {id:"21",n:"Obst.",c:"Alta gastronomia",p:"$$$$",b:"Centro",a:"Alameda Prudente de Moraes 983",h:"Ter-Sab 19h-23h",ig:"@obst.lugar",e:"🍽️",bg:"alta",pid:"ID_GOOGLE_021"},
-  {id:"49",n:"Bobardí",c:"Alta gastronomia",p:"$$$$",b:"Cabral",a:"Av. Munhoz da Rocha 53",h:"Ter-Dom 19h-23h",ig:"@bobardi",e:"🌟",bg:"alta",pid:"ChIJ050Ozyjk3JQRuwiwNz-6s14"},
-  {id:"50",n:"K.sa Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Fernando Simas 260",h:"Ter-Sab 19h-23h",ig:"@ksarestaurante",e:"🏠",bg:"alta",pid:"ChIJQQb3DUbj3JQR1MO5Y5hy_o4"},
-  {id:"51",n:"Aisō",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Bispo Dom José 2772",h:"Ter-Sab 19h-23h",ig:"@aisorestaurante",e:"🎌",bg:"alta",pid:"ChIJT0LGv6bl3JQR_Fx3RVkYIfg"},
-  {id:"79",n:"Emy by Kazuo",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Sab 19h-23h",ig:"@emybykazuo",e:"🍣",bg:"alta",pid:"ChIJizTylLvj3JQRx53Pg785h70"},
-  {id:"80",n:"Igor Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Água Verde",a:"Rua Gutemberg 151",h:"Ter-Sab 19h-23h",ig:"@igor.restaurante",e:"🍴",bg:"alta",pid:"ChIJAQADV4rj3JQRyUsQ_Zhl4lA"},
-  {id:"81",n:"Ninna Cozinha",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Desembargador Motta 2500",h:"Ter-Sab 19h-23h",ig:"@ninnacozinha",e:"🧑‍🍳",bg:"alta",pid:"ChIJlVVNLSfl3JQRMOK5gS1nz_k"},
-  {id:"22",n:"Veg Veg",c:"Vegano",p:"$$",b:"Centro",a:"Rua Visconde de Nácar 655",h:"Seg-Sab 11h-20h",ig:"@vegvegcuritiba",e:"🥗",bg:"vegano",pid:"ChIJ08dZL3Pk3JQRdS4b1N_Pim8"},
-  {id:"23",n:"Bouquet Garni",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Alameda Dr. Carlos de Carvalho 271",h:"Seg-Sab 11h-15h",ig:"@bouquetgarnicuritiba",e:"🌿",bg:"vegano",pid:"ChIJx7TgUu7j3JQRCzZ-nRtN44c"},
-  {id:"24",n:"Verd&Co",c:"Vegano",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 588",h:"Seg-Sab 11h-22h",ig:"@verd.co",e:"🌱",bg:"vegano",pid:"ChIJyUGbftzl3JQRyp-QQrjgA5Q"},
-  {id:"52",n:"Semente de Girassol",c:"Vegano",p:"$",b:"Centro",a:"Rua Treze de Maio 512",h:"Seg-Sab 11h-15h",ig:"@sementedegirassolcwb",e:"🌻",bg:"vegano",pid:"ChIJKb3zyRPk3JQRSFeyinHEksU"},
-  {id:"53",n:"Mornings",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Coronel Agostinho Macedo 60",h:"Seg-Dom 09h-16h",ig:"@morningscwb",e:"🌅",bg:"vegano",pid:"ChIJT1YKvdLl3JQRp9HnoRUX3CI"},
-  {id:"54",n:"Oidê",c:"Vegano",p:"$$",b:"Centro",a:"Rua Cruz Machado 274",h:"Ter-Sab 18h-23h",ig:"@oide.cwb",e:"🫐",bg:"vegano",pid:"ChIJo5jeKbXl3JQRIHQHoaWF0Qs"},
-  {id:"82",n:"Veg e Lev",c:"Vegano",p:"$$",b:"Centro",a:"Alameda Prudente de Moraes 1218",h:"Seg-Sab 11h-15h",ig:"@vegelev",e:"🥦",bg:"vegano",pid:"ChIJRRGAHgvk3JQRKdSg7FiEPpE"},
-  {id:"83",n:"Sorella",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 728",h:"Seg-Sab 11h-15h",ig:"@sorellacwb",e:"🍃",bg:"vegano",pid:"ChIJO8gl3oTj3JQRxdgCcApX8lI"},
-  {id:"84",n:"Amora",c:"Vegano",p:"$$",b:"Mercês",a:"Rua Pe. Agostinho 185",h:"Seg-Sab 11h-15h",ig:"@amoracwb",e:"🫒",bg:"vegano",pid:"ChIJoxh_pznl3JQRMsD3UeIE7KM"},
-  {id:"25",n:"Degusto Café",c:"Pet friendly",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 536",h:"Seg-Sab 09h-20h",ig:"@degustocafe",e:"🐾",bg:"pet",pid:"ChIJ-XRO4Irj3JQRTpTPfLMg3ao"},
-  {id:"26",n:"Garden Hamburgueria",c:"Pet friendly",p:"$$",b:"São Francisco",a:"Av. Jaime Reis 22",h:"Seg-Dom 17h-00h",ig:"@gardencwb",e:"🐶",bg:"pet",pid:"ChIJU31M-A3k3JQR0GUk0uNwiuA"},
-  {id:"27",n:"SFCO 179",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua São Francisco 179",h:"Ter-Dom 10h-23h",ig:"@sfco179",e:"🏡",bg:"pet",pid:"ChIJd1MDPRbl3JQRHY4YL026jBI"},
-  {id:"55",n:"Goodies Bakery",c:"Pet friendly",p:"$$",b:"Ahú",a:"Rua Brasilino Moura 382",h:"Seg-Sab 12h-19h",ig:"@goodiesbakery",e:"🧁",bg:"pet",pid:"ChIJT2QGaaPm3JQRjg79LGc0lB4"},
-  {id:"56",n:"Brisket Smokehouse",c:"Pet friendly",p:"$$$",b:"Juvevê",a:"Rua Augusto Stresser 318",h:"Ter-Dom 18h-23h",ig:"@brisketcwb",e:"🥩",bg:"pet",pid:"ChIJMTD2Y97v3JQRnfnzpo0DWoM"},
-  {id:"57",n:"O Barba Hamburgueria",c:"Pet friendly",p:"$$",b:"Centro",a:"Av. Vicente Machado 578",h:"Seg-Dom 18h-00h",ig:"@obarbahamburgueria",e:"🧔",bg:"pet",pid:"ChIJaRm8I3Xk3JQR8nJGYgeElLk"},
-  {id:"85",n:"Chelsea Burgers",c:"Pet friendly",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 113",h:"Seg-Dom 11h-22h",ig:"@chelseaburgerbr",e:"🍔",bg:"pet",pid:"ChIJBYvDORjk3JQRj3IKFvjvwmY"},
-  {id:"86",n:"Mercado Sal",c:"Pet friendly",p:"$$",b:"Portão",a:"Rua Itacolomi 1515",h:"Ter-Dom 17h-23h",ig:"@mercadosal",e:"🧂",bg:"pet",pid:"ChIJ8QOlrRXj3JQR8isKhBdzevo"},
-  {id:"87",n:"Vila Urbana",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua Marechal Deodoro 686",h:"Seg-Dom 11h-23h",ig:"@vilaurbana",e:"🌇",bg:"pet",pid:"ChIJtY5fvVjj3JQRisz1QOnkY7c"},
-  {id:"28",n:"Botanique",c:"Instagramável",p:"$$",b:"Centro",a:"Rua Brigadeiro Franco 1193",h:"Seg-Dom 10h-23h",ig:"@botaniquecafebar",e:"🌺",bg:"insta",pid:"ChIJAQAU9Qrk3JQRtHKuC8egp1U"},
-  {id:"29",n:"Cosmos Gastrobar",c:"Instagramável",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 543",h:"Ter-Sab 18h-00h",ig:"@cosmosgastrobar",e:"✨",bg:"insta",pid:"ChIJvcfsMPXj3JQRuQEovdrZExY"},
-  {id:"30",n:"Officina Restô Bar",c:"Instagramável",p:"$$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 1154",h:"Ter-Sab 18h-00h",ig:"@officinarestobar",e:"📸",bg:"insta",pid:"ChIJ3680MvXj3JQRXbyzKyeftns"},
-  {id:"58",n:"Lolla Bar",c:"Instagramável",p:"$$",b:"Bom Retiro",a:"Rua Fernando Amaro 84",h:"Ter-Sab 18h-01h",ig:"@lollabar",e:"🌈",bg:"insta",pid:"ChIJGUdSUWD73JQR_KuSjDuXnbo"},
-  {id:"59",n:"Ginger Bowtie",c:"Instagramável",p:"$$$",b:"Centro",a:"Rua Saldanha Marinho 1220",h:"Ter-Sab 19h-01h",ig:"@gingerbowtie",e:"🎀",bg:"insta",pid:"ChIJKcf4kQrk3JQRIIWoz1z9DdQ"},
-  {id:"60",n:"O Pão Que O Viado Amassou",c:"Instagramável",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 74",h:"Seg-Sab 09h-20h",ig:"@opaoqueoviadoamassou",e:"🥖",bg:"insta",pid:"ChIJqzM_TQDl3JQRynSUhyiIdlk"},
-  {id:"88",n:"Café das Orquídeas",c:"Instagramável",p:"$$",b:"Seminário",a:"Rua Machado de Assis 223",h:"Ter-Dom 12h-19h",ig:"@cafedasorquideas",e:"🌸",bg:"insta",pid:"ChIJh0860U3v3JQRAtSXVzaSIg0"},
-  {id:"89",n:"Hard Rock Cafe",c:"Instagramável",p:"$$$",b:"Batel",a:"Rua Buenos Aires 50",h:"Seg-Dom 11h-00h",ig:"@hrccuritiba",e:"🎸",bg:"insta",pid:"ChIJeVmuOnTk3JQRspABB4pSZeQ"},
-  {id:"90",n:"Chō Street Food",c:"Instagramável",p:"$$",b:"Batel",a:"Av. Vicente Machado 521",h:"Ter-Sab 18h-23h",ig:"@cho.streetfood",e:"🍡",bg:"insta",pid:"ChIJc2lTdnbk3JQRPXYL2HlXLQ8"},
-];
+// ─── Lugares e Categorias carregados do Firestore ─────────────────
+// Lugares carregados do Firestore (substituem o array hardcoded)
+let P = [];
 
-const CATS = ["Todos","Café da tarde","Barzinho","Céu aberto","Balada","Romântico","Baratinho","Alta gastronomia","Vegano","Pet friendly","Instagramável"];
-
-const CE   = {"Todos":"🗺️","Café da tarde":"☕","Barzinho":"🍸","Céu aberto":"🌆","Balada":"🎵","Romântico":"🕯️","Baratinho":"🍔","Alta gastronomia":"⭐","Vegano":"🌱","Pet friendly":"🐾","Instagramável":"📸"};
+let CATS = ["Todos","Café da tarde","Barzinho","Céu aberto","Balada","Romântico","Baratinho","Alta gastronomia","Vegano","Pet friendly","Instagramável"];
+let CE   = {"Todos":"🗺️","Café da tarde":"☕","Barzinho":"🍸","Céu aberto":"🌆","Balada":"🎵","Romântico":"🕯️","Baratinho":"🍔","Alta gastronomia":"⭐","Vegano":"🌱","Pet friendly":"🐾","Instagramável":"📸"};
 
 let cat="Todos", filtered=[...P], idx=0, saved=[];
 let drag=false, sx=0, cx=0, dragStartedOnPhoto=false;
@@ -1178,8 +1103,31 @@ function cardPhotoPrev() {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────
-function init(){
+async function init(){
+  // Carrega categorias e lugares do Firestore em paralelo
+  if (typeof window.fsLoadCategories === 'function' && typeof window.fsLoadPlaces === 'function') {
+    const [cats, places] = await Promise.all([
+      window.fsLoadCategories(),
+      window.fsLoadPlaces(),
+    ]);
+
+    // Atualiza categorias se vieram do Firestore
+    if (cats.length) {
+      CATS = ['Todos', ...cats.map(c => c.name)];
+      CE   = { 'Todos': '🗺️' };
+      cats.forEach(c => { CE[c.name] = c.emoji || ''; });
+    }
+
+    // Atualiza lugares se vieram do Firestore
+    if (places.length) {
+      P = places;
+    }
+  }
+
+  filtered = [...P];
+
   const row = document.getElementById('catsRow');
+  row.innerHTML = '';
   CATS.forEach(c => {
     const b = document.createElement('button');
     b.className = 'cat-pill'+(c===cat?' on':'');
@@ -1203,7 +1151,10 @@ function init(){
 function setCat(c){
   cat=c;
   document.querySelectorAll('.cat-pill').forEach((b,i) => b.classList.toggle('on', CATS[i]===c));
-  filtered = c==='Todos' ? [...P] : P.filter(p => p.c===c);
+  filtered = c==='Todos' ? [...P] : P.filter(p => {
+    const placeCats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    return placeCats.includes(c);
+  });
   idx=0; renderCard(); renderProgress();
 }
 
@@ -1582,7 +1533,7 @@ function closeAddrSheet(e){
   document.getElementById('addrSheetBackdrop').style.display='none';
 }
 
-init();
+init(); // async — carrega Firestore e renderiza
 </script>
 </body>
 </html>
