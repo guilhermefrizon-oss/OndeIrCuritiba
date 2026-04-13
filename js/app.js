@@ -1,0 +1,567 @@
+// ── app.js ────────────────────────────────────────────────────────
+import { fsLoadPlaces, fsLoadCategories, fsLoadAll, fsSave, fsIncrementLike } from './store.js';
+import { fsRemove } from './store.js';
+import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
+import { renderFavorites, toggleFavView } from './favorites.js';
+import { initSearch, openSearch } from './search.js';
+import { renderCommentsSection, unsubscribeComments } from './comments.js';
+
+// ── State ──────────────────────────────────────────────────────────
+let P        = [];
+let CATS     = ['Todos'];
+let CE       = { Todos: '🗺️' };
+let cat      = 'Todos';
+let filtered = [];
+let idx      = 0;
+let saved    = [];
+
+let cardPhotos    = [];
+let cardPhotoIdx  = 0;
+let profilePhotos = [];
+let profilePhotoIdx = 0;
+
+let activeCard  = null;
+let dragActive  = false;
+let dragStartX  = 0;
+let dragStartY  = 0;
+let dragCurX    = 0;
+let dragLocked  = false;
+
+// ── Helpers ────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function sortByLikesThenShuffle(places) {
+  const sorted = [...places].sort((a,b)=>(b._likes||0)-(a._likes||0));
+  const groups = [];
+  let g = [];
+  for (const p of sorted) {
+    if (!g.length || g[0]._likes === p._likes) g.push(p);
+    else { groups.push(g); g=[p]; }
+  }
+  if (g.length) groups.push(g);
+  return groups.flatMap(grp => shuffle(grp));
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+async function init() {
+  const stack = document.getElementById('cardStack');
+  if (stack) stack.innerHTML = `
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:14px;color:var(--text3)">
+      <div style="width:36px;height:36px;border:3px solid var(--bg4);
+        border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite"></div>
+      <span style="font-size:14px">Carregando lugares…</span>
+    </div>`;
+
+  const [cats, places] = await Promise.all([
+    fsLoadCategories(), fsLoadPlaces()
+  ]);
+
+  if (cats.length) {
+    CATS = ['Todos', ...cats.map(c => c.name)];
+    CE   = { Todos: '🗺️' };
+    cats.forEach(c => { CE[c.name] = c.emoji || ''; });
+  }
+
+  if (places.length) P = sortByLikesThenShuffle(places);
+
+  filtered = [...P];
+  initSearch(P);
+
+  buildCategoryRow();
+  renderCard();
+  renderProgress();
+  showWelcomeScreen();
+
+  const allSaved = await fsLoadAll();
+  if (allSaved?.length) {
+    saved = allSaved;
+    updateBadge();
+  }
+}
+
+// ── Category row ───────────────────────────────────────────────────
+function buildCategoryRow() {
+  const row = document.getElementById('catsRow');
+  row.innerHTML = '';
+  CATS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'cat-pill' + (c === cat ? ' on' : '');
+    b.innerHTML = `<span style="font-size:13px">${CE[c]||''}</span>${c}`;
+    b.onclick = () => setCat(c);
+    row.appendChild(b);
+  });
+}
+
+export function setCat(c) {
+  cat = c;
+  document.querySelectorAll('.cat-pill').forEach((b,i) => b.classList.toggle('on', CATS[i]===c));
+  filtered = c==='Todos' ? [...P] : P.filter(p => {
+    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    return cats.includes(c);
+  });
+  idx=0; renderCard(); renderProgress();
+}
+
+function place() { return filtered[idx % filtered.length]; }
+
+// ── Progress dots ──────────────────────────────────────────────────
+function renderProgress() {
+  const row = document.getElementById('progressRow');
+  const total = Math.min(filtered.length, 5);
+  row.innerHTML = '';
+  for (let i=0; i<total; i++) {
+    const d = document.createElement('div');
+    d.className = 'pdot' + (i === idx%total ? ' on' : '');
+    row.appendChild(d);
+  }
+}
+
+// ── Cards ──────────────────────────────────────────────────────────
+function renderCard() {
+  const stack = document.getElementById('cardStack');
+  stack.querySelectorAll('.place-card').forEach(e => e.remove());
+  if (!filtered.length) return;
+
+  for (let i=Math.min(2,filtered.length-1); i>=0; i--) {
+    const p = filtered[(idx+i)%filtered.length];
+    const card = makeCard(p);
+    if (i > 0) {
+      card.style.transform = `translateY(${i*10}px) scale(${1-i*0.04})`;
+      card.style.zIndex    = 10 - i;
+      card.style.opacity   = 1 - i*0.2;
+      card.style.pointerEvents = 'none';
+    } else {
+      card.style.zIndex = 20;
+      card.dataset.top  = '1';
+      bindDrag(card);
+    }
+    stack.appendChild(card);
+  }
+
+  const top = filtered[idx%filtered.length];
+  if (Array.isArray(top.photos) && top.photos.length) {
+    const bg = stack.querySelector('.place-card[data-top="1"] .card-bg');
+    if (bg) { bg.style.backgroundImage=`url("${top.photos[0]}")`; bg.style.backgroundSize='cover'; }
+  } else if (top.pid && !top.pid.startsWith('ID_GOOGLE_')) {
+    fetchPlacePhoto(top.pid).then(url => {
+      if (!url) return;
+      const bg = stack.querySelector('.place-card[data-top="1"] .card-bg');
+      if (bg) { bg.style.backgroundImage=`url("${url}")`; bg.style.backgroundSize='cover'; }
+    });
+  }
+  initCardPhotos(top);
+}
+
+function makeCard(p) {
+  const el = document.createElement('div');
+  el.className = 'place-card su';
+  el.innerHTML = `
+    <div class="card-bg bg-${p.bg}"><div class="photo-loading">${p.e}</div></div>
+    <div class="card-overlay"></div>
+    <div class="card-glow"></div>
+    <div class="card-top">
+      <div class="cat-tag">${p.c}</div>
+      <div class="price-tag">${p.p}</div>
+    </div>
+    <div class="card-story-bars" id="cardStoryBars"></div>
+    <div class="card-photo-tap card-photo-tap-left"  id="cardTapLeft"></div>
+    <div class="card-photo-tap card-photo-tap-right" id="cardTapRight"></div>
+    <div class="card-bottom card-bottom-tap"
+         onclick="event.stopPropagation();window._openProfileCurrent()">
+      <div class="card-name">${p.n}</div>
+      <div class="card-addr">📍 ${p.a}</div>
+      <div class="card-meta">
+        <span>${p.b}</span><div class="meta-sep"></div><span>🕐 ${p.h}</span>
+      </div>
+      <div class="card-footer">
+        <div class="ig-chip"><span style="font-size:12px">📷</span>${p.ig}</div>
+        <div class="card-profile-hint">Ver perfil →</div>
+      </div>
+    </div>`;
+  return el;
+}
+
+window._openProfileCurrent = () => openProfile(filtered[idx % filtered.length]);
+
+// ── Card photos (story) ────────────────────────────────────────────
+function initCardPhotos(p) {
+  cardPhotos = []; cardPhotoIdx = 0;
+  updateCardStoryBars();
+
+  const bindTap = (el, fn) => {
+    if (!el) return;
+    let tsX = 0;
+    el.addEventListener('touchstart', e => { tsX = e.touches[0].clientX; }, {passive:true});
+    el.addEventListener('touchend',   e => {
+      if (Math.abs(e.changedTouches[0].clientX - tsX) < 15) { e.stopPropagation(); fn(); }
+    });
+    el.addEventListener('click', e => { e.stopPropagation(); fn(); });
+  };
+  bindTap(document.getElementById('cardTapLeft'),  cardPhotoPrev);
+  bindTap(document.getElementById('cardTapRight'), cardPhotoNext);
+
+  if (Array.isArray(p.photos) && p.photos.length) {
+    cardPhotos = p.photos; cardPhotoIdx = 0; updateCardStoryBars(); return;
+  }
+  if (!p.pid || p.pid.startsWith('ID_GOOGLE_')) return;
+  fetchAllPhotos(p.pid).then(urls => {
+    if (!urls.length) return;
+    cardPhotos = urls; cardPhotoIdx = 0; updateCardStoryBars();
+  });
+}
+
+function setCardPhoto(i) {
+  const bg = document.querySelector('.place-card[data-top="1"] .card-bg');
+  if (!bg || !cardPhotos.length) return;
+  bg.style.opacity = '0';
+  setTimeout(() => {
+    bg.style.backgroundImage = `url("${cardPhotos[i]}")`; bg.style.backgroundSize='cover'; bg.style.opacity='1';
+    const fl = bg.querySelector('.photo-loading'); if (fl) fl.style.opacity='0';
+  }, 150);
+}
+
+function updateCardStoryBars() {
+  const bars = document.getElementById('cardStoryBars');
+  if (!bars) return;
+  if (cardPhotos.length <= 1) { bars.innerHTML=''; return; }
+  bars.innerHTML='';
+  for (let i=0; i<cardPhotos.length; i++) {
+    const bar  = document.createElement('div'); bar.className='card-sbar';
+    const fill = document.createElement('div');
+    fill.className = 'card-sbar-fill' + (i<=cardPhotoIdx?' done':'');
+    bar.appendChild(fill); bars.appendChild(bar);
+  }
+}
+
+function cardPhotoNext() {
+  if (!cardPhotos.length || cardPhotoIdx>=cardPhotos.length-1) return;
+  cardPhotoIdx++; setCardPhoto(cardPhotoIdx); updateCardStoryBars();
+}
+function cardPhotoPrev() {
+  if (!cardPhotos.length || cardPhotoIdx<=0) return;
+  cardPhotoIdx--; setCardPhoto(cardPhotoIdx); updateCardStoryBars();
+}
+
+// ── Drag & swipe ───────────────────────────────────────────────────
+function bindDrag(card) {
+  activeCard = card;
+  card.addEventListener('touchstart', onDragStart, {passive:true});
+  card.addEventListener('mousedown',  onDragStart);
+}
+
+function onDragStart(e) {
+  if (e.target.closest('.card-bottom-tap')) return;
+  dragActive=true; dragLocked=false; dragCurX=0;
+  const pt = e.touches ? e.touches[0] : e;
+  dragStartX = pt.clientX; dragStartY = pt.clientY;
+  if (activeCard) activeCard.style.transition='none';
+}
+
+function onDragMove(e) {
+  if (!dragActive || !activeCard) return;
+  const pt = e.touches ? e.touches[0] : e;
+  const dx = pt.clientX - dragStartX;
+  const dy = pt.clientY - dragStartY;
+  if (!dragLocked) {
+    if (Math.abs(dx)<6 && Math.abs(dy)<6) return;
+    if (Math.abs(dy)>Math.abs(dx)) { dragActive=false; return; }
+    dragLocked=true;
+  }
+  if (e.cancelable) e.preventDefault();
+  dragCurX = dx;
+  activeCard.style.transform = `translateX(${dx}px) rotate(${dx*0.055}deg)`;
+  const ls = document.getElementById('likeStamp');
+  const ns = document.getElementById('nopeStamp');
+  const t  = Math.abs(dx)>30 ? Math.min((Math.abs(dx)-30)/90,1) : 0;
+  if (dx>30)       { ls.style.opacity=t; ns.style.opacity=0; }
+  else if (dx<-30) { ns.style.opacity=t; ls.style.opacity=0; }
+  else             { ls.style.opacity=0; ns.style.opacity=0; }
+}
+
+function onDragEnd() {
+  if (!dragActive||!activeCard) { dragActive=false; return; }
+  dragActive=false;
+  document.getElementById('likeStamp').style.opacity=0;
+  document.getElementById('nopeStamp').style.opacity=0;
+  const threshold = window.innerWidth * 0.30;
+  const card = activeCard;
+  if (dragCurX > threshold) {
+    animateOut(card,'right'); doSave(place()); setTimeout(nextCard,380);
+  } else if (dragCurX < -threshold) {
+    animateOut(card,'left'); setTimeout(nextCard,380);
+  } else {
+    card.style.transition='transform .45s cubic-bezier(.34,1.4,.64,1)';
+    card.style.transform='';
+  }
+  dragCurX=0;
+}
+
+function animateOut(card, dir) {
+  const x   = dir==='right' ? '130%' : '-130%';
+  const rot = dir==='right' ? '25deg' : '-25deg';
+  card.style.transition='transform .38s cubic-bezier(.4,0,.2,1), opacity .35s';
+  card.style.transform=`translateX(${x}) rotate(${rot})`;
+  card.style.opacity='0';
+}
+
+function nextCard() {
+  idx = (idx+1) % filtered.length;
+  renderCard(); renderProgress();
+}
+
+document.addEventListener('touchmove', onDragMove, {passive:false});
+document.addEventListener('mousemove', onDragMove);
+document.addEventListener('touchend',  onDragEnd);
+document.addEventListener('mouseup',   onDragEnd);
+
+// ── Swipe buttons ──────────────────────────────────────────────────
+window.swipe = (dir) => {
+  if (!activeCard) return;
+  if (dir==='right') { doSave(place()); fsIncrementLike(place().id); }
+  animateOut(activeCard, dir);
+  setTimeout(nextCard, 380);
+};
+window.savePlace = () => { doSave(place()); window.swipe('right'); };
+
+function doSave(p) {
+  if (!saved.find(s=>s.id===p.id)) {
+    saved.push(p);
+    updateBadge();
+    fsSave(p);
+  }
+}
+
+function updateBadge() {
+  const b = document.getElementById('nbadge');
+  if (!b) return;
+  if (saved.length) { b.style.display='inline'; b.textContent=saved.length; }
+  else b.style.display='none';
+}
+
+// ── Remove favorite ────────────────────────────────────────────────
+function removeFav(id) {
+  saved = saved.filter(s => s.id !== id);
+  updateBadge();
+  fsRemove(id);
+  // Re-render favorites view if active
+  const view = document.getElementById('favoritesView');
+  if (view && view.style.display !== 'none') {
+    renderFavorites(saved, openProfile, removeFav);
+  }
+}
+
+// ── Navigation tabs ────────────────────────────────────────────────
+window.showTab = (t) => {
+  const disc = document.getElementById('discoverView');
+  const fav  = document.getElementById('favoritesView');
+  ['navDiscover','navFavorites','navMap'].forEach(id =>
+    document.getElementById(id)?.classList.remove('on')
+  );
+  const active = t==='discover' ? 'navDiscover' : t==='favorites' ? 'navFavorites' : 'navMap';
+  document.getElementById(active)?.classList.add('on');
+  disc.style.display = t==='discover' ? 'flex' : 'none';
+  fav.style.display  = t==='favorites' ? 'flex' : 'none';
+  if (t === 'favorites') renderFavorites(saved, openProfile, removeFav);
+};
+
+// Toggle map/list inside favorites tab
+window.onFavToggle = () => toggleFavView(saved, openProfile, removeFav);
+
+// ── Search ─────────────────────────────────────────────────────────
+window.openSearchOverlay = () => openSearch(openProfile);
+
+// ── Profile screen ─────────────────────────────────────────────────
+function priceHTML(p) {
+  const count = p.length;
+  return [1,2,3,4,5].map(i=>`<span class="${i<=count?'active':'inactive'}">$</span>`).join('');
+}
+
+window.openProfile = openProfile;
+
+async function openProfile(p) {
+  window._currentProfilePlaceId = p.id;
+  profilePhotos=[]; profilePhotoIdx=0;
+  const screen = document.getElementById('profileScreen');
+  screen.style.display='flex'; screen.classList.remove('closing');
+
+  document.getElementById('profileName').textContent = p.n;
+  document.getElementById('profileCat').textContent  = p.c;
+  document.getElementById('profilePrice').innerHTML  = priceHTML(p.p);
+  document.getElementById('profilePhotoFallback').textContent = p.e;
+  document.getElementById('profilePhotoImg').style.backgroundImage='';
+  document.getElementById('profilePhotoImg').style.opacity='1';
+
+  const igHandle = p.ig.replace('@','');
+  document.getElementById('profileIgHandle').textContent = p.ig;
+  document.getElementById('profileIgBtn').href = `https://instagram.com/${igHandle}`;
+
+  const addrEsc = p.a.replace(/'/g,"\\'");
+  document.getElementById('profileInfoGrid').innerHTML=`
+    <div class="info-card" style="cursor:pointer;" onclick="openAddrSheet('${addrEsc}')">
+      <div class="info-card-icon">📍</div>
+      <div class="info-card-content">
+        <div class="info-card-label">Endereço</div>
+        <div class="info-card-value">${p.a}</div>
+      </div>
+      <button class="info-card-action" onclick="event.stopPropagation();openAddrSheet('${addrEsc}')">Ver opções</button>
+    </div>
+    <div class="info-card">
+      <div class="info-card-icon">🏘️</div>
+      <div class="info-card-content">
+        <div class="info-card-label">Bairro</div>
+        <div class="info-card-value">${p.b}</div>
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-icon">🕐</div>
+      <div class="info-card-content">
+        <div class="info-card-label">Horário</div>
+        <div class="info-card-value">${p.h}</div>
+      </div>
+    </div>`;
+
+  if (typeof renderCommentsSection === 'function') renderCommentsSection(p.id);
+
+  document.getElementById('storyBars').innerHTML='<div class="story-bar"><div class="story-bar-fill"></div></div>';
+
+  if (Array.isArray(p.photos) && p.photos.length) {
+    profilePhotos = p.photos; profilePhotoIdx = 0;
+    updateProfileStoryBars(); setProfilePhoto(0);
+  } else {
+    fetchAllPhotos(p.pid).then(urls => {
+      if (!urls.length) return;
+      profilePhotos=urls; profilePhotoIdx=0;
+      updateProfileStoryBars(); setProfilePhoto(0);
+    });
+  }
+
+  document.getElementById('storyTapLeft').onclick  = storyPrev;
+  document.getElementById('storyTapRight').onclick = storyNext;
+  document.getElementById('profileClose').onclick  = closeProfile;
+}
+
+function setProfilePhoto(i) {
+  if (!profilePhotos.length) return;
+  const img = document.getElementById('profilePhotoImg');
+  img.style.opacity='0';
+  setTimeout(()=>{ img.style.backgroundImage=`url("${profilePhotos[i]}")`; img.style.opacity='1'; },100);
+}
+
+function updateProfileStoryBars() {
+  const bars  = document.getElementById('storyBars');
+  const total = Math.max(profilePhotos.length,1);
+  bars.innerHTML='';
+  for (let i=0; i<total; i++) {
+    const bar  = document.createElement('div'); bar.className='story-bar';
+    const fill = document.createElement('div');
+    fill.className='story-bar-fill'+(i<profilePhotoIdx?' done':'');
+    if (i===profilePhotoIdx) fill.style.width='100%';
+    bar.appendChild(fill); bars.appendChild(bar);
+  }
+}
+
+function storyNext() {
+  if (!profilePhotos.length||profilePhotoIdx>=profilePhotos.length-1) return;
+  profilePhotoIdx++; setProfilePhoto(profilePhotoIdx); updateProfileStoryBars();
+}
+function storyPrev() {
+  if (!profilePhotos.length||profilePhotoIdx<=0) return;
+  profilePhotoIdx--; setProfilePhoto(profilePhotoIdx); updateProfileStoryBars();
+}
+
+function closeProfile() {
+  const screen = document.getElementById('profileScreen');
+  screen.classList.add('closing');
+  if (typeof unsubscribeComments==='function') unsubscribeComments();
+  setTimeout(()=>{ screen.style.display='none'; },300);
+}
+
+// ── Address sheet ──────────────────────────────────────────────────
+window.openAddrSheet = (addr) => {
+  document.getElementById('addrSheetTitle').textContent = addr;
+  document.getElementById('addrBtnMaps').onclick = () => {
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr+', Curitiba, PR')}`,'_blank');
+    window.closeAddrSheet();
+  };
+  document.getElementById('addrBtnCopy').onclick = () => {
+    navigator.clipboard.writeText(addr+', Curitiba, PR').then(()=>{
+      document.getElementById('addrBtnCopy').innerHTML='<span class="addr-sheet-btn-icon">✅</span> Copiado!';
+      setTimeout(window.closeAddrSheet, 1000);
+    });
+  };
+  document.getElementById('addrSheetBackdrop').style.display='flex';
+};
+window.closeAddrSheet = (e) => {
+  if (e && e.target!==document.getElementById('addrSheetBackdrop')) return;
+  document.getElementById('addrSheetBackdrop').style.display='none';
+};
+
+// ── City selector ──────────────────────────────────────────────────
+let currentCity = 'Curitiba, PR';
+window.openCitySheet  = () => document.getElementById('citySheetBackdrop').style.display='flex';
+window.closeCitySheet = (e) => {
+  if (e && e.target!==document.getElementById('citySheetBackdrop')) return;
+  document.getElementById('citySheetBackdrop').style.display='none';
+};
+window.selectCity = (city, id) => {
+  currentCity = city;
+  document.getElementById('cityLabel').textContent = city;
+  document.querySelectorAll('.city-option').forEach(b => b.classList.toggle('active', b.id===id));
+  document.getElementById('citySheetBackdrop').style.display='none';
+};
+
+// ── Welcome screen ─────────────────────────────────────────────────
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h<12) return 'Bom dia ☀️';
+  if (h<18) return 'Boa tarde 🌤️';
+  return 'Boa noite ✨';
+}
+
+function showWelcomeScreen() {
+  if (sessionStorage.getItem('cwb_welcomed')) return;
+  document.getElementById('welcomeGreeting').textContent = getGreeting();
+  document.getElementById('welcomeScreen').style.display = 'flex';
+
+  const availCats = CATS.filter(c => c !== 'Todos');
+  const picked    = shuffle(availCats).slice(0,5);
+  const container = document.getElementById('welcomeCats');
+  container.innerHTML = picked.map(c => {
+    const count = P.filter(p => {
+      const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+      return cats.includes(c);
+    }).length;
+    return `<div class="wcat-card" onclick="window.closeWelcome('${c.replace(/'/g,"\\'")}')">
+      <div class="wcat-emoji">${CE[c]||'📍'}</div>
+      <div>
+        <div class="wcat-name">${c}</div>
+        <div class="wcat-count">${count} lugar${count!==1?'es':''}</div>
+      </div>
+      <div class="wcat-arrow">›</div>
+    </div>`;
+  }).join('');
+}
+
+window.closeWelcome = (category) => {
+  sessionStorage.setItem('cwb_welcomed','1');
+  const screen = document.getElementById('welcomeScreen');
+  screen.style.transition='opacity .3s';
+  screen.style.opacity='0';
+  setTimeout(()=>{ screen.style.display='none'; screen.style.opacity=''; },300);
+  if (category) setCat(category);
+};
+
+// ── Boot ───────────────────────────────────────────────────────────
+if (typeof fsLoadPlaces === 'function') {
+  init();
+} else {
+  window.addEventListener('firebase-ready', () => init(), { once: true });
+}
