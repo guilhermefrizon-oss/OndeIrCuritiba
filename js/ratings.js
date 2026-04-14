@@ -3,6 +3,7 @@
 // Regras:
 //  - Só usuários logados com Google podem avaliar
 //  - Podem reavaliar (sobrescreve nota anterior)
+//  - Avaliação EXIGE um comentário junto
 //  - Média calculada no cliente a partir de todos os votos
 //  - Armazenado em: Firestore → ratings/{placeId}/votes/{userId}
 //  - Contador desnormalizado em: ratings/{placeId} → { avg, count }
@@ -19,19 +20,16 @@ export async function submitRating(placeId, stars) {
   if (!user) return false;
 
   try {
-    // Salva voto individual
     await setDoc(
       doc(db, 'ratings', placeId, 'votes', user.uid),
       { stars, userId: user.uid, updatedAt: Date.now() }
     );
 
-    // Recalcula média lendo todos os votos
     const snap = await getDocs(collection(db, 'ratings', placeId, 'votes'));
     const votes = snap.docs.map(d => d.data().stars);
     const avg   = votes.reduce((s,v) => s+v, 0) / votes.length;
     const count = votes.length;
 
-    // Persiste resumo no doc pai (para leitura rápida)
     await setDoc(
       doc(db, 'ratings', placeId),
       { avg: Math.round(avg * 10) / 10, count },
@@ -54,8 +52,8 @@ export async function loadRating(placeId) {
     const votes = snap.docs.map(d => d.data());
     const avg   = votes.reduce((s,v) => s+v.stars, 0) / votes.length;
 
-    const user       = window.currentUser;
-    const userVote   = user ? votes.find(v => v.userId === user.uid) : null;
+    const user     = window.currentUser;
+    const userVote = user ? votes.find(v => v.userId === user.uid) : null;
 
     return {
       avg:       Math.round(avg * 10) / 10,
@@ -70,7 +68,6 @@ export async function loadRating(placeId) {
 
 // ── Renderiza bloco de rating no profile ──────────────────────────
 export async function renderRatingBlock(placeId) {
-  // Remove bloco anterior
   document.getElementById('ratingBlock')?.remove();
 
   const block = document.createElement('div');
@@ -78,7 +75,6 @@ export async function renderRatingBlock(placeId) {
   block.className = 'rating-block';
   block.innerHTML = `<div class="rating-loading"><div class="spinner"></div></div>`;
 
-  // Insere antes dos info-cards
   const infoGrid = document.getElementById('profileInfoGrid');
   if (infoGrid) infoGrid.before(block);
 
@@ -92,9 +88,9 @@ function renderRatingHTML(block, placeId, avg, count, userStars) {
 
   block.innerHTML = `
     <div class="rating-summary">
-      <div class="rating-avg-wrap">
+      <div class="rating-avg-row">
         <div class="rating-avg-score">${hasRating ? avg.toFixed(1) : '—'}</div>
-        <div>
+        <div class="rating-avg-detail">
           <div class="rating-stars-display">${renderStarsDisplay(avg)}</div>
           <div class="rating-count">${count > 0 ? `${count} avaliação${count > 1 ? 'ões' : ''}` : 'Sem avaliações'}</div>
         </div>
@@ -108,12 +104,21 @@ function renderRatingHTML(block, placeId, avg, count, userStars) {
                ? `Sua avaliação <span class="rating-user-prev">${userStars}★</span> — alterar:`
                : 'Avalie este lugar:'}
            </div>
-           <div class="rating-picker" id="ratingPicker" data-selected="${userStars}">
+           <div class="rating-picker" id="ratingPicker" data-selected="${userStars}" data-pending="0">
              ${[1,2,3,4,5].map(i => `
                <button class="rstar${userStars >= i ? ' on' : ''}"
                        data-val="${i}"
-                       onclick="window._handleStarClick(${i},'${placeId}')">★</button>
+                       onclick="window._handleStarSelect(${i})">★</button>
              `).join('')}
+           </div>
+           <div class="rating-comment-wrap" id="ratingCommentWrap" style="display:none">
+             <textarea class="rating-comment-input" id="ratingCommentInput"
+               placeholder="Conta o que achou deste lugar... (obrigatório)" rows="2" maxlength="400"></textarea>
+             <div class="rating-comment-actions">
+               <button class="rating-cancel-btn" onclick="window._cancelRating('${placeId}')">Cancelar</button>
+               <button class="rating-submit-btn" id="ratingSubmitBtn" disabled
+                 onclick="window._confirmRating('${placeId}')">Enviar avaliação</button>
+             </div>
            </div>
          </div>`
       : `<div class="rating-login-hint">
@@ -123,30 +128,79 @@ function renderRatingHTML(block, placeId, avg, count, userStars) {
          </div>`
     }`;
 
-  // Re-render ao logar/deslogar
+  // Habilita botão enviar conforme digita
+  const textarea = document.getElementById('ratingCommentInput');
+  if (textarea) {
+    textarea.addEventListener('input', () => {
+      const btn = document.getElementById('ratingSubmitBtn');
+      if (btn) btn.disabled = textarea.value.trim().length === 0;
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    });
+  }
+
   window.addEventListener('authChanged', () => {
     const current = document.getElementById('ratingBlock');
     if (current) renderRatingBlock(placeId);
   }, { once: true });
 }
 
-// Hover + click nas estrelas
-window._handleStarClick = async (val, placeId) => {
+// Seleciona estrelas → mostra área de comentário
+window._handleStarSelect = (val) => {
   const picker = document.getElementById('ratingPicker');
   if (!picker) return;
-
-  // Feedback visual imediato
   picker.querySelectorAll('.rstar').forEach((b,i) => {
     b.classList.toggle('on', i < val);
   });
-  picker.dataset.selected = val;
+  picker.dataset.pending = val;
 
+  const wrap = document.getElementById('ratingCommentWrap');
+  if (wrap) {
+    wrap.style.display = 'block';
+    document.getElementById('ratingCommentInput')?.focus();
+  }
+};
+
+// Confirmar avaliação (estrelas + comentário)
+window._confirmRating = async (placeId) => {
+  const picker  = document.getElementById('ratingPicker');
+  const textarea = document.getElementById('ratingCommentInput');
+  const val     = parseInt(picker?.dataset.pending || 0);
+  const comment = textarea?.value.trim();
+  if (!val || !comment) return;
+
+  const btn = document.getElementById('ratingSubmitBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  // Salva rating
   const result = await submitRating(placeId, val);
-  if (!result) return;
 
-  // Atualiza bloco com nova média
+  // Salva comentário com estrelas vinculadas
+  try {
+    const { db, addDoc, collection, serverTimestamp } = await import('./firebase.js');
+    await addDoc(collection(db, 'comments', placeId, 'items'), {
+      text:      comment,
+      stars:     val,
+      userId:    window.currentUser.uid,
+      userName:  window.currentUser.displayName || 'Usuário',
+      userPhoto: window.currentUser.photoURL || null,
+      createdAt: serverTimestamp()
+    });
+  } catch(e) { console.warn('Erro ao salvar comentário de rating:', e); }
+
+  if (!result) return;
   const block = document.getElementById('ratingBlock');
   if (block) renderRatingHTML(block, placeId, result.avg, result.count, result.userStars);
+};
+
+// Cancelar seleção de estrelas
+window._cancelRating = (placeId) => {
+  const block = document.getElementById('ratingBlock');
+  if (!block) return;
+  // Recarrega com estado atual (sem pending)
+  loadRating(placeId).then(({ avg, count, userStars }) => {
+    renderRatingHTML(block, placeId, avg, count, userStars);
+  });
 };
 
 // Hover effect
@@ -165,7 +219,7 @@ document.addEventListener('mouseout', e => {
   if (!btn) return;
   const picker = btn.closest('#ratingPicker');
   if (!picker) return;
-  const sel = parseInt(picker.dataset.selected || 0);
+  const sel = parseInt(picker.dataset.pending || picker.dataset.selected || 0);
   picker.querySelectorAll('.rstar').forEach((b,i) => {
     b.classList.remove('hover');
     b.classList.toggle('on', i < sel);

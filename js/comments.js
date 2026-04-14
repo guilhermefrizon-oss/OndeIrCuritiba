@@ -114,6 +114,9 @@ function subscribeToComments(placeId) {
       const avatarHTML = c.userPhoto ? `<img src="${c.userPhoto}" alt="${c.userName}">` : initials;
       const item = document.createElement('div');
       item.className = 'comment-item';
+      const starsHTML = c.stars
+        ? `<span class="comment-stars">${'★'.repeat(c.stars)}${'★'.repeat(5 - c.stars).replace(/★/g, '<span style="opacity:.3">★</span>')}</span>`
+        : '';
       item.innerHTML = `
         <div class="comment-user-avatar">${avatarHTML}</div>
         <div class="comment-bubble">
@@ -121,6 +124,7 @@ function subscribeToComments(placeId) {
             <span class="comment-user-name">${esc(c.userName)}</span>
             <span class="comment-date">${dateStr}</span>
           </div>
+          ${starsHTML}
           <div class="comment-text">${esc(c.text)}</div>
         </div>`;
       list.appendChild(item);

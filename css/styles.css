@@ -516,6 +516,7 @@ body {
 .comment-user-name { font-size: 12px; font-weight: 700; color: var(--acc); }
 .comment-date { font-size: 10px; color: var(--text3); }
 .comment-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+.comment-stars { font-size: 13px; color: #F59E0B; letter-spacing: 1px; display: block; margin-bottom: 4px; }
 .comment-empty { font-size: 13px; color: var(--text3); text-align: center; padding: 20px 0; }
 .comment-loading { display: flex; justify-content: center; padding: 16px 0; }
 .spinner { width: 20px; height: 20px; border: 2.5px solid var(--bg4); border-top-color: var(--acc); border-radius: 50%; animation: spin .7s linear infinite; }
@@ -562,15 +563,16 @@ body {
 .rating-loading { display: flex; justify-content: center; padding: 10px 0; }
 
 .rating-summary { margin-bottom: 14px; }
-.rating-avg-wrap {
+.rating-avg-row {
   display: flex; align-items: center; gap: 14px;
 }
 .rating-avg-score {
   font-size: 42px; font-weight: 800; letter-spacing: -2px;
-  color: var(--text); line-height: 1; min-width: 56px;
+  color: var(--text); line-height: 1; min-width: 56px; flex-shrink: 0;
 }
-.rating-stars-display { display: flex; gap: 2px; margin-bottom: 3px; }
-.sdot { font-size: 18px; }
+.rating-avg-detail { display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.rating-stars-display { display: flex; gap: 2px; }
+.sdot { font-size: 18px; line-height: 1; }
 .sdot.full  { color: #F59E0B; }
 .sdot.half  { color: #F59E0B; opacity: .55; }
 .sdot.empty { color: var(--bg4); }
@@ -590,7 +592,7 @@ body {
 }
 
 /* Star picker */
-.rating-picker { display: flex; gap: 6px; }
+.rating-picker { display: flex; gap: 6px; margin-bottom: 4px; }
 .rstar {
   font-size: 30px; background: none; border: none; cursor: pointer;
   color: var(--bg4); transition: color .12s, transform .1s;
@@ -599,6 +601,34 @@ body {
 .rstar.on    { color: #F59E0B; }
 .rstar.hover { color: #FCD34D; transform: scale(1.15); }
 .rstar:active { transform: scale(.92); }
+
+/* Comment input after star selection */
+.rating-comment-wrap {
+  margin-top: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.rating-comment-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--bg3); border: 1.5px solid var(--bg4);
+  border-radius: 14px; padding: 10px 12px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text);
+  resize: none; outline: none; line-height: 1.5; min-height: 60px;
+  transition: border-color .15s;
+}
+.rating-comment-input:focus { border-color: var(--acc); }
+.rating-comment-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.rating-cancel-btn {
+  padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--bg4);
+  background: transparent; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer;
+}
+.rating-submit-btn {
+  padding: 8px 16px; border-radius: 12px; border: none;
+  background: var(--acc); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;
+  transition: opacity .15s;
+}
+.rating-submit-btn:disabled { opacity: .4; cursor: default; }
+.rating-submit-btn:not(:disabled):hover { opacity: .85; }
 
 /* Login hint */
 .rating-login-hint { border-top: 1.5px solid var(--bg4); padding-top: 14px; }
@@ -609,5 +639,16 @@ body {
   color: var(--text2); cursor: pointer; transition: background .15s;
 }
 .rating-login-btn:hover { background: var(--bg4); }
+
+/* Rating badge no card */
+.card-name-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.card-rating {
+  font-size: 13px; font-weight: 700; color: #F59E0B;
+  background: rgba(245,158,11,.18); border-radius: 20px;
+  padding: 3px 9px; white-space: nowrap; flex-shrink: 0;
+  backdrop-filter: blur(4px);
+}
 
 .photo-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; opacity: .3; }

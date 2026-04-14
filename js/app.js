@@ -5,7 +5,7 @@ import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
 import { renderFavorites, toggleFavView } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
-import { renderRatingBlock } from './ratings.js';
+import { renderRatingBlock, loadRating } from './ratings.js';
 
 // ── State ──────────────────────────────────────────────────────────
 let P        = [];
@@ -51,6 +51,22 @@ function sortByLikesThenShuffle(places) {
 }
 
 // ── Init ───────────────────────────────────────────────────────────
+
+// Carrega ratings de todos os lugares em paralelo e atualiza os cards visíveis
+async function loadAllRatings() {
+  if (!P.length) return;
+  const results = await Promise.allSettled(
+    P.map(p => loadRating(p.id).then(r => ({ id: p.id, ...r })))
+  );
+  results.forEach(r => {
+    if (r.status === 'fulfilled' && r.value.avg > 0) {
+      const p = P.find(x => x.id === r.value.id);
+      if (p) p._avgRating = r.value;
+    }
+  });
+  // Re-renderiza os cards para mostrar as notas
+  renderCard();
+}
 async function init() {
   const stack = document.getElementById('cardStack');
   if (stack) stack.innerHTML = `
@@ -86,6 +102,9 @@ async function init() {
     saved = allSaved;
     updateBadge();
   }
+
+  // Carrega médias de rating em background e atualiza cards
+  loadAllRatings();
 }
 
 // ── Category row ───────────────────────────────────────────────────
@@ -164,6 +183,11 @@ function renderCard() {
 function makeCard(p) {
   const el = document.createElement('div');
   el.className = 'place-card su';
+
+  const ratingHTML = p._avgRating?.avg > 0
+    ? `<div class="card-rating">★ ${p._avgRating.avg.toFixed(1)}</div>`
+    : '';
+
   el.innerHTML = `
     <div class="card-bg bg-${p.bg}"><div class="photo-loading">${p.e}</div></div>
     <div class="card-overlay"></div>
@@ -177,7 +201,10 @@ function makeCard(p) {
     <div class="card-photo-tap card-photo-tap-right" id="cardTapRight"></div>
     <div class="card-bottom card-bottom-tap"
          onclick="event.stopPropagation();window._openProfileCurrent()">
-      <div class="card-name">${p.n}</div>
+      <div class="card-name-row">
+        <div class="card-name">${p.n}</div>
+        ${ratingHTML}
+      </div>
       <div class="card-addr">📍 ${p.a}</div>
       <div class="card-meta">
         <span>${p.b}</span><div class="meta-sep"></div><span>🕐 ${p.h}</span>
