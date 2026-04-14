@@ -1,4 +1,4 @@
-# OndeIr Curitiba 🌆
+# Day Match Curitiba 🌆
 
 App estilo Tinder para descobrir os melhores lugares em Curitiba.
 

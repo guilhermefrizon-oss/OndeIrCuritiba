@@ -5,6 +5,7 @@ import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
 import { renderFavorites, toggleFavView } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
+import { renderRatingBlock } from './ratings.js';
 
 // ── State ──────────────────────────────────────────────────────────
 let P        = [];
@@ -428,6 +429,7 @@ async function openProfile(p) {
       </div>
     </div>`;
 
+  if (typeof renderRatingBlock === 'function') renderRatingBlock(p.id);
   if (typeof renderCommentsSection === 'function') renderCommentsSection(p.id);
 
   document.getElementById('storyBars').innerHTML='<div class="story-bar"><div class="story-bar-fill"></div></div>';
