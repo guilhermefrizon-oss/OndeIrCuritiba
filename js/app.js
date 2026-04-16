@@ -27,6 +27,7 @@ let dragStartX  = 0;
 let dragStartY  = 0;
 let dragCurX    = 0;
 let dragLocked  = false;
+let dragHappened = false; // impede o click no bottom-tap após um swipe
 
 // ── Helpers ────────────────────────────────────────────────────────
 function shuffle(arr) {
@@ -217,7 +218,10 @@ function makeCard(p) {
   return el;
 }
 
-window._openProfileCurrent = () => openProfile(filtered[idx % filtered.length]);
+window._openProfileCurrent = () => {
+  if (dragHappened) return; // ignorar clique que vem logo após um swipe
+  openProfile(filtered[idx % filtered.length]);
+};
 
 // ── Card photos (story) ────────────────────────────────────────────
 function initCardPhotos(p) {
@@ -286,7 +290,8 @@ function bindDrag(card) {
 }
 
 function onDragStart(e) {
-  if (e.target.closest('.card-bottom-tap')) return;
+  // Permite drag de qualquer área do card.
+  // O click do bottom-tap só abre o perfil se não houve swipe (ver dragHappened).
   dragActive=true; dragLocked=false; dragCurX=0;
   const pt = e.touches ? e.touches[0] : e;
   dragStartX = pt.clientX; dragStartY = pt.clientY;
@@ -299,18 +304,20 @@ function onDragMove(e) {
   const dx = pt.clientX - dragStartX;
   const dy = pt.clientY - dragStartY;
   if (!dragLocked) {
-    if (Math.abs(dx)<6 && Math.abs(dy)<6) return;
-    if (Math.abs(dy)>Math.abs(dx)) { dragActive=false; return; }
+    // Aguarda pelo menos 8px de movimento para determinar direção
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    // Cancela só se for claramente vertical (2× mais vertical que horizontal)
+    if (Math.abs(dy) > Math.abs(dx) * 2) { dragActive=false; return; }
     dragLocked=true;
   }
   if (e.cancelable) e.preventDefault();
   dragCurX = dx;
-  activeCard.style.transform = `translateX(${dx}px) rotate(${dx*0.055}deg)`;
+  activeCard.style.transform = `translateX(${dx}px) rotate(${dx*0.05}deg)`;
   const ls = document.getElementById('likeStamp');
   const ns = document.getElementById('nopeStamp');
-  const t  = Math.abs(dx)>30 ? Math.min((Math.abs(dx)-30)/90,1) : 0;
-  if (dx>30)       { ls.style.opacity=t; ns.style.opacity=0; }
-  else if (dx<-30) { ns.style.opacity=t; ls.style.opacity=0; }
+  const t  = Math.abs(dx)>20 ? Math.min((Math.abs(dx)-20)/70,1) : 0;
+  if (dx>20)       { ls.style.opacity=t; ns.style.opacity=0; }
+  else if (dx<-20) { ns.style.opacity=t; ls.style.opacity=0; }
   else             { ls.style.opacity=0; ns.style.opacity=0; }
 }
 
@@ -319,12 +326,20 @@ function onDragEnd() {
   dragActive=false;
   document.getElementById('likeStamp').style.opacity=0;
   document.getElementById('nopeStamp').style.opacity=0;
-  const threshold = window.innerWidth * 0.30;
+
+  // Threshold menor = swipe mais natural (≈85px num 390px)
+  const threshold = window.innerWidth * 0.22;
   const card = activeCard;
+
   if (dragCurX > threshold) {
-    animateOut(card,'right'); doSave(place()); setTimeout(nextCard,380);
+    dragHappened = true;
+    animateOut(card,'right');
+    doSave(place()); fsIncrementLike(place().id);
+    setTimeout(() => { nextCard(); dragHappened=false; }, 400);
   } else if (dragCurX < -threshold) {
-    animateOut(card,'left'); setTimeout(nextCard,380);
+    dragHappened = true;
+    animateOut(card,'left');
+    setTimeout(() => { nextCard(); dragHappened=false; }, 400);
   } else {
     card.style.transition='transform .45s cubic-bezier(.34,1.4,.64,1)';
     card.style.transform='';
