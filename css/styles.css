@@ -770,3 +770,42 @@ body {
 
 /* ── Profile: photo area slightly taller ────────────────────────── */
 .profile-photo-wrap { height: 320px; }
+
+/* ── Bloco unificado: estrelas + comentário ──────────────────────── */
+.unified-review-wrap {
+  background: var(--bg2);
+  border: 1.5px solid var(--bg4);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+.unified-stars-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1.5px solid var(--bg4);
+  gap: 10px;
+}
+.unified-stars-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+.unified-star-picker {
+  display: flex;
+  gap: 0;
+}
+.unified-star-picker .rstar {
+  font-size: 22px;
+  padding: 2px 3px;
+}
+.unified-comment-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+}
