@@ -88,13 +88,19 @@ function renderRatingHTML(block, placeId, avg, count, userStars) {
 
   block.innerHTML = `
     <div class="rating-summary">
-      <div class="rating-avg-row">
-        <div class="rating-avg-score">${hasRating ? avg.toFixed(1) : '—'}</div>
-        <div class="rating-avg-detail">
-          <div class="rating-stars-display">${renderStarsDisplay(avg)}</div>
-          <div class="rating-count">${count > 0 ? `${count} avaliação${count > 1 ? 'ões' : ''}` : 'Sem avaliações'}</div>
-        </div>
-      </div>
+      ${hasRating
+        ? `<div class="rating-avg-row">
+            <div class="rating-avg-score">${avg.toFixed(1)}</div>
+            <div class="rating-avg-detail">
+              <div class="rating-stars-display">${renderStarsDisplay(avg)}</div>
+              <div class="rating-count">${count} avaliação${count > 1 ? 'ões' : ''}</div>
+            </div>
+          </div>`
+        : `<div class="rating-empty-state">
+            <div class="rating-empty-stars">${renderStarsDisplay(0)}</div>
+            <p class="rating-empty-text">Este estabelecimento ainda não possui avaliações no DayMatch</p>
+          </div>`
+      }
     </div>
 
     ${user
