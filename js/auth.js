@@ -4,6 +4,13 @@ import {
   signInWithPopup, signOut, onAuthStateChanged
 } from './firebase.js';
 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
 const provider = new GoogleAuthProvider();
 window.currentUser = null;
 
@@ -19,7 +26,7 @@ function updateAvatarUI(user) {
   if (user) {
     avatar.innerHTML = user.photoURL
       ? `<img src="${user.photoURL}" alt="${user.displayName}">`
-      : (user.displayName || 'U').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+      : getInitials(user);
     avatar.title = user.displayName || user.email;
   } else {
     avatar.innerHTML = '';
@@ -28,9 +35,31 @@ function updateAvatarUI(user) {
   }
 }
 
+function getInitials(user) {
+  const name = user.displayName || user.email || 'U';
+  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
 export async function signInWithGoogle() {
   try { await signInWithPopup(auth, provider); closeAuthModal(); }
   catch (e) { console.warn('Login falhou:', e.message); }
+}
+
+export async function signUpWithEmail(name, email, password) {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  if (name) await updateProfile(cred.user, { displayName: name });
+  closeAuthModal();
+  return cred.user;
+}
+
+export async function signInWithEmail(email, password) {
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  closeAuthModal();
+  return cred.user;
+}
+
+export async function resetPassword(email) {
+  await sendPasswordResetEmail(auth, email);
 }
 
 export async function signOutUser() {
@@ -38,21 +67,34 @@ export async function signOutUser() {
   catch (e) { console.warn('Logout falhou:', e); }
 }
 
-export function showAuthModal() {
+// ── Auth Modal ─────────────────────────────────────────────────────
+export function showAuthModal(reason = 'default') {
   let bd = document.getElementById('authModalBackdrop');
   if (!bd) {
     bd = document.createElement('div');
     bd.className = 'auth-modal-backdrop';
     bd.id = 'authModalBackdrop';
-    bd.innerHTML = `
-      <div class="auth-modal">
-        <div class="auth-modal-handle"></div>
-        <div class="auth-modal-icon">💬</div>
-        <div class="auth-modal-title">Entre para comentar</div>
-        <div class="auth-modal-sub">
-          Compartilhe sua experiência com outros usuários.<br>
-          Faça login com sua conta Google para continuar.
-        </div>
+    document.body.appendChild(bd);
+    bd.addEventListener('click', e => { if (e.target === bd) closeAuthModal(); });
+  }
+
+  const reasons = {
+    like:    { icon: '❤️', title: 'Curtir lugares',    sub: 'Entre para salvar e curtir lugares que você ama.' },
+    save:    { icon: '🔖', title: 'Salvar lugares',    sub: 'Crie sua lista pessoal de lugares favoritos.' },
+    comment: { icon: '💬', title: 'Deixar um comentário', sub: 'Compartilhe sua experiência com outros usuários.' },
+    default: { icon: '✨', title: 'Entre na sua conta', sub: 'Acesse todos os recursos do Day Match.' },
+  };
+  const r = reasons[reason] || reasons.default;
+
+  bd.innerHTML = `
+    <div class="auth-modal" id="authModal">
+      <div class="auth-modal-handle"></div>
+
+      <div id="authViewLogin" class="auth-view">
+        <div class="auth-modal-icon">${r.icon}</div>
+        <div class="auth-modal-title">${r.title}</div>
+        <div class="auth-modal-sub">${r.sub}</div>
+
         <button class="auth-google-btn" id="authGoogleBtn">
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -62,14 +104,186 @@ export function showAuthModal() {
           </svg>
           Continuar com Google
         </button>
+
+        <div class="auth-divider"><span>ou</span></div>
+
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="loginEmail" type="email" placeholder="E-mail" autocomplete="email">
+        </div>
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="loginPassword" type="password" placeholder="Senha" autocomplete="current-password">
+          <button class="auth-field-eye" id="loginEyeBtn" type="button">👁</button>
+        </div>
+        <div id="loginError" class="auth-error" style="display:none"></div>
+
+        <button class="auth-submit-btn" id="loginSubmitBtn">Entrar</button>
+
+        <div class="auth-footer-row">
+          <button class="auth-link-btn" id="goForgotBtn">Esqueci a senha</button>
+          <span class="auth-sep">·</span>
+          <button class="auth-link-btn" id="goRegisterBtn">Criar conta</button>
+        </div>
         <button class="auth-cancel-btn" id="authCancelBtn">Agora não</button>
-      </div>`;
-    document.body.appendChild(bd);
-    bd.addEventListener('click', e => { if (e.target === bd) closeAuthModal(); });
-  }
+      </div>
+
+      <div id="authViewRegister" class="auth-view" style="display:none">
+        <div class="auth-modal-icon">🙌</div>
+        <div class="auth-modal-title">Criar conta</div>
+        <div class="auth-modal-sub">Junte-se e descubra os melhores lugares de Curitiba.</div>
+
+        <button class="auth-google-btn" id="authGoogleBtn2">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Registrar com Google
+        </button>
+
+        <div class="auth-divider"><span>ou</span></div>
+
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="regName" type="text" placeholder="Seu nome" autocomplete="name">
+        </div>
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="regEmail" type="email" placeholder="E-mail" autocomplete="email">
+        </div>
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="regPassword" type="password" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password">
+          <button class="auth-field-eye" id="regEyeBtn" type="button">👁</button>
+        </div>
+        <div id="regError" class="auth-error" style="display:none"></div>
+
+        <button class="auth-submit-btn" id="regSubmitBtn">Criar conta</button>
+
+        <div class="auth-footer-row">
+          <button class="auth-link-btn" id="goLoginBtn">Já tenho conta</button>
+        </div>
+        <button class="auth-cancel-btn" id="regCancelBtn">Agora não</button>
+      </div>
+
+      <div id="authViewForgot" class="auth-view" style="display:none">
+        <div class="auth-modal-icon">🔑</div>
+        <div class="auth-modal-title">Recuperar senha</div>
+        <div class="auth-modal-sub">Enviaremos um link para redefinir sua senha.</div>
+
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="forgotEmail" type="email" placeholder="Seu e-mail">
+        </div>
+        <div id="forgotError" class="auth-error" style="display:none"></div>
+        <div id="forgotSuccess" class="auth-success" style="display:none">✅ E-mail enviado! Verifique sua caixa de entrada.</div>
+
+        <button class="auth-submit-btn" id="forgotSubmitBtn">Enviar link</button>
+
+        <div class="auth-footer-row">
+          <button class="auth-link-btn" id="forgotBackBtn">Voltar ao login</button>
+        </div>
+        <button class="auth-cancel-btn" id="forgotCancelBtn">Cancelar</button>
+      </div>
+    </div>`;
+
   bd.style.display = 'flex';
-  document.getElementById('authGoogleBtn').onclick = signInWithGoogle;
-  document.getElementById('authCancelBtn').onclick = closeAuthModal;
+  _bindAuthModal();
+}
+
+function _bindAuthModal() {
+  document.getElementById('authGoogleBtn').onclick  = signInWithGoogle;
+  document.getElementById('authGoogleBtn2')?.addEventListener('click', signInWithGoogle);
+  document.getElementById('goRegisterBtn').onclick  = () => switchAuthView('Register');
+  document.getElementById('goLoginBtn').onclick     = () => switchAuthView('Login');
+  document.getElementById('goForgotBtn').onclick    = () => switchAuthView('Forgot');
+  document.getElementById('forgotBackBtn').onclick  = () => switchAuthView('Login');
+  document.getElementById('authCancelBtn').onclick  = closeAuthModal;
+  document.getElementById('regCancelBtn').onclick   = closeAuthModal;
+  document.getElementById('forgotCancelBtn').onclick= closeAuthModal;
+
+  _bindEye('loginEyeBtn', 'loginPassword');
+  _bindEye('regEyeBtn', 'regPassword');
+
+  document.getElementById('loginSubmitBtn').onclick = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pwd   = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    if (!email || !pwd) { showErr(errEl, 'Preencha e-mail e senha.'); return; }
+    setLoading('loginSubmitBtn', true);
+    try { await signInWithEmail(email, pwd); }
+    catch (e) { showErr(errEl, _friendlyError(e.code)); }
+    finally { setLoading('loginSubmitBtn', false); }
+  };
+
+  document.getElementById('regSubmitBtn').onclick = async () => {
+    const name  = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const pwd   = document.getElementById('regPassword').value;
+    const errEl = document.getElementById('regError');
+    errEl.style.display = 'none';
+    if (!email || !pwd) { showErr(errEl, 'Preencha e-mail e senha.'); return; }
+    if (pwd.length < 6)  { showErr(errEl, 'Senha deve ter pelo menos 6 caracteres.'); return; }
+    setLoading('regSubmitBtn', true);
+    try { await signUpWithEmail(name, email, pwd); }
+    catch (e) { showErr(errEl, _friendlyError(e.code)); }
+    finally { setLoading('regSubmitBtn', false); }
+  };
+
+  document.getElementById('forgotSubmitBtn').onclick = async () => {
+    const email  = document.getElementById('forgotEmail').value.trim();
+    const errEl  = document.getElementById('forgotError');
+    const succEl = document.getElementById('forgotSuccess');
+    errEl.style.display = 'none'; succEl.style.display = 'none';
+    if (!email) { showErr(errEl, 'Digite seu e-mail.'); return; }
+    setLoading('forgotSubmitBtn', true);
+    try { await resetPassword(email); succEl.style.display = 'block'; }
+    catch (e) { showErr(errEl, _friendlyError(e.code)); }
+    finally { setLoading('forgotSubmitBtn', false); }
+  };
+
+  ['loginEmail','loginPassword'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('loginSubmitBtn').click();
+    });
+  });
+}
+
+function _bindEye(btnId, fieldId) {
+  const btn = document.getElementById(btnId);
+  const field = document.getElementById(fieldId);
+  if (!btn || !field) return;
+  btn.onclick = () => {
+    const vis = field.type === 'text';
+    field.type = vis ? 'password' : 'text';
+    btn.textContent = vis ? '👁' : '🙈';
+  };
+}
+
+function switchAuthView(view) {
+  ['Login','Register','Forgot'].forEach(v => {
+    const el = document.getElementById('authView' + v);
+    if (el) el.style.display = v === view ? 'block' : 'none';
+  });
+}
+
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.style.opacity = loading ? '.6' : '1';
+}
+
+function _friendlyError(code) {
+  const map = {
+    'auth/user-not-found':        'Nenhuma conta encontrada com este e-mail.',
+    'auth/wrong-password':        'Senha incorreta.',
+    'auth/invalid-credential':    'E-mail ou senha incorretos.',
+    'auth/email-already-in-use':  'Este e-mail já está em uso.',
+    'auth/weak-password':         'Senha muito fraca.',
+    'auth/invalid-email':         'E-mail inválido.',
+    'auth/too-many-requests':     'Muitas tentativas. Tente de novo em alguns minutos.',
+    'auth/network-request-failed':'Erro de conexão.',
+  };
+  return map[code] || 'Ocorreu um erro. Tente novamente.';
 }
 
 export function closeAuthModal() {
@@ -77,13 +291,192 @@ export function closeAuthModal() {
   if (bd) bd.style.display = 'none';
 }
 
-export function handleAvatarClick() {
-  if (window.currentUser) {
-    if (confirm(`Sair da conta ${window.currentUser.displayName || window.currentUser.email}?`))
-      signOutUser();
-  } else {
-    showAuthModal();
+// ── User Profile Screen ────────────────────────────────────────────
+export function showUserProfile() {
+  const user = window.currentUser;
+  if (!user) { showAuthModal('default'); return; }
+
+  let screen = document.getElementById('userProfileScreen');
+  if (!screen) {
+    screen = document.createElement('div');
+    screen.id = 'userProfileScreen';
+    screen.className = 'user-profile-screen';
+    document.body.appendChild(screen);
   }
+
+  const initials    = getInitials(user);
+  const displayName = user.displayName || 'Usuário';
+  const email       = user.email || '';
+  const photoURL    = user.photoURL || '';
+  const isGoogle    = user.providerData?.[0]?.providerId === 'google.com';
+  const memberSince = user.metadata?.creationTime
+    ? new Date(user.metadata.creationTime).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    : '';
+
+  screen.innerHTML = `
+    <div class="ups-backdrop" id="upsBackdrop"></div>
+    <div class="ups-sheet" id="upsSheet">
+      <div class="ups-handle"></div>
+
+      <div class="ups-header">
+        <div class="ups-avatar-wrap">
+          ${photoURL
+            ? `<img class="ups-avatar-img" src="${photoURL}" alt="${displayName}">`
+            : `<div class="ups-avatar-initials">${initials}</div>`}
+          <div class="ups-avatar-badge" title="${isGoogle ? 'Google' : 'E-mail'}">${isGoogle ? '🔵' : '✉️'}</div>
+        </div>
+        <div class="ups-user-info">
+          <div class="ups-name">${displayName}</div>
+          <div class="ups-email">${email}</div>
+          ${memberSince ? `<div class="ups-since">Membro desde ${memberSince}</div>` : ''}
+        </div>
+      </div>
+
+      <div class="ups-stats">
+        <div class="ups-stat">
+          <div class="ups-stat-num" id="upsStatLikes">—</div>
+          <div class="ups-stat-lbl">Curtidos</div>
+        </div>
+        <div class="ups-stat-divider"></div>
+        <div class="ups-stat">
+          <div class="ups-stat-num" id="upsStatSaved">—</div>
+          <div class="ups-stat-lbl">Salvos</div>
+        </div>
+        <div class="ups-stat-divider"></div>
+        <div class="ups-stat">
+          <div class="ups-stat-num" id="upsStatComments">—</div>
+          <div class="ups-stat-lbl">Comentários</div>
+        </div>
+      </div>
+
+      <div class="ups-section-title">Conta</div>
+      <div class="ups-actions">
+        ${!isGoogle ? `
+        <button class="ups-action-row" id="upsChangeNameBtn">
+          <span class="ups-action-icon">✏️</span>
+          <span class="ups-action-label">Alterar nome</span>
+          <span class="ups-action-chevron">›</span>
+        </button>
+        <button class="ups-action-row" id="upsChangePwdBtn">
+          <span class="ups-action-icon">🔑</span>
+          <span class="ups-action-label">Alterar senha</span>
+          <span class="ups-action-chevron">›</span>
+        </button>` : ''}
+        <button class="ups-action-row ups-action-danger" id="upsSignOutBtn">
+          <span class="ups-action-icon">🚪</span>
+          <span class="ups-action-label">Sair da conta</span>
+          <span class="ups-action-chevron">›</span>
+        </button>
+      </div>
+
+      <div id="upsEditName" class="ups-edit-panel" style="display:none">
+        <div class="ups-section-title" style="margin-top:12px">Alterar nome</div>
+        <div class="auth-field-wrap"><input class="auth-field" id="upsNewName" type="text" placeholder="Seu nome" value="${displayName}"></div>
+        <div id="upsNameError" class="auth-error" style="display:none"></div>
+        <button class="auth-submit-btn" id="upsSaveNameBtn">Salvar</button>
+        <button class="ups-link-btn" id="upsCancelNameBtn">Cancelar</button>
+      </div>
+
+      <div id="upsEditPwd" class="ups-edit-panel" style="display:none">
+        <div class="ups-section-title" style="margin-top:12px">Alterar senha</div>
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="upsNewPwd" type="password" placeholder="Nova senha (mín. 6 caracteres)">
+          <button class="auth-field-eye" id="upsPwdEyeBtn" type="button">👁</button>
+        </div>
+        <div id="upsPwdError" class="auth-error" style="display:none"></div>
+        <div id="upsPwdSuccess" class="auth-success" style="display:none">✅ Senha alterada!</div>
+        <button class="auth-submit-btn" id="upsSavePwdBtn">Alterar senha</button>
+        <button class="ups-link-btn" id="upsCancelPwdBtn">Cancelar</button>
+      </div>
+
+      <button class="ups-close-btn" id="upsCloseBtn">Fechar</button>
+    </div>`;
+
+  screen.style.display = 'flex';
+  requestAnimationFrame(() => screen.classList.add('ups-visible'));
+
+  _loadUserStats(user);
+
+  document.getElementById('upsBackdrop').onclick = closeUserProfile;
+  document.getElementById('upsCloseBtn').onclick  = closeUserProfile;
+  document.getElementById('upsSignOutBtn').onclick = async () => { closeUserProfile(); await signOutUser(); };
+
+  const changeNameBtn = document.getElementById('upsChangeNameBtn');
+  const changePwdBtn  = document.getElementById('upsChangePwdBtn');
+
+  if (changeNameBtn) {
+    changeNameBtn.onclick = () => { document.getElementById('upsEditName').style.display='block'; changeNameBtn.style.display='none'; };
+  }
+  if (changePwdBtn) {
+    changePwdBtn.onclick = () => { document.getElementById('upsEditPwd').style.display='block'; changePwdBtn.style.display='none'; };
+  }
+
+  const saveNameBtn = document.getElementById('upsSaveNameBtn');
+  if (saveNameBtn) {
+    saveNameBtn.onclick = async () => {
+      const newName = document.getElementById('upsNewName').value.trim();
+      const errEl   = document.getElementById('upsNameError');
+      errEl.style.display = 'none';
+      if (!newName) { showErr(errEl,'Digite um nome.'); return; }
+      setLoading('upsSaveNameBtn',true);
+      try {
+        await updateProfile(auth.currentUser, { displayName: newName });
+        window.currentUser = auth.currentUser;
+        updateAvatarUI(auth.currentUser);
+        screen.querySelector('.ups-name').textContent = newName;
+        document.getElementById('upsEditName').style.display='none';
+        if (changeNameBtn) changeNameBtn.style.display='flex';
+      } catch(e) { showErr(errEl,'Erro ao salvar.'); }
+      finally { setLoading('upsSaveNameBtn',false); }
+    };
+    document.getElementById('upsCancelNameBtn').onclick = () => {
+      document.getElementById('upsEditName').style.display='none';
+      if (changeNameBtn) changeNameBtn.style.display='flex';
+    };
+  }
+
+  const savePwdBtn = document.getElementById('upsSavePwdBtn');
+  if (savePwdBtn) {
+    _bindEye('upsPwdEyeBtn','upsNewPwd');
+    savePwdBtn.onclick = async () => {
+      const { updatePassword } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+      const newPwd = document.getElementById('upsNewPwd').value;
+      const errEl  = document.getElementById('upsPwdError');
+      const succEl = document.getElementById('upsPwdSuccess');
+      errEl.style.display='none'; succEl.style.display='none';
+      if (newPwd.length < 6) { showErr(errEl,'Mínimo 6 caracteres.'); return; }
+      setLoading('upsSavePwdBtn',true);
+      try { await updatePassword(auth.currentUser,newPwd); succEl.style.display='block'; document.getElementById('upsNewPwd').value=''; }
+      catch(e) { showErr(errEl,_friendlyError(e.code)); }
+      finally { setLoading('upsSavePwdBtn',false); }
+    };
+    document.getElementById('upsCancelPwdBtn').onclick = () => {
+      document.getElementById('upsEditPwd').style.display='none';
+      if (changePwdBtn) changePwdBtn.style.display='flex';
+    };
+  }
+}
+
+function _loadUserStats(user) {
+  const saved = JSON.parse(localStorage.getItem('cwb_saved') || '[]');
+  const liked = JSON.parse(localStorage.getItem('cwb_liked') || '[]');
+  const el = id => document.getElementById(id);
+  if (el('upsStatSaved'))    el('upsStatSaved').textContent    = saved.length;
+  if (el('upsStatLikes'))    el('upsStatLikes').textContent    = liked.length;
+  if (el('upsStatComments')) el('upsStatComments').textContent = '—';
+}
+
+export function closeUserProfile() {
+  const screen = document.getElementById('userProfileScreen');
+  if (!screen) return;
+  screen.classList.remove('ups-visible');
+  screen.classList.add('ups-closing');
+  setTimeout(() => { screen.classList.remove('ups-closing'); screen.style.display='none'; }, 320);
+}
+
+export function handleAvatarClick() {
+  if (window.currentUser) showUserProfile();
+  else showAuthModal('default');
 }
 
 window.signInWithGoogle  = signInWithGoogle;
@@ -91,3 +484,5 @@ window.signOutUser       = signOutUser;
 window.showAuthModal     = showAuthModal;
 window.closeAuthModal    = closeAuthModal;
 window.handleAvatarClick = handleAvatarClick;
+window.showUserProfile   = showUserProfile;
+window.closeUserProfile  = closeUserProfile;
