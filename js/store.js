@@ -1,7 +1,7 @@
 // ── store.js ──────────────────────────────────────────────────────
 import {
   db,
-  doc, setDoc, deleteDoc, getDocs,
+  doc, getDoc, setDoc, deleteDoc, getDocs,
   collection, increment
 } from './firebase.js';
 
@@ -42,7 +42,13 @@ export const fsLoadCategories = async () => {
 };
 
 export const fsIncrementLike = async (placeId) => {
+  const user = window.currentUser;
+  if (!user) return; // só usuários autenticados
   try {
+    const likeRef = doc(db, 'likes', placeId, 'users', user.uid);
+    const existing = await getDoc(likeRef);
+    if (existing.exists()) return; // já curtiu, não incrementa de novo
+    await setDoc(likeRef, { likedAt: new Date().toISOString() });
     await setDoc(doc(db, 'places', placeId), { _likes: increment(1) }, { merge: true });
   } catch (e) { console.warn('fsIncrementLike:', e); }
 };

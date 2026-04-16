@@ -3,7 +3,7 @@
 
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, doc, setDoc, deleteDoc, getDocs,
+  getFirestore, doc, getDoc, setDoc, deleteDoc, getDocs,
   collection, increment, addDoc, query, orderBy, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
@@ -25,5 +25,5 @@ const db   = getFirestore(app);
 const auth = getAuth(app);
 
 export { db, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged };
-export { doc, setDoc, deleteDoc, getDocs, collection, increment };
+export { doc, getDoc, setDoc, deleteDoc, getDocs, collection, increment };
 export { addDoc, query, orderBy, onSnapshot, serverTimestamp };

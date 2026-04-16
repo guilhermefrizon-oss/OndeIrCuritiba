@@ -333,6 +333,14 @@ function onDragEnd() {
 
   if (dragCurX > threshold) {
     dragHappened = true;
+    if (!window.currentUser) {
+      card.style.transition='transform .45s cubic-bezier(.34,1.4,.64,1)';
+      card.style.transform='';
+      dragCurX=0;
+      setTimeout(() => { dragHappened=false; }, 400);
+      window.showAuthModal && window.showAuthModal('like');
+      return;
+    }
     animateOut(card,'right');
     doSave(place()); fsIncrementLike(place().id);
     setTimeout(() => { nextCard(); dragHappened=false; }, 400);
@@ -369,6 +377,10 @@ document.addEventListener('mouseup',   onDragEnd);
 window.swipe = (dir, fromBtn = false) => {
   if (!activeCard) return;
   if (dir === 'right') {
+    if (!window.currentUser) {
+      window.showAuthModal && window.showAuthModal('like');
+      return;
+    }
     doSave(place()); fsIncrementLike(place().id);
     pulseBtn(document.querySelector('.b-like .c'));
     if (fromBtn) showHeartBurst();
