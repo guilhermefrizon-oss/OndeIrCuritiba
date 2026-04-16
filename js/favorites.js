@@ -44,6 +44,7 @@ export function renderFavorites(saved, onOpenProfile, onRemove) {
 // ── List view (grouped by category) ───────────────────────────────
 function renderList(saved, grid, onOpenProfile, onRemove) {
   grid.innerHTML = '';
+  let animIdx = 0;
 
   // Group by category
   const groups = {};
@@ -57,12 +58,16 @@ function renderList(saved, grid, onOpenProfile, onRemove) {
     // Category header
     const header = document.createElement('div');
     header.className = 'fav-cat-header';
-    header.textContent = cat;
+    // Use emoji from first place in group as category indicator
+    const catEmoji = places[0]?.e || '';
+    header.innerHTML = `<span class="fav-cat-emoji">${catEmoji}</span>${cat}<span class="fav-cat-count">${places.length}</span>`;
     grid.appendChild(header);
 
     places.forEach(p => {
       const row = document.createElement('div');
       row.className = 'saved-row su';
+      row.style.animationDelay = `${animIdx * 40}ms`;
+      animIdx++;
       row.onclick = () => onOpenProfile(p);
 
       row.innerHTML = `

@@ -351,13 +351,33 @@ document.addEventListener('touchend',  onDragEnd);
 document.addEventListener('mouseup',   onDragEnd);
 
 // ── Swipe buttons ──────────────────────────────────────────────────
-window.swipe = (dir) => {
+window.swipe = (dir, fromBtn = false) => {
   if (!activeCard) return;
-  if (dir==='right') { doSave(place()); fsIncrementLike(place().id); }
+  if (dir === 'right') {
+    doSave(place()); fsIncrementLike(place().id);
+    pulseBtn(document.querySelector('.b-like .c'));
+    if (fromBtn) showHeartBurst();
+  }
+  if (dir === 'left' && fromBtn) {
+    pulseBtn(document.querySelector('.b-pass .c'));
+  }
   animateOut(activeCard, dir);
   setTimeout(nextCard, 380);
 };
-window.savePlace = () => { doSave(place()); window.swipe('right'); };
+
+window.savePlace = () => {
+  const p = place();
+  const alreadySaved = !!saved.find(s => s.id === p.id);
+  doSave(p);
+  pulseBtn(document.querySelector('.b-save .c'));
+  const st = document.getElementById('saveStamp');
+  if (st) {
+    st.style.opacity = '1';
+    clearTimeout(st._to);
+    st._to = setTimeout(() => { st.style.opacity = '0'; }, 900);
+  }
+  showToast(alreadySaved ? '✓ Já está nos favoritos' : '🔖 Adicionado aos favoritos!');
+};
 
 function doSave(p) {
   if (!saved.find(s=>s.id===p.id)) {
@@ -372,6 +392,40 @@ function updateBadge() {
   if (!b) return;
   if (saved.length) { b.style.display='inline'; b.textContent=saved.length; }
   else b.style.display='none';
+}
+
+// ── Animation helpers ──────────────────────────────────────────────
+function showToast(msg) {
+  let t = document.getElementById('appToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'appToast';
+    document.querySelector('.phone').appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.remove('toast-in');
+  void t.offsetWidth; // force reflow
+  t.classList.add('toast-in');
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.classList.remove('toast-in'), 1800);
+}
+
+function showHeartBurst() {
+  const stack = document.getElementById('cardStack');
+  if (!stack) return;
+  const h = document.createElement('div');
+  h.className = 'heart-burst';
+  h.textContent = '❤️';
+  stack.appendChild(h);
+  h.addEventListener('animationend', () => h.remove());
+}
+
+function pulseBtn(el) {
+  if (!el) return;
+  el.classList.remove('btn-pulse');
+  void el.offsetWidth;
+  el.classList.add('btn-pulse');
+  el.addEventListener('animationend', () => el.classList.remove('btn-pulse'), { once: true });
 }
 
 // ── Remove favorite ────────────────────────────────────────────────
@@ -428,8 +482,35 @@ async function openProfile(p) {
   document.getElementById('profilePhotoImg').style.opacity='1';
 
   const igHandle = p.ig.replace('@','');
-  document.getElementById('profileIgHandle').textContent = p.ig;
-  document.getElementById('profileIgBtn').href = `https://instagram.com/${igHandle}`;
+  // Esconder o botão ig antigo — agora fica nas ações rápidas
+  const igBtn = document.getElementById('profileIgBtn');
+  if (igBtn) igBtn.style.display = 'none';
+
+  // ── Ações rápidas ──────────────────────────────────────────────
+  let qEl = document.getElementById('profileQActions');
+  if (!qEl) {
+    qEl = document.createElement('div');
+    qEl.id = 'profileQActions';
+    qEl.className = 'profile-qactions';
+    const catRow = document.querySelector('.profile-cat-row');
+    if (catRow) catRow.insertAdjacentElement('afterend', qEl);
+  }
+  const addrQ = encodeURIComponent(p.a + ', Curitiba, PR');
+  const addrEscQ = p.a.replace(/'/g, "\\'");
+  qEl.innerHTML = `
+    <a class="pqa" href="https://www.google.com/maps/search/?api=1&query=${addrQ}" target="_blank" rel="noopener">
+      <span class="pqa-icon">🗺️</span><span class="pqa-label">Google Maps</span>
+    </a>
+    <button class="pqa" onclick="window._pqaCopy('${addrEscQ}')">
+      <span class="pqa-icon">📋</span><span class="pqa-label">Copiar end.</span>
+    </button>
+    <a class="pqa" href="https://instagram.com/${igHandle}" target="_blank" rel="noopener">
+      <span class="pqa-icon">📸</span><span class="pqa-label">Instagram</span>
+    </a>`;
+  window._pqaCopy = (addr) => {
+    navigator.clipboard.writeText(addr + ', Curitiba, PR')
+      .then(() => showToast('📋 Endereço copiado!'));
+  };
 
   const addrEsc = p.a.replace(/'/g,"\\'");
   document.getElementById('profileInfoGrid').innerHTML=`
