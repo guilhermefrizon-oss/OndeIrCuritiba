@@ -5,6 +5,10 @@ import {
 } from './firebase.js';
 
 import {
+  db, collection, getDocs, query
+} from './firebase.js';
+
+import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
@@ -457,13 +461,41 @@ export function showUserProfile() {
   }
 }
 
-function _loadUserStats(user) {
-  const saved = JSON.parse(localStorage.getItem('cwb_saved') || '[]');
-  const liked = JSON.parse(localStorage.getItem('cwb_liked') || '[]');
+async function _loadUserStats(user) {
   const el = id => document.getElementById(id);
-  if (el('upsStatSaved'))    el('upsStatSaved').textContent    = saved.length;
-  if (el('upsStatLikes'))    el('upsStatLikes').textContent    = liked.length;
-  if (el('upsStatComments')) el('upsStatComments').textContent = '—';
+  // Mostra loading enquanto busca
+  if (el('upsStatSaved'))    el('upsStatSaved').textContent    = '…';
+  if (el('upsStatLikes'))    el('upsStatLikes').textContent    = '…';
+  if (el('upsStatComments')) el('upsStatComments').textContent = '…';
+
+  try {
+    // Salvos: coleção favorites/{uid}/places
+    const savedSnap = await getDocs(collection(db, 'favorites', user.uid, 'places'));
+    if (el('upsStatSaved')) el('upsStatSaved').textContent = savedSnap.size;
+
+    // Curtidos: coleção likes — conta todos os places onde o uid existe
+    // Estrutura: likes/{placeId}/users/{uid}
+    // Para evitar percorrer todos os places, guardamos também um índice reverso
+    // likes_by_user/{uid}/places/{placeId}
+    const likedSnap = await getDocs(collection(db, 'likes_by_user', user.uid, 'places'));
+    if (el('upsStatLikes')) el('upsStatLikes').textContent = likedSnap.size;
+
+    // Comentários: comments — subcoleção por place, filtramos por userId
+    // Como não há índice centralizado, usamos collectionGroup se disponível
+    // Fallback: mostra '—' (requer índice no Firebase para collectionGroup)
+    try {
+      const { collectionGroup, where } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+      const commSnap = await getDocs(query(collectionGroup(db, 'items'), where('userId', '==', user.uid)));
+      if (el('upsStatComments')) el('upsStatComments').textContent = commSnap.size;
+    } catch {
+      if (el('upsStatComments')) el('upsStatComments').textContent = '—';
+    }
+  } catch (e) {
+    console.warn('_loadUserStats:', e);
+    if (el('upsStatSaved'))    el('upsStatSaved').textContent    = '—';
+    if (el('upsStatLikes'))    el('upsStatLikes').textContent    = '—';
+    if (el('upsStatComments')) el('upsStatComments').textContent = '—';
+  }
 }
 
 export function closeUserProfile() {

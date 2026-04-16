@@ -5,22 +5,28 @@ import {
   collection, increment
 } from './firebase.js';
 
-let userId = localStorage.getItem('cwb_uid');
-if (!userId) { userId = crypto.randomUUID(); localStorage.setItem('cwb_uid', userId); }
+// Usa o UID do usuário autenticado se disponível, senão anônimo por dispositivo
+function getUid() {
+  return window.currentUser?.uid || localStorage.getItem('cwb_uid') || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem('cwb_uid', id);
+    return id;
+  })();
+}
 
 export const fsSave = async (place) => {
-  try { await setDoc(doc(db, 'favorites', userId, 'places', place.id), place); }
+  try { await setDoc(doc(db, 'favorites', getUid(), 'places', place.id), place); }
   catch (e) { console.warn('fsSave:', e); }
 };
 
 export const fsRemove = async (placeId) => {
-  try { await deleteDoc(doc(db, 'favorites', userId, 'places', placeId)); }
+  try { await deleteDoc(doc(db, 'favorites', getUid(), 'places', placeId)); }
   catch (e) { console.warn('fsRemove:', e); }
 };
 
 export const fsLoadAll = async () => {
   try {
-    const snap = await getDocs(collection(db, 'favorites', userId, 'places'));
+    const snap = await getDocs(collection(db, 'favorites', getUid(), 'places'));
     return snap.docs.map(d => d.data());
   } catch (e) { console.warn('fsLoadAll:', e); return []; }
 };
@@ -48,8 +54,12 @@ export const fsIncrementLike = async (placeId) => {
     const likeRef = doc(db, 'likes', placeId, 'users', user.uid);
     const existing = await getDoc(likeRef);
     if (existing.exists()) return; // já curtiu, não incrementa de novo
-    await setDoc(likeRef, { likedAt: new Date().toISOString() });
-    await setDoc(doc(db, 'places', placeId), { _likes: increment(1) }, { merge: true });
+    // Grava nos dois índices em paralelo
+    await Promise.all([
+      setDoc(likeRef, { likedAt: new Date().toISOString() }),
+      setDoc(doc(db, 'likes_by_user', user.uid, 'places', placeId), { likedAt: new Date().toISOString() }),
+      setDoc(doc(db, 'places', placeId), { _likes: increment(1) }, { merge: true }),
+    ]);
   } catch (e) { console.warn('fsIncrementLike:', e); }
 };
 
