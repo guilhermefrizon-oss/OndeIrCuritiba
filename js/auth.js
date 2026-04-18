@@ -337,109 +337,161 @@ export function showUserProfile() {
     : '';
 
   screen.innerHTML = `
-    <div class="ups-backdrop" id="upsBackdrop"></div>
-    <div class="ups-sheet" id="upsSheet">
-      <div class="ups-handle"></div>
+    <div class="ups-fullscreen" id="upsSheet">
 
-      <div class="ups-header">
-        <div class="ups-avatar-wrap">
-          ${photoURL
-            ? `<img class="ups-avatar-img" src="${photoURL}" alt="${displayName}">`
-            : `<div class="ups-avatar-initials">${initials}</div>`}
-          <div class="ups-avatar-badge" title="${isGoogle ? 'Google' : 'E-mail'}">${isGoogle ? '🔵' : '✉️'}</div>
-        </div>
-        <div class="ups-user-info">
-          <div class="ups-name">${displayName}</div>
-          <div class="ups-email">${email}</div>
-          ${memberSince ? `<div class="ups-since">Membro desde ${memberSince}</div>` : ''}
-        </div>
-      </div>
-
-      <div class="ups-level-bar" id="upsLevelBar">
-        <div class="ups-level-top">
-          <span class="ups-level-icon" id="upsLevelIcon">🌱</span>
-          <span class="ups-level-name" id="upsLevelName">Novato</span>
-          <span class="ups-level-xp"  id="upsLevelXp">0 XP</span>
-        </div>
-        <div class="ups-level-track">
-          <div class="ups-level-fill" id="upsLevelFill" style="width:0%"></div>
-        </div>
-        <div class="ups-level-next" id="upsLevelNext"></div>
-      </div>
-
-      <div class="ups-stats">
-        <div class="ups-stat">
-          <div class="ups-stat-num" id="upsStatLikes">—</div>
-          <div class="ups-stat-lbl">Curtidos</div>
-        </div>
-        <div class="ups-stat-divider"></div>
-        <div class="ups-stat">
-          <div class="ups-stat-num" id="upsStatSaved">—</div>
-          <div class="ups-stat-lbl">Salvos</div>
-        </div>
-        <div class="ups-stat-divider"></div>
-        <div class="ups-stat">
-          <div class="ups-stat-num" id="upsStatComments">—</div>
-          <div class="ups-stat-lbl">Comentários</div>
-        </div>
-      </div>
-
-      <div class="ups-section-title">Minhas Badges</div>
-      <div class="ups-badges-grid" id="upsBadgesGrid">
-        <div class="badges-empty">Carregando…</div>
-      </div>
-
-      <div class="ups-section-title">Conta</div>
-      <div class="ups-actions">
-        ${!isGoogle ? `
-        <button class="ups-action-row" id="upsChangeNameBtn">
-          <span class="ups-action-icon">✏️</span>
-          <span class="ups-action-label">Alterar nome</span>
-          <span class="ups-action-chevron">›</span>
+      <!-- Topbar -->
+      <div class="ups-topbar">
+        <button class="ups-back-btn" id="upsCloseBtn">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         </button>
-        <button class="ups-action-row" id="upsChangePwdBtn">
-          <span class="ups-action-icon">🔑</span>
-          <span class="ups-action-label">Alterar senha</span>
-          <span class="ups-action-chevron">›</span>
-        </button>` : ''}
-        <button class="ups-action-row ups-action-danger" id="upsSignOutBtn">
-          <span class="ups-action-icon">🚪</span>
-          <span class="ups-action-label">Sair da conta</span>
-          <span class="ups-action-chevron">›</span>
-        </button>
-      </div>
-
-      <div id="upsEditName" class="ups-edit-panel" style="display:none">
-        <div class="ups-section-title" style="margin-top:12px">Alterar nome</div>
-        <div class="auth-field-wrap"><input class="auth-field" id="upsNewName" type="text" placeholder="Seu nome" value="${displayName}"></div>
-        <div id="upsNameError" class="auth-error" style="display:none"></div>
-        <button class="auth-submit-btn" id="upsSaveNameBtn">Salvar</button>
-        <button class="ups-link-btn" id="upsCancelNameBtn">Cancelar</button>
-      </div>
-
-      <div id="upsEditPwd" class="ups-edit-panel" style="display:none">
-        <div class="ups-section-title" style="margin-top:12px">Alterar senha</div>
-        <div class="auth-field-wrap">
-          <input class="auth-field" id="upsNewPwd" type="password" placeholder="Nova senha (mín. 6 caracteres)">
-          <button class="auth-field-eye" id="upsPwdEyeBtn" type="button">👁</button>
+        <span class="ups-topbar-title">Meu Perfil</span>
+        <div class="ups-privacy-toggle" id="upsPrivacyToggle" title="Visibilidade do perfil">
+          <span id="upsPrivacyIcon">🔒</span>
+          <span id="upsPrivacyLbl">Privado</span>
         </div>
-        <div id="upsPwdError" class="auth-error" style="display:none"></div>
-        <div id="upsPwdSuccess" class="auth-success" style="display:none">✅ Senha alterada!</div>
-        <button class="auth-submit-btn" id="upsSavePwdBtn">Alterar senha</button>
-        <button class="ups-link-btn" id="upsCancelPwdBtn">Cancelar</button>
       </div>
 
-      <button class="ups-close-btn" id="upsCloseBtn">Fechar</button>
+      <div class="ups-scroll">
+
+        <!-- Header -->
+        <div class="ups-header">
+          <div class="ups-avatar-wrap">
+            ${photoURL
+              ? `<img class="ups-avatar-img" src="${photoURL}" alt="${displayName}">`
+              : `<div class="ups-avatar-initials">${initials}</div>`}
+            <div class="ups-avatar-badge" title="${isGoogle ? 'Google' : 'E-mail'}">${isGoogle ? '🔵' : '✉️'}</div>
+          </div>
+          <div class="ups-user-info">
+            <div class="ups-name">${displayName}</div>
+            <div class="ups-email">${email}</div>
+            ${memberSince ? `<div class="ups-since">Membro desde ${memberSince}</div>` : ''}
+          </div>
+        </div>
+
+        <!-- Nível -->
+        <div class="ups-level-bar" id="upsLevelBar">
+          <div class="ups-level-top">
+            <span class="ups-level-icon" id="upsLevelIcon">🌱</span>
+            <span class="ups-level-name" id="upsLevelName">Novato</span>
+            <span class="ups-level-xp"  id="upsLevelXp">0 XP</span>
+          </div>
+          <div class="ups-level-track">
+            <div class="ups-level-fill" id="upsLevelFill" style="width:0%"></div>
+          </div>
+          <div class="ups-level-next" id="upsLevelNext"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="ups-stats">
+          <div class="ups-stat">
+            <div class="ups-stat-num" id="upsStatVisited">—</div>
+            <div class="ups-stat-lbl">Visitados</div>
+          </div>
+          <div class="ups-stat-divider"></div>
+          <div class="ups-stat">
+            <div class="ups-stat-num" id="upsStatSaved">—</div>
+            <div class="ups-stat-lbl">Salvos</div>
+          </div>
+          <div class="ups-stat-divider"></div>
+          <div class="ups-stat">
+            <div class="ups-stat-num" id="upsStatComments">—</div>
+            <div class="ups-stat-lbl">Comentários</div>
+          </div>
+        </div>
+
+        <!-- Abas -->
+        <div class="ups-tabs">
+          <button class="ups-tab on" data-tab="badges"     onclick="upsSetTab('badges')">Badges</button>
+          <button class="ups-tab"     data-tab="history"   onclick="upsSetTab('history')">Histórico</button>
+          <button class="ups-tab"     data-tab="stats"     onclick="upsSetTab('stats')">Estatísticas</button>
+          <button class="ups-tab"     data-tab="settings"  onclick="upsSetTab('settings')">Conta</button>
+        </div>
+
+        <!-- Aba: Badges -->
+        <div class="ups-tab-panel" id="upsTabBadges">
+          <div class="ups-badges-grid" id="upsBadgesGrid">
+            <div class="badges-empty">Carregando…</div>
+          </div>
+        </div>
+
+        <!-- Aba: Histórico -->
+        <div class="ups-tab-panel" id="upsTabHistory" style="display:none">
+          <div class="ups-history-list" id="upsHistoryList">
+            <div class="ups-loading">Carregando…</div>
+          </div>
+        </div>
+
+        <!-- Aba: Estatísticas -->
+        <div class="ups-tab-panel" id="upsTabStats" style="display:none">
+          <div class="ups-stats-detail" id="upsStatsDetail">
+            <div class="ups-loading">Carregando…</div>
+          </div>
+        </div>
+
+        <!-- Aba: Conta -->
+        <div class="ups-tab-panel" id="upsTabSettings" style="display:none">
+          <div class="ups-actions">
+            ${!isGoogle ? `
+            <button class="ups-action-row" id="upsChangeNameBtn">
+              <span class="ups-action-icon">✏️</span>
+              <span class="ups-action-label">Alterar nome</span>
+              <span class="ups-action-chevron">›</span>
+            </button>
+            <button class="ups-action-row" id="upsChangePwdBtn">
+              <span class="ups-action-icon">🔑</span>
+              <span class="ups-action-label">Alterar senha</span>
+              <span class="ups-action-chevron">›</span>
+            </button>` : ''}
+            <button class="ups-action-row ups-action-danger" id="upsSignOutBtn">
+              <span class="ups-action-icon">🚪</span>
+              <span class="ups-action-label">Sair da conta</span>
+              <span class="ups-action-chevron">›</span>
+            </button>
+          </div>
+
+          <div id="upsEditName" class="ups-edit-panel" style="display:none">
+            <div class="ups-section-title" style="margin-top:12px">Alterar nome</div>
+            <div class="auth-field-wrap"><input class="auth-field" id="upsNewName" type="text" placeholder="Seu nome" value="${displayName}"></div>
+            <div id="upsNameError" class="auth-error" style="display:none"></div>
+            <button class="auth-submit-btn" id="upsSaveNameBtn">Salvar</button>
+            <button class="ups-link-btn" id="upsCancelNameBtn">Cancelar</button>
+          </div>
+
+          <div id="upsEditPwd" class="ups-edit-panel" style="display:none">
+            <div class="ups-section-title" style="margin-top:12px">Alterar senha</div>
+            <div class="auth-field-wrap">
+              <input class="auth-field" id="upsNewPwd" type="password" placeholder="Nova senha (mín. 6 caracteres)">
+              <button class="auth-field-eye" id="upsPwdEyeBtn" type="button">👁</button>
+            </div>
+            <div id="upsPwdError" class="auth-error" style="display:none"></div>
+            <div id="upsPwdSuccess" class="auth-success" style="display:none">✅ Senha alterada!</div>
+            <button class="auth-submit-btn" id="upsSavePwdBtn">Alterar senha</button>
+            <button class="ups-link-btn" id="upsCancelPwdBtn">Cancelar</button>
+          </div>
+        </div>
+
+      </div><!-- .ups-scroll -->
     </div>`;
 
   screen.style.display = 'flex';
   requestAnimationFrame(() => screen.classList.add('ups-visible'));
 
   _loadUserStats(user);
+  _loadPrivacyToggle(user);
 
-  document.getElementById('upsBackdrop').onclick = closeUserProfile;
-  document.getElementById('upsCloseBtn').onclick  = closeUserProfile;
+  document.getElementById('upsCloseBtn').onclick   = closeUserProfile;
   document.getElementById('upsSignOutBtn').onclick = async () => { closeUserProfile(); await signOutUser(); };
+
+  // Tab switcher
+  window.upsSetTab = (tab) => {
+    document.querySelectorAll('.ups-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+    document.querySelectorAll('.ups-tab-panel').forEach(p => p.style.display = 'none');
+    const panels = { badges:'upsTabBadges', history:'upsTabHistory', stats:'upsTabStats', settings:'upsTabSettings' };
+    const panel  = document.getElementById(panels[tab]);
+    if (panel) panel.style.display = 'block';
+    if (tab === 'history') _loadHistory(user);
+    if (tab === 'stats')   _loadStats(user);
+  };
 
   const changeNameBtn = document.getElementById('upsChangeNameBtn');
   const changePwdBtn  = document.getElementById('upsChangePwdBtn');
@@ -499,22 +551,20 @@ export function showUserProfile() {
 
 async function _loadUserStats(user) {
   const el = id => document.getElementById(id);
+  if (el('upsStatVisited'))  el('upsStatVisited').textContent  = '…';
   if (el('upsStatSaved'))    el('upsStatSaved').textContent    = '…';
-  if (el('upsStatLikes'))    el('upsStatLikes').textContent    = '…';
   if (el('upsStatComments')) el('upsStatComments').textContent = '…';
 
-  // Carrega XP e nível em paralelo com as stats
   try {
-    const [savedSnap, likedSnap, totalXp] = await Promise.all([
-      getDocs(collection(db, 'favorites', user.uid, 'places')),
-      getDocs(collection(db, 'likes_by_user', user.uid, 'places')),
+    const [visitedSnap, savedSnap, totalXp] = await Promise.all([
+      getDocs(collection(db, 'been_there', user.uid, 'places')),
+      getDocs(collection(db, 'favorites',  user.uid, 'places')),
       loadUserXp(user.uid),
     ]);
 
-    if (el('upsStatSaved')) el('upsStatSaved').textContent = savedSnap.size;
-    if (el('upsStatLikes')) el('upsStatLikes').textContent = likedSnap.size;
+    if (el('upsStatVisited')) el('upsStatVisited').textContent = visitedSnap.size;
+    if (el('upsStatSaved'))   el('upsStatSaved').textContent   = savedSnap.size;
 
-    // Comentários via collectionGroup
     try {
       const { collectionGroup, where } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
       const commSnap = await getDocs(query(collectionGroup(db, 'items'), where('userId', '==', user.uid)));
@@ -523,30 +573,157 @@ async function _loadUserStats(user) {
       if (el('upsStatComments')) el('upsStatComments').textContent = '—';
     }
 
-    // Renderiza nível
     _renderLevel(totalXp);
 
-    // Carrega e renderiza badges
     const earnedBadges = await loadUserBadges(user.uid);
     renderBadges(earnedBadges, document.getElementById('upsBadgesGrid'));
 
-    // Atualiza badges em tempo real se uma nova for conquistada
     window.addEventListener('badgeUnlocked', async () => {
       const updated = await loadUserBadges(user.uid);
       renderBadges(updated, document.getElementById('upsBadgesGrid'));
     });
-
-    // Atualiza em tempo real se XP for concedido enquanto o perfil está aberto
     window.addEventListener('xpAwarded', async () => {
       const updated = await loadUserXp(user.uid);
       _renderLevel(updated);
-    }, { once: false });
+    });
 
   } catch (e) {
     console.warn('_loadUserStats:', e);
-    if (el('upsStatSaved'))    el('upsStatSaved').textContent    = '—';
-    if (el('upsStatLikes'))    el('upsStatLikes').textContent    = '—';
-    if (el('upsStatComments')) el('upsStatComments').textContent = '—';
+    ['upsStatVisited','upsStatSaved','upsStatComments'].forEach(id => {
+      if (el(id)) el(id).textContent = '—';
+    });
+  }
+}
+
+// ── Privacy toggle ─────────────────────────────────────────────────
+async function _loadPrivacyToggle(user) {
+  const profileRef = doc(db, 'user_profiles', user.uid);
+  try {
+    const snap    = await getDoc(profileRef);
+    const isPublic = snap.exists() ? (snap.data().isPublic || false) : false;
+    _setPrivacyUI(isPublic);
+  } catch (e) { console.warn('_loadPrivacyToggle:', e); }
+
+  const toggle = document.getElementById('upsPrivacyToggle');
+  if (!toggle) return;
+  toggle.onclick = async () => {
+    const snap     = await getDoc(doc(db, 'user_profiles', user.uid));
+    const current  = snap.exists() ? (snap.data().isPublic || false) : false;
+    const next     = !current;
+    await setDoc(doc(db, 'user_profiles', user.uid), { isPublic: next }, { merge: true });
+    _setPrivacyUI(next);
+  };
+}
+
+function _setPrivacyUI(isPublic) {
+  const icon = document.getElementById('upsPrivacyIcon');
+  const lbl  = document.getElementById('upsPrivacyLbl');
+  const wrap = document.getElementById('upsPrivacyToggle');
+  if (icon) icon.textContent = isPublic ? '🌍' : '🔒';
+  if (lbl)  lbl.textContent  = isPublic ? 'Público' : 'Privado';
+  if (wrap) wrap.classList.toggle('privacy-public', isPublic);
+}
+
+// ── History tab ────────────────────────────────────────────────────
+async function _loadHistory(user) {
+  const list = document.getElementById('upsHistoryList');
+  if (!list || list.dataset.loaded) return;
+  list.dataset.loaded = '1';
+  list.innerHTML = '<div class="ups-loading">Carregando…</div>';
+
+  try {
+    const snap    = await getDocs(collection(db, 'been_there', user.uid, 'places'));
+    const places  = snap.docs.map(d => d.data()).sort((a,b) =>
+      new Date(b.visitedAt) - new Date(a.visitedAt)
+    );
+
+    if (!places.length) {
+      list.innerHTML = '<div class="ups-empty-tab">Nenhum lugar visitado ainda.<br>Use o botão 📍 nos cards!</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    places.forEach(p => {
+      const date = p.visitedAt ? new Date(p.visitedAt).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' }) : '';
+      const row  = document.createElement('div');
+      row.className = 'ups-history-row';
+      row.innerHTML = `
+        <div class="ups-history-thumb bg-${p.bg||'1'}">${p.e||'📍'}</div>
+        <div class="ups-history-info">
+          <div class="ups-history-name">${p.n||'Lugar'}</div>
+          <div class="ups-history-meta">${p.c||''} · ${p.b||''}</div>
+          <div class="ups-history-date">${date}</div>
+        </div>`;
+      if (Array.isArray(p.photos) && p.photos.length) {
+        row.querySelector('.ups-history-thumb').style.cssText =
+          `background-image:url("${p.photos[0]}");background-size:cover;`;
+      }
+      list.appendChild(row);
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="ups-empty-tab">Erro ao carregar histórico.</div>';
+    console.warn('_loadHistory:', e);
+  }
+}
+
+// ── Stats tab ──────────────────────────────────────────────────────
+async function _loadStats(user) {
+  const container = document.getElementById('upsStatsDetail');
+  if (!container || container.dataset.loaded) return;
+  container.dataset.loaded = '1';
+  container.innerHTML = '<div class="ups-loading">Calculando…</div>';
+
+  try {
+    const snap   = await getDocs(collection(db, 'been_there', user.uid, 'places'));
+    const places = snap.docs.map(d => d.data());
+
+    if (!places.length) {
+      container.innerHTML = '<div class="ups-empty-tab">Visite lugares para ver suas estatísticas!</div>';
+      return;
+    }
+
+    // Categoria favorita
+    const catCount = {};
+    places.forEach(p => { const c = p.c||'Outros'; catCount[c] = (catCount[c]||0)+1; });
+    const topCat = Object.entries(catCount).sort((a,b)=>b[1]-a[1]);
+
+    // Bairro favorito
+    const bairroCount = {};
+    places.forEach(p => { const b = p.b||'Desconhecido'; bairroCount[b] = (bairroCount[b]||0)+1; });
+    const topBairro = Object.entries(bairroCount).sort((a,b)=>b[1]-a[1]);
+
+    container.innerHTML = `
+      <div class="ups-stat-block">
+        <div class="ups-stat-block-title">🏆 Total de lugares visitados</div>
+        <div class="ups-stat-block-val">${places.length}</div>
+      </div>
+
+      <div class="ups-stat-block">
+        <div class="ups-stat-block-title">❤️ Categoria favorita</div>
+        ${topCat.slice(0,3).map(([cat,n]) => `
+          <div class="ups-stat-bar-row">
+            <span class="ups-stat-bar-lbl">${cat}</span>
+            <div class="ups-stat-bar-track">
+              <div class="ups-stat-bar-fill" style="width:${Math.round(n/places.length*100)}%"></div>
+            </div>
+            <span class="ups-stat-bar-num">${n}</span>
+          </div>`).join('')}
+      </div>
+
+      <div class="ups-stat-block">
+        <div class="ups-stat-block-title">📍 Bairro favorito</div>
+        ${topBairro.slice(0,3).map(([b,n]) => `
+          <div class="ups-stat-bar-row">
+            <span class="ups-stat-bar-lbl">${b}</span>
+            <div class="ups-stat-bar-track">
+              <div class="ups-stat-bar-fill" style="width:${Math.round(n/places.length*100)}%"></div>
+            </div>
+            <span class="ups-stat-bar-num">${n}</span>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) {
+    container.innerHTML = '<div class="ups-empty-tab">Erro ao carregar estatísticas.</div>';
+    console.warn('_loadStats:', e);
   }
 }
 
