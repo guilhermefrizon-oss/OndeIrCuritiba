@@ -63,59 +63,88 @@
   <div id="discoverView" style="display:flex;flex-direction:column;flex:1;min-height:0;">
     <div class="stack-wrap">
       <div class="stack" id="cardStack">
-        <div class="stamp stamp-like" id="likeStamp">Curtir</div>
-        <div class="stamp stamp-nope" id="nopeStamp">Passar</div>
+        <div class="stamp stamp-like" id="likeStamp">Quero ir!</div>
+        <div class="stamp stamp-nope" id="nopeStamp">Não hoje</div>
         <div class="stamp stamp-save" id="saveStamp">🔖 Salvo</div>
+        <div class="stamp stamp-been" id="beenStamp">📍 Já fui</div>
       </div>
     </div>
     <div class="progress-row" id="progressRow"></div>
     <div class="btns">
-      <button class="abtn b-pass" onclick="swipe('left')">
-        <div class="c"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
-        <div class="lbl">Passar</div>
-      </button>
-      <button class="abtn b-save" onclick="savePlace()">
-        <div class="c"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
-        <div class="lbl">Salvar</div>
-      </button>
-      <button class="abtn b-like" onclick="swipe('right',true)">
-        <div class="c"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-        <div class="lbl">Curtir</div>
-      </button>
+      <!-- Linha secundária: pequenos -->
+      <div class="btns-secondary">
+        <button class="abtn b-been" onclick="markBeenThere()">
+          <div class="c">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 10c0 6-8 13-8 13s-8-7-8-13a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="lbl">Já fui</div>
+        </button>
+        <button class="abtn b-save" onclick="savePlace()">
+          <div class="c">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="lbl">Salvar</div>
+        </button>
+      </div>
+      <!-- Linha principal: grandes -->
+      <div class="btns-primary">
+        <button class="abtn b-pass" onclick="swipe('left',true)">
+          <div class="c"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+          <div class="lbl">Não hoje</div>
+        </button>
+        <button class="abtn b-like" onclick="swipe('right',true)">
+          <div class="c"><svg width="26" height="26" fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <div class="lbl">Quero ir!</div>
+        </button>
+      </div>
     </div>
   </div>
 
+  <!-- ── Want Today view ── -->
+  <div class="favorites-view" id="wantTodayView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow-y:auto;"></div>
+
   <!-- ── Favorites view ── -->
-  <div class="favorites-view" id="favoritesView">
+  <div class="favorites-view" id="favoritesView" style="display:none;">
     <div class="fav-header">
       <div>
-        <div class="fav-title">Meus lugares</div>
+        <div class="fav-title">Salvos</div>
         <div class="fav-subtitle" id="favSubtitle">Nenhum lugar salvo</div>
       </div>
       <button class="fav-toggle" id="favToggle" style="display:none" onclick="onFavToggle()">
         🗺️ Ver no mapa
       </button>
     </div>
+    <div class="fav-filter-row" id="favFilterRow">
+      <button class="fav-filter on" data-filter="all"    onclick="setFavFilter('all')">Todos</button>
+      <button class="fav-filter"     data-filter="been"   onclick="setFavFilter('been')">Já fui</button>
+      <button class="fav-filter"     data-filter="rated"  onclick="setFavFilter('rated')">Avaliados</button>
+    </div>
     <div class="empty" id="favEmpty">
       <div class="empty-ico">🗂️</div>
       <div class="empty-title">Lista vazia</div>
-      <div class="empty-sub">Deslize e curta lugares para<br>salvar aqui.</div>
+      <div class="empty-sub">Use o 🔖 nos cards para<br>salvar lugares aqui.</div>
     </div>
     <div class="fav-grid" id="favGrid" style="display:none"></div>
     <div id="favMap"></div>
   </div>
 
+  <!-- ── Map view ── -->
+  <div class="favorites-view" id="mapView" style="display:none;flex-direction:column;flex:1;min-height:0;"></div>
+
   <!-- ── Bottom nav ── -->
   <nav class="nav">
-    <button class="ni on" id="navDiscover" onclick="showTab('discover')">
-      <span class="ni-icon">◎</span>
-      <span class="ni-lbl">Descobrir</span>
+    <button class="ni" id="navWant" onclick="showTab('want')">
+      <span class="ni-icon">❤️</span>
+      <span class="ni-lbl">Quero ir <span class="nbadge" id="wantBadge" style="display:none">0</span></span>
+    </button>
+    <button class="ni ni-discover-center on" id="navDiscover2" onclick="showTab('discover')">
+      <div class="ni-center-icon">◎</div>
     </button>
     <button class="ni" id="navFavorites" onclick="showTab('favorites')">
       <span class="ni-icon">🔖</span>
       <span class="ni-lbl">Salvos <span class="nbadge" id="nbadge" style="display:none">0</span></span>
     </button>
-    <button class="ni" id="navMap" onclick="window.openSearchOverlay()">
+    <button class="ni" id="navSearch" onclick="window.openSearchOverlay()">
       <span class="ni-icon">🔍</span>
       <span class="ni-lbl">Buscar</span>
     </button>

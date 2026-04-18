@@ -1,6 +1,11 @@
 // ── app.js ────────────────────────────────────────────────────────
-import { fsLoadPlaces, fsLoadCategories, fsLoadAll, fsSave, fsIncrementLike } from './store.js';
-import { fsRemove } from './store.js';
+import {
+  fsLoadPlaces, fsLoadCategories,
+  fsLoadAll, fsSave, fsRemove, fsIncrementLike,
+  fsWantToday, fsLoadWantToday, fsRemoveWantToday,
+  fsSkip, fsLoadSkipped,
+  fsBeenThere, fsLoadBeenThere
+} from './store.js';
 import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
 import { renderFavorites, toggleFavView } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
@@ -14,7 +19,10 @@ let CE       = { Todos: '🗺️' };
 let cat      = 'Todos';
 let filtered = [];
 let idx      = 0;
-let saved    = [];
+let saved    = [];      // favoritos permanentes
+let wantToday = [];     // quero ir hoje
+let skipped   = {};     // pulados hoje {id: true}
+let beenThere = {};     // já fui {id: {visitedAt}}
 
 let cardPhotos    = [];
 let cardPhotoIdx  = 0;
@@ -98,11 +106,15 @@ async function init() {
   renderProgress();
   showWelcomeScreen();
 
-  const allSaved = await fsLoadAll();
-  if (allSaved?.length) {
-    saved = allSaved;
-    updateBadge();
-  }
+  const [allSaved, allSkipped, allBeen] = await Promise.all([
+    fsLoadAll(), fsLoadSkipped(), fsLoadBeenThere()
+  ]);
+  if (allSaved?.length) { saved = allSaved; updateBadge(); }
+  skipped   = allSkipped || {};
+  beenThere = allBeen    || {};
+
+  // Filtra feed excluindo pulados hoje e já fui < 10 dias
+  applyUserFilters();
 
   // Carrega médias de rating em background e atualiza cards
   loadAllRatings();
@@ -124,11 +136,17 @@ function buildCategoryRow() {
 export function setCat(c) {
   cat = c;
   document.querySelectorAll('.cat-pill').forEach((b,i) => b.classList.toggle('on', CATS[i]===c));
-  filtered = c==='Todos' ? [...P] : P.filter(p => {
-    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
-    return cats.includes(c);
-  });
+  applyUserFilters();
   idx=0; renderCard(); renderProgress();
+}
+
+function applyUserFilters() {
+  const base = cat==='Todos' ? [...P] : P.filter(p => {
+    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    return cats.includes(cat);
+  });
+  filtered = base.filter(p => !skipped[p.id] && !beenThere[p.id]);
+  idx = 0;
 }
 
 function place() { return filtered[idx % filtered.length]; }
@@ -342,11 +360,12 @@ function onDragEnd() {
       return;
     }
     animateOut(card,'right');
-    doSave(place()); fsIncrementLike(place().id);
+    doWantToday(place());
     setTimeout(() => { nextCard(); dragHappened=false; }, 400);
   } else if (dragCurX < -threshold) {
     dragHappened = true;
     animateOut(card,'left');
+    doSkip(place());
     setTimeout(() => { nextCard(); dragHappened=false; }, 400);
   } else {
     card.style.transition='transform .45s cubic-bezier(.34,1.4,.64,1)';
@@ -381,12 +400,13 @@ window.swipe = (dir, fromBtn = false) => {
       window.showAuthModal && window.showAuthModal('like');
       return;
     }
-    doSave(place()); fsIncrementLike(place().id);
+    doWantToday(place());
     pulseBtn(document.querySelector('.b-like .c'));
     if (fromBtn) showHeartBurst();
   }
-  if (dir === 'left' && fromBtn) {
-    pulseBtn(document.querySelector('.b-pass .c'));
+  if (dir === 'left') {
+    doSkip(place());
+    if (fromBtn) pulseBtn(document.querySelector('.b-pass .c'));
   }
   animateOut(activeCard, dir);
   setTimeout(nextCard, 380);
@@ -395,7 +415,7 @@ window.swipe = (dir, fromBtn = false) => {
 window.savePlace = () => {
   const p = place();
   const alreadySaved = !!saved.find(s => s.id === p.id);
-  doSave(p);
+  if (!alreadySaved) doSave(p);
   pulseBtn(document.querySelector('.b-save .c'));
   const st = document.getElementById('saveStamp');
   if (st) {
@@ -406,6 +426,18 @@ window.savePlace = () => {
   showToast(alreadySaved ? '✓ Já está nos favoritos' : '🔖 Adicionado aos favoritos!');
 };
 
+window.markBeenThere = () => {
+  if (!window.currentUser) { window.showAuthModal && window.showAuthModal('like'); return; }
+  const p = place();
+  doBeenThere(p);
+  pulseBtn(document.querySelector('.b-been .c'));
+  const bs = document.getElementById('beenStamp');
+  if (bs) { bs.style.opacity='1'; setTimeout(()=>{ bs.style.opacity='0'; },600); }
+  showToast('📍 Marcado como visitado!');
+  if (activeCard) animateOut(activeCard, 'left');
+  setTimeout(nextCard, 380);
+};
+
 function doSave(p) {
   if (!saved.find(s=>s.id===p.id)) {
     saved.push(p);
@@ -414,10 +446,38 @@ function doSave(p) {
   }
 }
 
+function doWantToday(p) {
+  if (!wantToday.find(w=>w.id===p.id)) {
+    wantToday.push(p);
+    fsWantToday(p);
+    fsIncrementLike(p.id);
+    updateWantBadge();
+  }
+}
+
+function doSkip(p) {
+  skipped[p.id] = true;
+  fsSkip(p.id);
+}
+
+function doBeenThere(p) {
+  beenThere[p.id] = { visitedAt: new Date().toISOString(), ...p };
+  fsBeenThere(p);
+  // Remove do feed imediatamente
+  filtered = filtered.filter(f => f.id !== p.id);
+}
+
 function updateBadge() {
   const b = document.getElementById('nbadge');
   if (!b) return;
   if (saved.length) { b.style.display='inline'; b.textContent=saved.length; }
+  else b.style.display='none';
+}
+
+function updateWantBadge() {
+  const b = document.getElementById('wantBadge');
+  if (!b) return;
+  if (wantToday.length) { b.style.display='inline'; b.textContent=wantToday.length; }
   else b.style.display='none';
 }
 
@@ -469,20 +529,46 @@ function removeFav(id) {
 
 // ── Navigation tabs ────────────────────────────────────────────────
 window.showTab = (t) => {
-  const disc = document.getElementById('discoverView');
-  const fav  = document.getElementById('favoritesView');
-  ['navDiscover','navFavorites','navMap'].forEach(id =>
+  const views = {
+    discover:  document.getElementById('discoverView'),
+    want:      document.getElementById('wantTodayView'),
+    favorites: document.getElementById('favoritesView'),
+    map:       document.getElementById('mapView'),
+  };
+  Object.entries(views).forEach(([k, el]) => {
+    if (el) el.style.display = k === t ? 'flex' : 'none';
+  });
+  ['navDiscover','navWant','navFavorites','navMap','navSearch'].forEach(id =>
     document.getElementById(id)?.classList.remove('on')
   );
-  const active = t==='discover' ? 'navDiscover' : t==='favorites' ? 'navFavorites' : 'navMap';
-  document.getElementById(active)?.classList.add('on');
-  disc.style.display = t==='discover' ? 'flex' : 'none';
-  fav.style.display  = t==='favorites' ? 'flex' : 'none';
+  const navMap = { discover:'navDiscover2', want:'navWant', favorites:'navFavorites', map:'navMap', search:'navSearch' };
+  document.getElementById(navMap[t])?.classList.add('on');
+
+  if (t === 'want')      renderWantToday();
   if (t === 'favorites') renderFavorites(saved, openProfile, removeFav);
+  if (t === 'map')       renderMapView();
 };
 
 // Toggle map/list inside favorites tab
 window.onFavToggle = () => toggleFavView(saved, openProfile, removeFav);
+
+// ── Favorites filter ───────────────────────────────────────────────
+let favFilter = 'all';
+window.setFavFilter = (f) => {
+  favFilter = f;
+  document.querySelectorAll('.fav-filter').forEach(b =>
+    b.classList.toggle('on', b.dataset.filter === f)
+  );
+  let list = [...saved];
+  if (f === 'been') {
+    const beenIds = Object.keys(beenThere);
+    list = saved.filter(p => beenIds.includes(p.id));
+  } else if (f === 'rated') {
+    // Filtra os que têm _avgRating
+    list = saved.filter(p => p._avgRating?.avg > 0 || P.find(x=>x.id===p.id)?._avgRating?.avg > 0);
+  }
+  renderFavorites(list, openProfile, removeFav);
+};
 
 // ── Search ─────────────────────────────────────────────────────────
 window.openSearchOverlay = () => openSearch(openProfile);
@@ -696,6 +782,93 @@ window.closeWelcome = (category) => {
   if (category) setCat(category);
 };
 
+// ── Want Today view ───────────────────────────────────────────────
+function renderWantToday() {
+  const view = document.getElementById('wantTodayView');
+  if (!view) return;
+
+  if (!window.currentUser) {
+    view.innerHTML = `<div class="empty"><div class="empty-ico">❤️</div>
+      <div class="empty-title">Entre na sua conta</div>
+      <div class="empty-sub">Faça login para ver os lugares que quer visitar hoje.</div>
+      <button class="login-google-btn" style="margin-top:16px" onclick="showAuthModal()">Entrar</button></div>`;
+    return;
+  }
+
+  if (!wantToday.length) {
+    view.innerHTML = `<div class="want-header"><div class="want-title">Quero ir hoje ❤️</div>
+      <div class="want-sub">Zera à meia-noite</div></div>
+      <div class="empty"><div class="empty-ico">❤️</div>
+      <div class="empty-title">Nenhum lugar ainda</div>
+      <div class="empty-sub">Deslize para a direita nos cards<br>para adicionar lugares aqui.</div></div>`;
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'fav-grid';
+  let html = `<div class="want-header"><div class="want-title">Quero ir hoje ❤️</div>
+    <div class="want-sub">${wantToday.length} lugar${wantToday.length>1?'es':''} · zera à meia-noite</div></div>`;
+  view.innerHTML = html;
+  view.appendChild(grid);
+
+  wantToday.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'saved-row su';
+    row.style.animationDelay = `${i * 40}ms`;
+    row.onclick = () => openProfile(p);
+    row.innerHTML = `
+      <div class="saved-thumb bg-${p.bg}" id="wthumb-${p.id}">${p.e}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="saved-name">${p.n}</div>
+        <div class="saved-meta">${p.b} · ${p.h}</div>
+      </div>
+      <div class="saved-price">${p.p}</div>
+      <button class="fav-remove-btn" title="Remover" onclick="event.stopPropagation();window._removeWant('${p.id}')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>`;
+    grid.appendChild(row);
+    if (Array.isArray(p.photos) && p.photos.length) {
+      const t = document.getElementById(`wthumb-${p.id}`);
+      if (t) { t.style.backgroundImage=`url("${p.photos[0]}")`; t.textContent=''; }
+    }
+  });
+
+  window._removeWant = (id) => {
+    wantToday = wantToday.filter(p => p.id !== id);
+    fsRemoveWantToday(id);
+    updateWantBadge();
+    renderWantToday();
+  };
+}
+
+// ── Map view (placeholder — abre busca por enquanto) ───────────────
+function renderMapView() {
+  const view = document.getElementById('mapView');
+  if (!view) return;
+  // Reutiliza o mapa de favoritos se tiver lugares salvos
+  if (saved.length) {
+    view.innerHTML = '';
+    const favMap = document.createElement('div');
+    favMap.id = 'mainMap';
+    favMap.style.cssText = 'flex:1;width:100%;min-height:0;';
+    view.appendChild(favMap);
+    // Importa e usa o mapa de favoritos
+    import('./favorites.js').then(({ renderFavMap }) => {
+      if (renderFavMap) renderFavMap(saved, favMap, openProfile);
+    }).catch(() => {
+      view.innerHTML = `<div class="empty"><div class="empty-ico">🗺️</div>
+        <div class="empty-title">Mapa</div>
+        <div class="empty-sub">Salve lugares para vê-los no mapa.</div></div>`;
+    });
+  } else {
+    view.innerHTML = `<div class="empty"><div class="empty-ico">🗺️</div>
+      <div class="empty-title">Mapa</div>
+      <div class="empty-sub">Salve lugares para vê-los no mapa.</div></div>`;
+  }
+}
+
 // ── Boot ───────────────────────────────────────────────────────────
 if (typeof fsLoadPlaces === 'function') {
   init();
@@ -703,18 +876,21 @@ if (typeof fsLoadPlaces === 'function') {
   window.addEventListener('firebase-ready', () => init(), { once: true });
 }
 
-// Recarrega favoritos quando o login é confirmado (auth resolve depois do init)
+// Recarrega dados quando o login é confirmado
 window.addEventListener('authChanged', async (e) => {
   const user = e.detail;
   if (!user) return;
-  const allSaved = await fsLoadAll();
-  if (allSaved?.length) {
-    saved = allSaved;
-    updateBadge();
-    // Atualiza a aba de favoritos se estiver aberta
-    const view = document.getElementById('favoritesView');
-    if (view && view.style.display !== 'none') {
-      renderFavorites(saved, openProfile, removeFav);
-    }
-  }
+  const [allSaved, allWant, allSkipped, allBeen] = await Promise.all([
+    fsLoadAll(), fsLoadWantToday(), fsLoadSkipped(), fsLoadBeenThere()
+  ]);
+  if (allSaved?.length)  { saved     = allSaved;    updateBadge(); }
+  if (allWant?.length)   { wantToday = allWant;     updateWantBadge(); }
+  skipped   = allSkipped || {};
+  beenThere = allBeen    || {};
+  applyUserFilters();
+  renderCard();
+  const favView  = document.getElementById('favoritesView');
+  const wantView = document.getElementById('wantTodayView');
+  if (favView  && favView.style.display  !== 'none') renderFavorites(saved, openProfile, removeFav);
+  if (wantView && wantView.style.display !== 'none') renderWantToday();
 });

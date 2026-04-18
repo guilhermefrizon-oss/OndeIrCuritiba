@@ -215,7 +215,8 @@ body {
 /* Stamps */
 .stamp { position: absolute; top: 28px; padding: 8px 18px; border-radius: 12px; font-size: 16px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; opacity: 0; pointer-events: none; backdrop-filter: blur(8px); }
 .stamp-like { left: 22px; background: rgba(52,211,153,.12); border: 2.5px solid var(--green); color: var(--green); transform: rotate(-14deg); }
-.stamp-nope { right: 22px; background: rgba(248,113,113,.12); border: 2.5px solid var(--red); color: var(--red); transform: rotate(14deg); }
+.stamp-nope { right: 22px; background: rgba(248,113,113,.12); border: 2.5px solid #f87171; color: #f87171; transform: rotate(14deg); }
+.stamp-been { left: 50%; transform: translateX(-50%) rotate(-8deg); top: 50%; background: rgba(245,158,11,.12); border: 2.5px solid #f59e0b; color: #f59e0b; }
 
 /* Progress dots */
 .progress-row { display: flex; justify-content: center; gap: 5px; padding: 10px 0 4px; flex-shrink: 0; }
@@ -223,29 +224,40 @@ body {
 .pdot.on { background: var(--acc); width: 18px; border-radius: 3px; }
 
 /* ── Action buttons ───────────────────────────────────────────────── */
-.btns { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 14px 24px 12px; flex-shrink: 0; }
-.abtn { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; background: none; border: none; }
-.abtn .c { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid; transition: transform .12s, background .15s; box-shadow: var(--shadow); }
+.btns { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 24px 12px; flex-shrink: 0; }
+.btns-secondary { display: flex; align-items: center; justify-content: center; gap: 32px; }
+.btns-primary   { display: flex; align-items: center; justify-content: center; gap: 28px; }
+.abtn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; background: none; border: none; }
+.abtn .c { border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid; transition: transform .12s, background .15s; box-shadow: var(--shadow); }
+.btns-primary .abtn .c   { width: 64px; height: 64px; }
+.btns-secondary .abtn .c { width: 46px; height: 46px; }
 .abtn:active .c { transform: scale(.91); }
-.abtn .lbl { font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; }
-.b-pass .c   { border-color: var(--bg4); background: var(--bg2); color: var(--text3); }
-.b-pass .lbl { color: var(--text3); }
-.b-save .c   { border-color: var(--p300); background: var(--p100); color: var(--p400); }
-.b-save .lbl { color: var(--p400); }
+.abtn .lbl { font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.b-pass .c   { border-color: #f87171; background: rgba(248,113,113,.08); color: #f87171; }
+.b-pass .lbl { color: #f87171; }
 .b-like .c   { border-color: var(--green); background: rgba(5,150,105,.08); color: var(--green); }
 .b-like .lbl { color: var(--green); }
+.b-save .c   { border-color: var(--p300); background: var(--p100); color: var(--p400); }
+.b-save .lbl { color: var(--p400); }
+.b-been .c   { border-color: #f59e0b; background: rgba(245,158,11,.08); color: #f59e0b; }
+.b-been .lbl { color: #f59e0b; }
 [data-theme="dark"] .b-like .c { background: rgba(52,211,153,.08); }
-.b-pass:hover .c { background: var(--bg3); }
+[data-theme="dark"] .b-pass .c { background: rgba(248,113,113,.08); }
+.b-pass:hover .c { background: rgba(248,113,113,.14); }
 .b-like:hover .c { background: rgba(5,150,105,.14); }
 .b-save:hover .c { background: var(--p100); }
+.b-been:hover .c { background: rgba(245,158,11,.14); }
 
 /* ── Bottom nav ──────────────────────────────────────────────────── */
-.nav { display: flex; padding: 6px 16px env(safe-area-inset-bottom, 18px); gap: 4px; border-top: 1.5px solid var(--bg4); background: var(--bg2); flex-shrink: 0; }
-.ni { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 8px 4px; border-radius: 16px; transition: background .15s; background: none; border: none; }
+.nav { display: flex; padding: 6px 8px env(safe-area-inset-bottom, 12px); gap: 2px; border-top: 1.5px solid var(--bg4); background: var(--bg2); flex-shrink: 0; align-items: center; }
+.ni { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 2px; border-radius: 14px; transition: background .15s; background: none; border: none; }
 .ni.on { background: var(--p100); }
-.ni-icon { font-size: 19px; line-height: 1; }
-.ni-lbl { font-size: 10px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text3); }
+.ni-icon { font-size: 18px; line-height: 1; }
+.ni-lbl { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); }
 .ni.on .ni-lbl { color: var(--acc); }
+.ni-discover-center { flex: 0 0 64px; width: 64px; height: 64px; padding: 0; border-radius: 50% !important; background: var(--acc) !important; box-shadow: 0 4px 16px rgba(124,58,237,.45); margin: 0 4px; position: relative; top: -8px; }
+.ni-discover-center.on { background: var(--acc) !important; }
+.ni-center-icon { font-size: 26px; line-height: 1; color: #fff; }
 .nbadge { background: var(--acc); color: #fff; font-size: 9px; font-weight: 700; border-radius: 100px; padding: 1px 6px; }
 
 /* ── Favorites view ──────────────────────────────────────────────── */
@@ -1050,3 +1062,13 @@ body {
   transition: background .15s;
 }
 .ups-close-btn:hover { background: var(--bg4); }
+
+/* ── Want Today & Fav Filter ─────────────────────────────────────── */
+.want-header { padding: 20px 20px 8px; flex-shrink: 0; }
+.want-title  { font-size: 20px; font-weight: 800; color: var(--text1); }
+.want-sub    { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+.fav-filter-row { display: flex; gap: 8px; padding: 8px 16px 4px; flex-shrink: 0; overflow-x: auto; }
+.fav-filter { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--bg4); background: var(--bg2);
+  font-size: 12px; font-weight: 700; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all .15s; }
+.fav-filter.on { background: var(--p100); border-color: var(--acc); color: var(--acc); }
