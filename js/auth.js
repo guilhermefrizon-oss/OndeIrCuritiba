@@ -5,7 +5,7 @@ import {
 } from './firebase.js';
 
 import {
-  db, collection, getDocs, query
+  db, doc, setDoc, collection, getDocs, query
 } from './firebase.js';
 
 import {
@@ -18,11 +18,28 @@ import {
 const provider = new GoogleAuthProvider();
 window.currentUser = null;
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   window.currentUser = user;
   updateAvatarUI(user);
+  if (user) await _migrateFavoritesIfNeeded(user);
   window.dispatchEvent(new CustomEvent('authChanged', { detail: user }));
 });
+
+async function _migrateFavoritesIfNeeded(user) {
+  const anonUid = localStorage.getItem('cwb_uid');
+  if (!anonUid || anonUid === user.uid) return;
+  try {
+    const snap = await getDocs(collection(db, 'favorites', anonUid, 'places'));
+    if (snap.empty) { localStorage.setItem('cwb_uid', user.uid); return; }
+    const writes = snap.docs.map(d =>
+      setDoc(doc(db, 'favorites', user.uid, 'places', d.id), d.data())
+    );
+    await Promise.all(writes);
+    localStorage.setItem('cwb_uid', user.uid);
+  } catch (e) {
+    console.warn('_migrateFavoritesIfNeeded:', e);
+  }
+}
 
 function updateAvatarUI(user) {
   const avatar = document.getElementById('topAvatar');
