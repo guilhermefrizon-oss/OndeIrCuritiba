@@ -8,6 +8,7 @@ import {
   db, doc, setDoc, collection, getDocs, query
 } from './firebase.js';
 import { loadUserXp, getLevelInfo } from './xp.js';
+import { loadUserBadges, renderBadges } from './badges.js';
 
 import {
   createUserWithEmailAndPassword,
@@ -383,6 +384,11 @@ export function showUserProfile() {
         </div>
       </div>
 
+      <div class="ups-section-title">Minhas Badges</div>
+      <div class="ups-badges-grid" id="upsBadgesGrid">
+        <div class="badges-empty">Carregando…</div>
+      </div>
+
       <div class="ups-section-title">Conta</div>
       <div class="ups-actions">
         ${!isGoogle ? `
@@ -519,6 +525,16 @@ async function _loadUserStats(user) {
 
     // Renderiza nível
     _renderLevel(totalXp);
+
+    // Carrega e renderiza badges
+    const earnedBadges = await loadUserBadges(user.uid);
+    renderBadges(earnedBadges, document.getElementById('upsBadgesGrid'));
+
+    // Atualiza badges em tempo real se uma nova for conquistada
+    window.addEventListener('badgeUnlocked', async () => {
+      const updated = await loadUserBadges(user.uid);
+      renderBadges(updated, document.getElementById('upsBadgesGrid'));
+    });
 
     // Atualiza em tempo real se XP for concedido enquanto o perfil está aberto
     window.addEventListener('xpAwarded', async () => {

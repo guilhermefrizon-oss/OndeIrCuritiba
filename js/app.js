@@ -7,6 +7,7 @@ import {
   fsBeenThere, fsLoadBeenThere
 } from './store.js';
 import { awardXp } from './xp.js';
+import { checkAndAwardBadges } from './badges.js';
 import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
 import { renderFavorites, toggleFavView } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
@@ -464,8 +465,9 @@ function doSkip(p) {
 function doBeenThere(p) {
   beenThere[p.id] = { visitedAt: new Date().toISOString(), ...p };
   fsBeenThere(p);
-  // Concede XP por visita
+  // Concede XP e verifica badges por visita
   awardXp('visited', { placeId: p.id, placeName: p.n, category: p.c, bairro: p.b });
+  checkAndAwardBadges();
   // Remove do feed imediatamente
   filtered = filtered.filter(f => f.id !== p.id);
 }
@@ -871,6 +873,30 @@ function renderMapView() {
       <div class="empty-sub">Salve lugares para vê-los no mapa.</div></div>`;
   }
 }
+
+// ── Badge unlock toast ────────────────────────────────────────────
+window.addEventListener('badgeUnlocked', (e) => {
+  const badge = e.detail;
+  if (!badge) return;
+  let toast = document.getElementById('badgeToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'badgeToast';
+    toast.className = 'badge-toast';
+    document.querySelector('.phone')?.appendChild(toast);
+  }
+  toast.innerHTML = `
+    <div class="badge-toast-icon">${badge.icon}</div>
+    <div class="badge-toast-text">
+      <div class="badge-toast-title">Badge conquistada!</div>
+      <div class="badge-toast-name">${badge.name}</div>
+    </div>`;
+  toast.classList.remove('badge-toast-in');
+  void toast.offsetWidth;
+  toast.classList.add('badge-toast-in');
+  clearTimeout(toast._to);
+  toast._to = setTimeout(() => toast.classList.remove('badge-toast-in'), 3500);
+});
 
 // ── Boot ───────────────────────────────────────────────────────────
 if (typeof fsLoadPlaces === 'function') {

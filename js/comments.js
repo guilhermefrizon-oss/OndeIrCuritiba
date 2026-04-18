@@ -9,6 +9,7 @@ import {
 } from './firebase.js';
 import { loadRating, submitRating } from './ratings.js';
 import { awardXp } from './xp.js';
+import { checkAndAwardBadges } from './badges.js';
 
 let activeUnsubscribe = null;
 
@@ -165,8 +166,9 @@ async function submitUnifiedReview(placeId, textarea, sendBtn, picker, area) {
     textarea.value = '';
     textarea.style.height = 'auto';
     sendBtn.textContent = 'Enviar';
-    // Concede XP por comentário (com ou sem avaliação)
+    // Concede XP e verifica badges por comentário
     awardXp('comment', { placeId });
+    checkAndAwardBadges();
 
     // Atualiza label de estrelas pós-envio
     const label = area?.querySelector('.unified-stars-label');
