@@ -702,3 +702,19 @@ if (typeof fsLoadPlaces === 'function') {
 } else {
   window.addEventListener('firebase-ready', () => init(), { once: true });
 }
+
+// Recarrega favoritos quando o login é confirmado (auth resolve depois do init)
+window.addEventListener('authChanged', async (e) => {
+  const user = e.detail;
+  if (!user) return;
+  const allSaved = await fsLoadAll();
+  if (allSaved?.length) {
+    saved = allSaved;
+    updateBadge();
+    // Atualiza a aba de favoritos se estiver aberta
+    const view = document.getElementById('favoritesView');
+    if (view && view.style.display !== 'none') {
+      renderFavorites(saved, openProfile, removeFav);
+    }
+  }
+});
