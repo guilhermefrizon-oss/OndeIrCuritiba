@@ -4,7 +4,8 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, getDocs,
-  collection, increment, addDoc, query, orderBy, onSnapshot, serverTimestamp
+  collection, increment, addDoc, query, orderBy, onSnapshot, serverTimestamp,
+  runTransaction, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth, GoogleAuthProvider,
@@ -27,3 +28,4 @@ const auth = getAuth(app);
 export { db, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged };
 export { doc, getDoc, setDoc, deleteDoc, getDocs, collection, increment };
 export { addDoc, query, orderBy, onSnapshot, serverTimestamp };
+export { runTransaction, writeBatch };

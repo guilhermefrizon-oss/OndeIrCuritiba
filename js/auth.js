@@ -7,6 +7,7 @@ import {
 import {
   db, doc, setDoc, collection, getDocs, query
 } from './firebase.js';
+import { loadUserXp, getLevelInfo } from './xp.js';
 
 import {
   createUserWithEmailAndPassword,
@@ -353,6 +354,18 @@ export function showUserProfile() {
         </div>
       </div>
 
+      <div class="ups-level-bar" id="upsLevelBar">
+        <div class="ups-level-top">
+          <span class="ups-level-icon" id="upsLevelIcon">🌱</span>
+          <span class="ups-level-name" id="upsLevelName">Novato</span>
+          <span class="ups-level-xp"  id="upsLevelXp">0 XP</span>
+        </div>
+        <div class="ups-level-track">
+          <div class="ups-level-fill" id="upsLevelFill" style="width:0%"></div>
+        </div>
+        <div class="ups-level-next" id="upsLevelNext"></div>
+      </div>
+
       <div class="ups-stats">
         <div class="ups-stat">
           <div class="ups-stat-num" id="upsStatLikes">—</div>
@@ -480,26 +493,22 @@ export function showUserProfile() {
 
 async function _loadUserStats(user) {
   const el = id => document.getElementById(id);
-  // Mostra loading enquanto busca
   if (el('upsStatSaved'))    el('upsStatSaved').textContent    = '…';
   if (el('upsStatLikes'))    el('upsStatLikes').textContent    = '…';
   if (el('upsStatComments')) el('upsStatComments').textContent = '…';
 
+  // Carrega XP e nível em paralelo com as stats
   try {
-    // Salvos: coleção favorites/{uid}/places
-    const savedSnap = await getDocs(collection(db, 'favorites', user.uid, 'places'));
-    if (el('upsStatSaved')) el('upsStatSaved').textContent = savedSnap.size;
+    const [savedSnap, likedSnap, totalXp] = await Promise.all([
+      getDocs(collection(db, 'favorites', user.uid, 'places')),
+      getDocs(collection(db, 'likes_by_user', user.uid, 'places')),
+      loadUserXp(user.uid),
+    ]);
 
-    // Curtidos: coleção likes — conta todos os places onde o uid existe
-    // Estrutura: likes/{placeId}/users/{uid}
-    // Para evitar percorrer todos os places, guardamos também um índice reverso
-    // likes_by_user/{uid}/places/{placeId}
-    const likedSnap = await getDocs(collection(db, 'likes_by_user', user.uid, 'places'));
+    if (el('upsStatSaved')) el('upsStatSaved').textContent = savedSnap.size;
     if (el('upsStatLikes')) el('upsStatLikes').textContent = likedSnap.size;
 
-    // Comentários: comments — subcoleção por place, filtramos por userId
-    // Como não há índice centralizado, usamos collectionGroup se disponível
-    // Fallback: mostra '—' (requer índice no Firebase para collectionGroup)
+    // Comentários via collectionGroup
     try {
       const { collectionGroup, where } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
       const commSnap = await getDocs(query(collectionGroup(db, 'items'), where('userId', '==', user.uid)));
@@ -507,11 +516,37 @@ async function _loadUserStats(user) {
     } catch {
       if (el('upsStatComments')) el('upsStatComments').textContent = '—';
     }
+
+    // Renderiza nível
+    _renderLevel(totalXp);
+
+    // Atualiza em tempo real se XP for concedido enquanto o perfil está aberto
+    window.addEventListener('xpAwarded', async () => {
+      const updated = await loadUserXp(user.uid);
+      _renderLevel(updated);
+    }, { once: false });
+
   } catch (e) {
     console.warn('_loadUserStats:', e);
     if (el('upsStatSaved'))    el('upsStatSaved').textContent    = '—';
     if (el('upsStatLikes'))    el('upsStatLikes').textContent    = '—';
     if (el('upsStatComments')) el('upsStatComments').textContent = '—';
+  }
+}
+
+function _renderLevel(totalXp) {
+  const el   = id => document.getElementById(id);
+  const info = getLevelInfo(totalXp);
+  if (el('upsLevelIcon')) el('upsLevelIcon').textContent = info.current.icon;
+  if (el('upsLevelName')) el('upsLevelName').textContent = info.current.name;
+  if (el('upsLevelXp'))   el('upsLevelXp').textContent  = `${totalXp} XP`;
+  if (el('upsLevelFill')) {
+    el('upsLevelFill').style.width = `${Math.round(info.progress * 100)}%`;
+  }
+  if (el('upsLevelNext')) {
+    el('upsLevelNext').textContent = info.next
+      ? `${info.xpIntoLevel} / ${info.xpNeeded} XP para ${info.next.icon} ${info.next.name}`
+      : `Nível máximo atingido! 🎉`;
   }
 }
 

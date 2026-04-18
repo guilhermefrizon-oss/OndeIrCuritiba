@@ -6,6 +6,7 @@ import {
   fsSkip, fsLoadSkipped,
   fsBeenThere, fsLoadBeenThere
 } from './store.js';
+import { awardXp } from './xp.js';
 import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
 import { renderFavorites, toggleFavView } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
@@ -463,6 +464,8 @@ function doSkip(p) {
 function doBeenThere(p) {
   beenThere[p.id] = { visitedAt: new Date().toISOString(), ...p };
   fsBeenThere(p);
+  // Concede XP por visita
+  awardXp('visited', { placeId: p.id, placeName: p.n, category: p.c, bairro: p.b });
   // Remove do feed imediatamente
   filtered = filtered.filter(f => f.id !== p.id);
 }

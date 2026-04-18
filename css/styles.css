@@ -1072,3 +1072,14 @@ body {
 .fav-filter { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--bg4); background: var(--bg2);
   font-size: 12px; font-weight: 700; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all .15s; }
 .fav-filter.on { background: var(--p100); border-color: var(--acc); color: var(--acc); }
+
+/* ── XP / Level bar ──────────────────────────────────────────────── */
+.ups-level-bar   { margin: 4px 20px 16px; background: var(--bg3); border-radius: 16px; padding: 14px 16px; }
+.ups-level-top   { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ups-level-icon  { font-size: 20px; line-height: 1; }
+.ups-level-name  { font-size: 15px; font-weight: 800; color: var(--text1); flex: 1; }
+.ups-level-xp    { font-size: 12px; font-weight: 700; color: var(--acc); }
+.ups-level-track { height: 8px; background: var(--bg4); border-radius: 99px; overflow: hidden; }
+.ups-level-fill  { height: 100%; background: linear-gradient(90deg, var(--acc), #a78bfa); border-radius: 99px;
+                   transition: width .6s cubic-bezier(.4,0,.2,1); }
+.ups-level-next  { font-size: 11px; color: var(--text3); margin-top: 7px; text-align: center; }
