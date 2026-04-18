@@ -254,9 +254,11 @@ body {
 .ni-icon { font-size: 18px; line-height: 1; }
 .ni-lbl { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); }
 .ni.on .ni-lbl { color: var(--acc); }
-.ni-discover-center { flex: 0 0 58px; width: 58px; height: 58px; padding: 0; border-radius: 50% !important; background: var(--acc) !important; box-shadow: 0 4px 18px rgba(124,58,237,.5); margin: 0 2px; position: relative; top: -10px; justify-content: center; }
+.ni-discover-center { flex: 0 0 58px; width: 58px; height: 58px; padding: 0; border-radius: 50% !important; background: var(--acc) !important; box-shadow: 0 4px 18px rgba(124,58,237,.5); margin: 0 2px; position: relative; top: -14px; }
 .ni-discover-center.on { background: var(--acc) !important; }
-.ni-center-icon { font-size: 24px; line-height: 1; color: #fff; display: flex; align-items: center; justify-content: center; }
+.ni-center-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; position: relative; top: 14px; }
+.ni-center-icon { font-size: 22px; line-height: 1; color: #fff; }
+.ni-center-lbl  { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #fff; white-space: nowrap; }
 .nbadge { background: var(--acc); color: #fff; font-size: 9px; font-weight: 700; border-radius: 100px; padding: 1px 6px; }
 
 /* ── Favorites view ──────────────────────────────────────────────── */
