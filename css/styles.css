@@ -224,13 +224,12 @@ body {
 .pdot.on { background: var(--acc); width: 18px; border-radius: 3px; }
 
 /* ── Action buttons ───────────────────────────────────────────────── */
-.btns { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 24px 12px; flex-shrink: 0; }
-.btns-secondary { display: flex; align-items: center; justify-content: center; gap: 32px; }
-.btns-primary   { display: flex; align-items: center; justify-content: center; gap: 28px; }
-.abtn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; background: none; border: none; }
+.btns { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 16px; padding: 12px 16px 14px; flex-shrink: 0; }
+.abtn { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; background: none; border: none; }
 .abtn .c { border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid; transition: transform .12s, background .15s; box-shadow: var(--shadow); }
-.btns-primary .abtn .c   { width: 64px; height: 64px; }
-.btns-secondary .abtn .c { width: 46px; height: 46px; }
+/* Tamanhos: pequeno para Já fui/Salvar, grande para Não hoje/Quero ir */
+.b-been .c, .b-save .c { width: 50px; height: 50px; }
+.b-pass .c, .b-like .c { width: 64px; height: 64px; }
 .abtn:active .c { transform: scale(.91); }
 .abtn .lbl { font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
 .b-pass .c   { border-color: #f87171; background: rgba(248,113,113,.08); color: #f87171; }
@@ -255,9 +254,9 @@ body {
 .ni-icon { font-size: 18px; line-height: 1; }
 .ni-lbl { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); }
 .ni.on .ni-lbl { color: var(--acc); }
-.ni-discover-center { flex: 0 0 64px; width: 64px; height: 64px; padding: 0; border-radius: 50% !important; background: var(--acc) !important; box-shadow: 0 4px 16px rgba(124,58,237,.45); margin: 0 4px; position: relative; top: -8px; }
+.ni-discover-center { flex: 0 0 58px; width: 58px; height: 58px; padding: 0; border-radius: 50% !important; background: var(--acc) !important; box-shadow: 0 4px 18px rgba(124,58,237,.5); margin: 0 2px; position: relative; top: -10px; justify-content: center; }
 .ni-discover-center.on { background: var(--acc) !important; }
-.ni-center-icon { font-size: 26px; line-height: 1; color: #fff; }
+.ni-center-icon { font-size: 24px; line-height: 1; color: #fff; display: flex; align-items: center; justify-content: center; }
 .nbadge { background: var(--acc); color: #fff; font-size: 9px; font-weight: 700; border-radius: 100px; padding: 1px 6px; }
 
 /* ── Favorites view ──────────────────────────────────────────────── */
