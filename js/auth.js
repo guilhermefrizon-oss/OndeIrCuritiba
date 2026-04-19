@@ -324,7 +324,8 @@ export function showUserProfile() {
     screen = document.createElement('div');
     screen.id = 'userProfileScreen';
     screen.className = 'user-profile-screen';
-    document.body.appendChild(screen);
+    // Append inside .phone so position:absolute works correctly
+    (document.querySelector('.phone') || document.body).appendChild(screen);
   }
 
   const initials    = getInitials(user);
@@ -746,9 +747,11 @@ function _renderLevel(totalXp) {
 export function closeUserProfile() {
   const screen = document.getElementById('userProfileScreen');
   if (!screen) return;
-  screen.classList.remove('ups-visible');
   screen.classList.add('ups-closing');
-  setTimeout(() => { screen.classList.remove('ups-closing'); screen.style.display='none'; }, 320);
+  setTimeout(() => {
+    screen.classList.remove('ups-closing');
+    screen.style.display = 'none';
+  }, 260);
 }
 
 export function handleAvatarClick() {
