@@ -897,10 +897,6 @@ body {
 /* ══════════════════════════════════════════════════════════════════
    USER PROFILE SCREEN
 ══════════════════════════════════════════════════════════════════ */
-.user-profile-screen {
-  position: fixed; inset: 0; z-index: 500;
-  display: flex; align-items: flex-end; justify-content: center;
-}
 
 .ups-backdrop {
   position: absolute; inset: 0;
@@ -1130,12 +1126,12 @@ body {
 .badge-toast-name  { font-size: 14px; font-weight: 800; color: var(--text1); }
 
 /* ── Profile fullscreen (inside .phone) ──────────────────────────── */
-.user-profile-screen { position: absolute; inset: 0; z-index: 300; display: none;
-  background: var(--bg1); flex-direction: column; }
-.user-profile-screen.ups-visible { display: flex;
+.user-profile-screen { position: absolute; inset: 0; z-index: 300; display: none !important; }
+.user-profile-screen.ups-visible { display: flex !important;
   animation: slideInRight .28s cubic-bezier(.22,1,.36,1); }
 .user-profile-screen.ups-closing { animation: slideOutRight .25s cubic-bezier(.4,0,.2,1) forwards; }
-.ups-fullscreen { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }
+.ups-fullscreen { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden;
+  background: var(--bg2); }
 
 @keyframes slideInRight  { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
@@ -1150,7 +1146,7 @@ body {
   font-weight: 700; color: var(--text3); transition: all .2s; }
 .ups-privacy-toggle.privacy-public { background: var(--p100); border-color: var(--acc); color: var(--acc); }
 
-.ups-scroll { flex: 1; overflow-y: auto; padding-bottom: 32px; }
+.ups-scroll { flex: 1; overflow-y: auto; padding-bottom: 32px; background: var(--bg2); }
 
 .ups-tabs { display: flex; gap: 0; padding: 0 16px; border-bottom: 1.5px solid var(--bg4); flex-shrink: 0; }
 .ups-tab  { flex: 1; padding: 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .4px;
