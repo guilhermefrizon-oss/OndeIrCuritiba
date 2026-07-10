@@ -15,6 +15,11 @@ import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
 import { ic, catIcon } from './icons.js';
 
+// Sinaliza que toda a cadeia de módulos (firebase, store, auth, xp…)
+// carregou. O watchdog em index.html usa isto para detectar quando o
+// app não inicializa (ex.: SDK do Firebase bloqueado em webview/rede).
+window.__dmBooted = true;
+
 // ── State ──────────────────────────────────────────────────────────
 let P        = [];
 let CATS     = ['Todos'];

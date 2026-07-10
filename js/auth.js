@@ -1,7 +1,8 @@
 // ── auth.js ───────────────────────────────────────────────────────
 import {
   auth, GoogleAuthProvider,
-  signInWithPopup, signOut, onAuthStateChanged
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  signOut, onAuthStateChanged
 } from './firebase.js';
 import { ic } from './icons.js';
 
@@ -27,6 +28,12 @@ onAuthStateChanged(auth, async (user) => {
   if (user) await _migrateFavoritesIfNeeded(user);
   window.dispatchEvent(new CustomEvent('authChanged', { detail: user }));
 });
+
+// Conclui o login quando voltamos de um signInWithRedirect (celular/webview).
+// onAuthStateChanged já cuida do estado; aqui só fechamos o modal e logamos erros.
+getRedirectResult(auth)
+  .then(res => { if (res && res.user) closeAuthModal(); })
+  .catch(e => console.warn('getRedirectResult:', e.code, e.message));
 
 async function _migrateFavoritesIfNeeded(user) {
   const anonUid = localStorage.getItem('cwb_uid');
@@ -64,9 +71,37 @@ function getInitials(user) {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
+// Alguns ambientes não suportam popup (webview do Instagram/Facebook,
+// alguns navegadores mobile, bloqueadores). Nesses casos caímos para o
+// fluxo de redirect, que funciona em qualquer lugar.
+const POPUP_UNSUPPORTED = [
+  'auth/popup-blocked',
+  'auth/operation-not-supported-in-this-environment',
+  'auth/web-storage-unsupported',
+  'auth/internal-error',
+];
+
 export async function signInWithGoogle() {
-  try { await signInWithPopup(auth, provider); closeAuthModal(); }
-  catch (e) { console.warn('Login falhou:', e.message); }
+  const errEl = document.getElementById('loginError');
+  if (errEl) errEl.style.display = 'none';
+  try {
+    await signInWithPopup(auth, provider);
+    closeAuthModal();
+  } catch (e) {
+    console.warn('Login popup falhou:', e.code, e.message);
+    // Usuário fechou/cancelou o popup: não faz nada (não força redirect).
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    // Popup indisponível no ambiente → tenta redirect (sai da página e volta logado).
+    if (POPUP_UNSUPPORTED.includes(e.code)) {
+      try { await signInWithRedirect(auth, provider); return; }
+      catch (e2) {
+        console.warn('Login redirect falhou:', e2.code, e2.message);
+        if (errEl) showErr(errEl, 'Não foi possível entrar com o Google aqui. Use o e-mail e senha abaixo.');
+        return;
+      }
+    }
+    if (errEl) showErr(errEl, _friendlyError(e.code));
+  }
 }
 
 export async function signUpWithEmail(name, email, password) {

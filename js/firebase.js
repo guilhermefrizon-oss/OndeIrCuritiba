@@ -9,7 +9,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth, GoogleAuthProvider,
-  signInWithPopup, signOut, onAuthStateChanged
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -25,7 +26,7 @@ const app  = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const db   = getFirestore(app);
 const auth = getAuth(app);
 
-export { db, auth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged };
+export { db, auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged };
 export { doc, getDoc, setDoc, deleteDoc, getDocs, collection, increment };
 export { addDoc, query, orderBy, onSnapshot, serverTimestamp };
 export { runTransaction, writeBatch };

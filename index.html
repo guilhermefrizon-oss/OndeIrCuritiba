@@ -215,6 +215,45 @@
   </div>
 </div>
 
+<!-- ── Watchdog de inicialização ──────────────────────────────────
+     Se a cadeia de módulos não carregar (SDK do Firebase bloqueado por
+     navegador embutido do Instagram/Facebook, rede ou extensão), o app
+     não inicia e a tela fica vazia. Aqui detectamos isso e mostramos um
+     aviso claro em vez de deixar o usuário sem retorno. -->
+<script>
+(function(){
+  function showBootError(){
+    if (window.__dmBooted || document.getElementById('dmBootError')) return;
+    var box = document.createElement('div');
+    box.id = 'dmBootError';
+    box.setAttribute('style',
+      'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;'+
+      'align-items:center;justify-content:center;gap:14px;text-align:center;'+
+      'padding:32px;background:#faf9f6;color:#14140f;font-family:system-ui,-apple-system,sans-serif;');
+    box.innerHTML =
+      '<div style="font-size:44px;line-height:1">📡</div>'+
+      '<div style="font-size:19px;font-weight:800">Não conseguimos carregar o app</div>'+
+      '<div style="font-size:14px;max-width:300px;line-height:1.5;color:#555">'+
+        'Isso costuma acontecer no navegador de dentro do Instagram/Facebook ou '+
+        'com conexão instável. Toque em <b>“Abrir no navegador”</b> (menu ⋯ no canto) '+
+        'ou tente recarregar.</div>'+
+      '<button id="dmBootReload" style="margin-top:6px;padding:13px 26px;border:none;'+
+        'border-radius:14px;background:#14140f;color:#fff;font-size:15px;font-weight:700;'+
+        'cursor:pointer">Recarregar</button>';
+    document.body.appendChild(box);
+    document.getElementById('dmBootReload').onclick = function(){ location.reload(); };
+  }
+  // Falha explícita de carregamento de um <script type="module">.
+  window.addEventListener('error', function(e){
+    if (e && e.target && e.target.tagName === 'SCRIPT') setTimeout(showBootError, 300);
+  }, true);
+  // Rede de segurança: se em 12s o app não sinalizou boot, avisa.
+  window.addEventListener('DOMContentLoaded', function(){
+    setTimeout(showBootError, 12000);
+  });
+})();
+</script>
+
 <!-- ── Módulos JS ── -->
 <script type="module" src="js/theme.js"></script>
 <script type="module" src="js/xp.js"></script>
