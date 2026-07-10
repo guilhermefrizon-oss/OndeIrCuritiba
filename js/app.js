@@ -835,11 +835,48 @@ function priceHTML(p) {
 
 window.openProfile = openProfile;
 
+// ── Voltar (botão/gesto do celular) fecha telas sobrepostas ────────
+// O app é single-page. Sem gerenciar o histórico, apertar "voltar" no
+// celular não fecha o perfil/busca/sheets — tenta sair do app. Aqui
+// cada tela aberta empurra um estado; o "voltar" dispara popstate e
+// fecha a tela do topo. Fechar pelo X também passa por aqui.
+const _overlayStack = []; // { id, closeFn, pushed }
+
+window.registerOverlay = (id, closeFn) => {
+  // Evita empilhar a mesma tela duas vezes
+  if (_overlayStack.some(o => o.id === id)) return;
+  let pushed = false;
+  try { history.pushState({ dmOverlay: id }, ''); pushed = true; } catch (e) {}
+  _overlayStack.push({ id, closeFn, pushed });
+};
+
+// Fecha a tela do topo "por vontade" (X, backdrop, Cancelar): volta no
+// histórico; o popstate abaixo executa o fechamento de fato.
+window.dismissOverlay = (id) => {
+  const idx = _overlayStack.map(o => o.id).lastIndexOf(id);
+  if (idx === -1) return;
+  const entry = _overlayStack[idx];
+  if (idx === _overlayStack.length - 1 && entry.pushed) {
+    history.back(); // é o topo → deixa o popstate fechar
+  } else {
+    // não é o topo, ou sem estado no histórico: remove e fecha direto
+    _overlayStack.splice(idx, 1);
+    try { entry.closeFn(); } catch (e) {}
+  }
+};
+
+window.addEventListener('popstate', () => {
+  const top = _overlayStack.pop();
+  if (top) { try { top.closeFn(); } catch (e) {} }
+});
+
 async function openProfile(p) {
   window._currentProfilePlaceId = p.id;
   profilePhotos=[]; profilePhotoIdx=0;
   const screen = document.getElementById('profileScreen');
+  const wasOpen = screen.style.display === 'flex';
   screen.style.display='flex'; screen.classList.remove('closing');
+  if (!wasOpen) window.registerOverlay('profile', doCloseProfile);
 
   document.getElementById('profileName').textContent = p.n;
   document.getElementById('profileCat').textContent  = p.c;
@@ -922,7 +959,7 @@ async function openProfile(p) {
 
   document.getElementById('storyTapLeft').onclick  = storyPrev;
   document.getElementById('storyTapRight').onclick = storyNext;
-  document.getElementById('profileClose').onclick  = closeProfile;
+  document.getElementById('profileClose').onclick  = () => window.dismissOverlay('profile');
 }
 
 function setProfilePhoto(i) {
@@ -954,12 +991,15 @@ function storyPrev() {
   profilePhotoIdx--; setProfilePhoto(profilePhotoIdx); updateProfileStoryBars();
 }
 
-function closeProfile() {
+// Fecha o DOM do perfil (idempotente). Chamado só pelo popstate/dismiss.
+function doCloseProfile() {
   const screen = document.getElementById('profileScreen');
+  if (!screen || screen.style.display === 'none') return;
   screen.classList.add('closing');
   if (typeof unsubscribeComments==='function') unsubscribeComments();
-  setTimeout(()=>{ screen.style.display='none'; },300);
+  setTimeout(()=>{ screen.style.display='none'; screen.classList.remove('closing'); },300);
 }
+window.closeProfile = () => window.dismissOverlay('profile');
 
 // ── Address sheet ──────────────────────────────────────────────────
 window.openAddrSheet = (addr) => {
@@ -975,24 +1015,36 @@ window.openAddrSheet = (addr) => {
     });
   };
   document.getElementById('addrSheetBackdrop').style.display='flex';
+  window.registerOverlay('addrSheet', doCloseAddrSheet);
 };
+function doCloseAddrSheet() {
+  const bd = document.getElementById('addrSheetBackdrop');
+  if (bd) bd.style.display='none';
+}
 window.closeAddrSheet = (e) => {
   if (e && e.target!==document.getElementById('addrSheetBackdrop')) return;
-  document.getElementById('addrSheetBackdrop').style.display='none';
+  window.dismissOverlay('addrSheet');
 };
 
 // ── City selector ──────────────────────────────────────────────────
 let currentCity = 'Curitiba, PR';
-window.openCitySheet  = () => document.getElementById('citySheetBackdrop').style.display='flex';
+window.openCitySheet  = () => {
+  document.getElementById('citySheetBackdrop').style.display='flex';
+  window.registerOverlay('citySheet', doCloseCitySheet);
+};
+function doCloseCitySheet() {
+  const bd = document.getElementById('citySheetBackdrop');
+  if (bd) bd.style.display='none';
+}
 window.closeCitySheet = (e) => {
   if (e && e.target!==document.getElementById('citySheetBackdrop')) return;
-  document.getElementById('citySheetBackdrop').style.display='none';
+  window.dismissOverlay('citySheet');
 };
 window.selectCity = (city, id) => {
   currentCity = city;
   document.getElementById('cityLabel').textContent = city;
   document.querySelectorAll('.city-option').forEach(b => b.classList.toggle('active', b.id===id));
-  document.getElementById('citySheetBackdrop').style.display='none';
+  window.dismissOverlay('citySheet');
 };
 
 // ── Welcome screen ─────────────────────────────────────────────────
