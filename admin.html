@@ -996,10 +996,10 @@ pre {
       </div>
 
       <div class="stats-bar" id="statsBar">
-        <div class="stat-card"><div class="stat-icon">📍</div><div class="stat-num" id="statTotal">—</div><div class="stat-label">Total de lugares</div></div>
-        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-num" id="statWithPid">—</div><div class="stat-label">Com Google ID</div></div>
-        <div class="stat-card"><div class="stat-icon">🗂️</div><div class="stat-num" id="statCats">—</div><div class="stat-label">Categorias</div></div>
-        <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-num" id="statRecent">—</div><div class="stat-label">Adicionados hoje</div></div>
+        <div class="stat-card"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div><div class="stat-num" id="statTotal">—</div><div class="stat-label">Total de lugares</div></div>
+        <div class="stat-card"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-num" id="statWithPid">—</div><div class="stat-label">Com Google ID</div></div>
+        <div class="stat-card"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div class="stat-num" id="statCats">—</div><div class="stat-label">Categorias</div></div>
+        <div class="stat-card"><div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="stat-num" id="statRecent">—</div><div class="stat-label">Adicionados hoje</div></div>
       </div>
 
       <div class="toolbar">
@@ -1061,7 +1061,7 @@ pre {
       </div>
 
       <div class="alert-box info" style="max-width:700px">
-        <span>💡</span>
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
         <div>Cada categoria tem um <strong>nome</strong>, <strong>emoji</strong> e <strong>cor do card</strong>. Assim que você salvar, ela aparece nos filtros do app e no formulário de lugares.</div>
       </div>
 
@@ -1082,7 +1082,7 @@ pre {
       </div>
 
       <div class="alert-box warn">
-        <span>⚠️</span>
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
         <div><strong>Execute uma vez!</strong> Este processo lê o array hardcoded do <code>index.html</code> e salva cada lugar como documento na coleção <code>places</code> do Firestore. Se já existirem documentos, serão sobrescritos pelo ID.</div>
       </div>
 
@@ -1110,7 +1110,7 @@ pre {
       </div>
 
       <div class="alert-box info">
-        <span>💡</span>
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
         <div>Aplique as regras abaixo no <strong>Firebase Console → Firestore → Rules</strong> para garantir que apenas admins autorizados possam escrever na coleção <code>places</code>.</div>
       </div>
 
@@ -1157,7 +1157,7 @@ service cloud.firestore {
     }
   }
 }</pre>
-        <button class="copy-btn" onclick="copyRules()">📋 Copiar regras</button>
+        <button class="copy-btn" onclick="copyRules()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar regras</button>
       </div>
 
       <div class="rules-card">
@@ -1180,7 +1180,7 @@ async function loadPlacesFromFirestore() {
 
 // Chame no init():
 loadPlacesFromFirestore();</pre>
-        <button class="copy-btn" onclick="copyIndex()">📋 Copiar código</button>
+        <button class="copy-btn" onclick="copyIndex()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código</button>
       </div>
     </div>
 
@@ -1252,7 +1252,7 @@ loadPlacesFromFirestore();</pre>
             <option value="insta">insta (fúcsia)</option>
           </select>
         </div>
-        <div class="form-group full">
+        <div class="form-group full" style="display:none">
           <label class="form-label">Emoji do card</label>
           <input class="form-input" id="f_e" placeholder="ex: 🌆" maxlength="4" style="font-size:22px; width:80px">
           <div class="emoji-row">
@@ -1353,7 +1353,7 @@ loadPlacesFromFirestore();</pre>
           <label class="form-label">Nome da categoria *</label>
           <input class="form-input" id="fc_name" placeholder="ex: Rooftop, Brunch, Samba…">
         </div>
-        <div class="form-group">
+        <div class="form-group" style="display:none">
           <label class="form-label">Emoji *</label>
           <input class="form-input" id="fc_emoji" placeholder="ex: 🌆" maxlength="4" style="font-size:22px; width:80px">
           <div class="emoji-row" style="margin-top:10px">
@@ -1441,6 +1441,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, Timestamp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { ic, catIcon } from "./js/icons.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCz1Ti_twBmtDxGOc9cGiXHBNbFTOdvYAg",
@@ -1573,7 +1574,7 @@ window.openPhotoModal = async () => {
   } catch(e) {
     document.getElementById('photoGridLoading').style.display = 'none';
     document.getElementById('photoGridError').style.display = 'block';
-    document.getElementById('photoGridError').textContent = '⚠️ ' + e.message;
+    document.getElementById('photoGridError').textContent = e.message;
   }
 };
 
@@ -1725,17 +1726,17 @@ async function loadCategories() {
 function renderCatsGrid() {
   const grid = document.getElementById('catsGrid');
   if (!allCategoriesList.length) {
-    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂️</div><div>Nenhuma categoria ainda</div></div>';
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div>Nenhuma categoria ainda</div></div>';
     return;
   }
   grid.innerHTML = allCategoriesList.map(cat => `
     <div class="cat-card">
-      <div class="cat-card-emoji">${cat.emoji || '📍'}</div>
+      <div class="cat-card-emoji">${catIcon(cat.name, 28, 1.7)}</div>
       <div class="cat-card-name">${cat.name}</div>
       <div class="cat-card-meta">Cor: ${cat.bg || '—'} · Ordem: ${cat.order || '—'}</div>
       <div class="cat-card-actions">
-        <button class="btn btn-secondary btn-sm" onclick="openEditCatModal('${cat.id}')">✏️ Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCat('${cat.id}', '${(cat.name||'').replace(/'/g,"\\'")}')">🗑️</button>
+        <button class="btn btn-secondary btn-sm" onclick="openEditCatModal('${cat.id}')">${ic('edit',13)} Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCat('${cat.id}', '${(cat.name||'').replace(/'/g,"\\'")}')">${ic('trash',14)}</button>
       </div>
     </div>
   `).join('');
@@ -1794,7 +1795,6 @@ window.saveCat = async () => {
   const name  = document.getElementById('fc_name').value.trim();
   const emoji = document.getElementById('fc_emoji').value.trim();
   if (!name)  { showToast('Nome é obrigatório', 'error'); return; }
-  if (!emoji) { showToast('Escolha um emoji', 'error'); return; }
 
   const btn = document.getElementById('btnSaveCat');
   btn.disabled = true; btn.textContent = 'Salvando…';
@@ -1851,7 +1851,7 @@ async function loadPlaces() {
     const isPermErr = e.message?.includes('permission') || e.message?.includes('Missing');
     document.getElementById('tableLoading').innerHTML = isPermErr
       ? `<div style="color:var(--yellow); line-height:1.8">
-           ⚠️ <strong>Coleção "places" ainda não existe no Firestore.</strong><br>
+           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> <strong>Coleção "places" ainda não existe no Firestore.</strong><br>
            <span style="color:var(--text3); font-size:13px">Vá em <strong style="color:var(--acc3)">Migrar Dados</strong> para importar os 90 lugares e criar a coleção.</span>
          </div>`
       : `<div style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
@@ -1914,7 +1914,7 @@ function renderTable() {
     document.getElementById('placesTableBody').closest('.table-wrap').querySelector('.empty-state')?.remove();
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.innerHTML = '<div class="empty-icon">🔍</div><div>Nenhum lugar encontrado</div>';
+    empty.innerHTML = '<div class="empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div>Nenhum lugar encontrado</div>';
     document.getElementById('tableContent').appendChild(empty);
     document.getElementById('paginationInfo').textContent = '';
     document.getElementById('paginationBtns').innerHTML = '';
@@ -1927,7 +1927,7 @@ function renderTable() {
   tbody.innerHTML = page.map(p => `
     <tr>
       <td>
-        <div class="place-name">${p.e||''} ${p.n||'—'}</div>
+        <div class="place-name">${p.n||'—'}</div>
         <div class="place-addr">${p.a||'—'}</div>
       </td>
       <td>${(Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : ['—'])).map(c => `<span class="cat-chip">${c}</span>`).join(' ')}</td>
@@ -1935,16 +1935,16 @@ function renderTable() {
       <td><span class="price-chip">${p.p||'—'}</span></td>
       <td>
         ${p.pid && !p.pid.startsWith('ID_GOOGLE_')
-          ? `<span class="pid-chip pid-ok" title="${p.pid}">✓ ${p.pid.substring(0,10)}…</span>`
+          ? `<span class="pid-chip pid-ok" title="${p.pid}">${ic('check',12)} ${p.pid.substring(0,10)}…</span>`
           : p.pid
-            ? `<span class="pid-chip pid-missing" title="${p.pid}">⚠ temporário</span>`
+            ? `<span class="pid-chip pid-missing" title="${p.pid}">${ic('alert',12)} temporário</span>`
             : `<span class="pid-chip" style="color:var(--text3)">— sem ID</span>`
         }
       </td>
       <td>
         <div class="actions">
-          <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p._docId}')">✏️ Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="openConfirm('${p._docId}', '${(p.n||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}')">🗑️</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p._docId}')">${ic('edit',13)} Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="openConfirm('${p._docId}', '${(p.n||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}')">${ic('trash',14)}</button>
         </div>
       </td>
     </tr>
@@ -2112,7 +2112,7 @@ window.confirmDelete = async () => {
     showToast('Erro ao excluir: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '🗑️ Excluir';
+    btn.innerHTML = ic('trash',14) + ' Excluir';
   }
 };
 
@@ -2273,7 +2273,7 @@ window.closeSidebar = () => {
 
 // ── Toast ───────────────────────────────────────────────────────
 window.showToast = (msg, type='info') => {
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const icons = { success: ic('check-circle',16), error: ic('x',16), info: ic('info',16) };
   const el = document.createElement('div');
   el.className = `toast ${type}`;
   el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
