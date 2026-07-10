@@ -865,6 +865,8 @@ window.dismissOverlay = (id) => {
   }
 };
 
+window._overlayHas = (id) => _overlayStack.some(o => o.id === id);
+
 window.addEventListener('popstate', () => {
   const top = _overlayStack.pop();
   if (top) { try { top.closeFn(); } catch (e) {} }

@@ -209,6 +209,8 @@ export function showAuthModal(reason = 'default') {
 
   bd.style.display = 'flex';
   _bindAuthModal();
+  // Registra no histórico → botão "voltar" do celular fecha o modal
+  if (window.registerOverlay) window.registerOverlay('authModal', doCloseAuthModal);
 }
 
 function _bindAuthModal() {
@@ -310,9 +312,14 @@ function _friendlyError(code) {
   return map[code] || 'Ocorreu um erro. Tente novamente.';
 }
 
-export function closeAuthModal() {
+// Fecha o DOM do modal (idempotente). Chamado só pelo popstate/dismiss.
+function doCloseAuthModal() {
   const bd = document.getElementById('authModalBackdrop');
   if (bd) bd.style.display = 'none';
+}
+export function closeAuthModal() {
+  if (window._overlayHas && window._overlayHas('authModal')) window.dismissOverlay('authModal');
+  else doCloseAuthModal();
 }
 
 // ── User Profile Screen ────────────────────────────────────────────
@@ -477,6 +484,8 @@ export function showUserProfile() {
 
   screen.style.display = 'flex';
   requestAnimationFrame(() => screen.classList.add('ups-visible'));
+  // Registra no histórico → botão "voltar" do celular fecha o perfil
+  if (window.registerOverlay) window.registerOverlay('userProfile', doCloseUserProfile);
 
   _loadUserStats(user);
   _loadPrivacyToggle(user);
@@ -745,14 +754,19 @@ function _renderLevel(totalXp) {
   }
 }
 
-export function closeUserProfile() {
+// Fecha o DOM do perfil (idempotente). Chamado só pelo popstate/dismiss.
+function doCloseUserProfile() {
   const screen = document.getElementById('userProfileScreen');
-  if (!screen) return;
+  if (!screen || screen.style.display === 'none') return;
   screen.classList.add('ups-closing');
   setTimeout(() => {
     screen.classList.remove('ups-closing');
     screen.style.display = 'none';
   }, 260);
+}
+export function closeUserProfile() {
+  if (window._overlayHas && window._overlayHas('userProfile')) window.dismissOverlay('userProfile');
+  else doCloseUserProfile();
 }
 
 export function handleAvatarClick() {
