@@ -15,6 +15,11 @@ import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
 import { ic, catIcon } from './icons.js';
 
+// Sinaliza que toda a cadeia de módulos (firebase, store, auth, xp…)
+// carregou. O watchdog em index.html usa isto para detectar quando o
+// app não inicializa (ex.: SDK do Firebase bloqueado em webview/rede).
+window.__dmBooted = true;
+
 // ── State ──────────────────────────────────────────────────────────
 let P        = [];
 let CATS     = ['Todos'];
@@ -97,9 +102,23 @@ async function init() {
     </div>`;
   if (stack) stack.appendChild(loader);
 
-  const [cats, places] = await Promise.all([
-    fsLoadCategories(), fsLoadPlaces()
+  // Rede de segurança: se as leituras não voltarem (transporte do Firestore
+  // bloqueado, offline), não deixa o spinner "Carregando lugares…" para
+  // sempre — mostra um aviso com botão de tentar de novo.
+  const TIMEOUT = Symbol('timeout');
+  const loadData = Promise.all([fsLoadCategories(), fsLoadPlaces()]);
+  const result = await Promise.race([
+    loadData,
+    new Promise(res => setTimeout(() => res(TIMEOUT), 20000)),
   ]);
+
+  if (result === TIMEOUT) {
+    loader.remove();
+    renderLoadError(stack);
+    return;
+  }
+
+  const [cats, places] = result;
   loader.remove();
 
   if (cats.length) {
@@ -302,6 +321,20 @@ function renderCard() {
     });
   }
   initCardPhotos(top);
+}
+
+// ── Erro ao carregar (rede/transporte do Firestore) ───────────────
+function renderLoadError(stack) {
+  if (!stack) return;
+  stack.querySelector('.deck-empty')?.remove();
+  const el = document.createElement('div');
+  el.className = 'deck-empty';
+  el.innerHTML = `
+    <div class="deck-empty-ico">${ic('frown', 40, 1.5)}</div>
+    <div class="deck-empty-title">Não conseguimos carregar</div>
+    <div class="deck-empty-sub">Verifique sua conexão. Se estiver usando<br>VPN ou Modo Privado, tente desativar.</div>
+    <button class="deck-empty-btn" onclick="location.reload()">Tentar de novo</button>`;
+  stack.appendChild(el);
 }
 
 // ── Fim do baralho ─────────────────────────────────────────────────
@@ -1178,12 +1211,23 @@ function renderMapView() {
     </div>
     <div id="mainMap" style="flex:1;width:100%;min-height:0;"></div>`;
 
-  const list = cat === 'Todos' ? P : P.filter(p => {
+  let list = cat === 'Todos' ? [...P] : P.filter(p => {
     const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
     return cats.includes(cat);
   });
 
-  renderFavMap(list, document.getElementById('mainMap'), openProfile);
+  // Respeita o filtro "Abertos agora" também no mapa
+  if (openNowOnly) list = list.filter(p => parseOpenNow(p.h) === true);
+
+  const mapEl = document.getElementById('mainMap');
+  if (openNowOnly && !list.length) {
+    mapEl.innerHTML = `<div class="empty" style="height:100%"><div class="empty-ico">${ic('clock', 40, 1.5)}</div>
+      <div class="empty-title">Nada aberto agora</div>
+      <div class="empty-sub">Nenhum lugar aberto neste horário${cat !== 'Todos' ? '<br>nesta categoria' : ''}.</div></div>`;
+    return;
+  }
+
+  renderFavMap(list, mapEl, openProfile);
 }
 
 // ── Badge unlock toast ────────────────────────────────────────────

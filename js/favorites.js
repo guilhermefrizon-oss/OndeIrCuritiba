@@ -215,7 +215,14 @@ function placeMarker(place, coords, bounds) {
   mapMarkers.push(marker);
 }
 
+// Cache das coordenadas por placeId — evita refazer as ~57 chamadas à
+// Places API a cada re-render do mapa (ligar/desligar "Abertos agora",
+// trocar de categoria). Só guarda sucesso; falha volta a tentar depois.
+const latLngCache = {};
+
 async function fetchPlaceLatLng(placeId) {
+  if (!placeId) return null;
+  if (latLngCache[placeId]) return latLngCache[placeId];
   try {
     const res = await fetch(
       `https://places.googleapis.com/v1/places/${placeId}?fields=location&key=${GOOGLE_API_KEY}`,
@@ -224,7 +231,9 @@ async function fetchPlaceLatLng(placeId) {
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.location) return null;
-    return { lat: data.location.latitude, lng: data.location.longitude };
+    const coords = { lat: data.location.latitude, lng: data.location.longitude };
+    latLngCache[placeId] = coords;
+    return coords;
   } catch { return null; }
 }
 
@@ -262,6 +271,7 @@ function getMapStyle() {
 let mainMapInstance = null;
 let mainMapMarkers  = [];
 let mainMapEl       = null;
+let mainMapBuild    = 0; // token de geração: descarta callbacks de builds antigos
 
 export function renderFavMap(places, mapEl, onOpenProfile) {
   if (!mapEl) return;
@@ -304,6 +314,11 @@ function buildMainMap(places, mapEl, onOpenProfile) {
 
   mainMapMarkers.forEach(m => m.setMap(null));
   mainMapMarkers = [];
+
+  // Cada build recebe um token; buscas assíncronas de builds anteriores
+  // (ex.: filtro "Abertos agora" recém-alternado) são ignoradas para não
+  // "vazar" pinos de uma lista antiga no mapa atual.
+  const myBuild = ++mainMapBuild;
 
   const bounds = new window.google.maps.LatLngBounds();
   let boundsCount = 0;
@@ -352,9 +367,9 @@ function buildMainMap(places, mapEl, onOpenProfile) {
   places.forEach(p => {
     if (p.lat && p.lng) addMarker(p, { lat: p.lat, lng: p.lng });
     else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
-      fetchPlaceLatLng(p.pid).then(coords => { if (coords) addMarker(p, coords); });
+      fetchPlaceLatLng(p.pid).then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
     } else if (p.a) {
-      geocodeAddress(p.a + ', Curitiba, PR').then(coords => { if (coords) addMarker(p, coords); });
+      geocodeAddress(p.a + ', Curitiba, PR').then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
     }
   });
 }
