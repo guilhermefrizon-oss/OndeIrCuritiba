@@ -1087,11 +1087,18 @@ body {
 .ni-icon svg { width: 21px; height: 21px; }
 .ni-lbl { font-size: 10px; font-weight: 600; letter-spacing: .2px; color: var(--text3); white-space: nowrap; }
 .ni.on .ni-lbl { color: var(--acc); }
-.ni-discover-center { flex: 0 0 60px; width: 68px; border-radius: 34px !important; background: var(--acc) !important; box-shadow: var(--shadow-card); margin: 0 2px; padding: 10px 4px 8px; gap: 6px; transform: translateY(-6px); }
-.ni-discover-center.on { background: var(--acc) !important; }
-.ni-discover-center .ni-lbl { color: var(--acc-ink) !important; font-weight: 700; }
-.ni-center-icon { display: flex; line-height: 1; color: var(--acc-ink); }
-.ni-center-icon svg { width: 23px; height: 23px; }
+.ni-discover-center { flex: 1; background: none !important; box-shadow: none; margin: 0; padding: 8px 2px; gap: 6px; }
+.ni-discover-center.on { background: none !important; }
+.ni-discover-center .ni-lbl { color: var(--text3) !important; font-weight: 600; }
+.ni-discover-center.on .ni-lbl { color: var(--acc) !important; font-weight: 700; }
+.ni-center-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--acc); color: var(--acc-ink);
+  box-shadow: var(--shadow-card); transform: translateY(-14px);
+  margin-bottom: -8px;
+}
+.ni-center-icon svg { width: 21px; height: 21px; }
 
 /* ── Stamps ──────────────────────────────────────────────────────── */
 .stamp-been { left: 50%; transform: translateX(-50%) rotate(-8deg); top: 50%; background: rgba(245,158,11,.12); border: 2.5px solid #f59e0b; color: #f59e0b; }
