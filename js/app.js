@@ -1211,12 +1211,23 @@ function renderMapView() {
     </div>
     <div id="mainMap" style="flex:1;width:100%;min-height:0;"></div>`;
 
-  const list = cat === 'Todos' ? P : P.filter(p => {
+  let list = cat === 'Todos' ? [...P] : P.filter(p => {
     const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
     return cats.includes(cat);
   });
 
-  renderFavMap(list, document.getElementById('mainMap'), openProfile);
+  // Respeita o filtro "Abertos agora" também no mapa
+  if (openNowOnly) list = list.filter(p => parseOpenNow(p.h) === true);
+
+  const mapEl = document.getElementById('mainMap');
+  if (openNowOnly && !list.length) {
+    mapEl.innerHTML = `<div class="empty" style="height:100%"><div class="empty-ico">${ic('clock', 40, 1.5)}</div>
+      <div class="empty-title">Nada aberto agora</div>
+      <div class="empty-sub">Nenhum lugar aberto neste horário${cat !== 'Todos' ? '<br>nesta categoria' : ''}.</div></div>`;
+    return;
+  }
+
+  renderFavMap(list, mapEl, openProfile);
 }
 
 // ── Badge unlock toast ────────────────────────────────────────────
