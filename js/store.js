@@ -27,6 +27,52 @@ function daysPassed(isoStr) {
   return Math.floor((Date.now() - new Date(isoStr).getTime()) / 86400000);
 }
 
+// ── Fallback REST (Firestore) ──────────────────────────────────────
+// Em algumas redes (dados móveis/operadora, alta latência) o canal do SDK
+// do Firestore não completa e getDocs() fica pendurado — spinner infinito.
+// A leitura pública via REST é um GET curto e simples, que passa onde o
+// streaming trava. Usamos como rede de segurança para lugares e categorias
+// (as duas coleções que travam a exibição dos cards).
+const PROJECT_ID = 'ondeircuritiba-91390';
+const REST_BASE  = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+
+function _restUnwrap(v) {
+  if (v == null) return null;
+  if ('stringValue'    in v) return v.stringValue;
+  if ('integerValue'   in v) return Number(v.integerValue);
+  if ('doubleValue'    in v) return v.doubleValue;
+  if ('booleanValue'   in v) return v.booleanValue;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('nullValue'      in v) return null;
+  if ('arrayValue'     in v) return (v.arrayValue.values || []).map(_restUnwrap);
+  if ('mapValue'       in v) return _restUnwrapFields(v.mapValue.fields || {});
+  return null;
+}
+function _restUnwrapFields(fields) {
+  const o = {};
+  for (const k in fields) o[k] = _restUnwrap(fields[k]);
+  return o;
+}
+async function _restCollection(name) {
+  const res = await fetch(`${REST_BASE}/${name}?pageSize=300`);
+  if (!res.ok) throw new Error('REST ' + res.status);
+  const data = await res.json();
+  return (data.documents || []).map(doc => ({
+    id: doc.name.split('/').pop(),
+    ..._restUnwrapFields(doc.fields || {}),
+  }));
+}
+// Corre o SDK contra um timeout; se estourar (ou o SDK falhar), tenta REST.
+async function _loadWithRestFallback(name, sdkPromise) {
+  try {
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('sdk-timeout')), 7000));
+    return await Promise.race([sdkPromise, timeout]);
+  } catch (e) {
+    console.warn(`${name}: SDK indisponível (${e.message}), tentando REST…`);
+    return await _restCollection(name);
+  }
+}
+
 // ── Salvos (lista permanente) ──────────────────────────────────────
 export const fsSave = async (place) => {
   try { await setDoc(doc(db, 'favorites', getUid(), 'places', place.id), place); }
@@ -145,15 +191,17 @@ export const fsLoadBeenThere = async () => {
 // ── Places & categories ────────────────────────────────────────────
 export const fsLoadPlaces = async () => {
   try {
-    const snap = await getDocs(collection(db, 'places'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const viaSdk = getDocs(collection(db, 'places'))
+      .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    return await _loadWithRestFallback('places', viaSdk);
   } catch (e) { console.warn('fsLoadPlaces:', e); return []; }
 };
 
 export const fsLoadCategories = async () => {
   try {
-    const snap = await getDocs(collection(db, 'categories'));
-    const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const viaSdk = getDocs(collection(db, 'categories'))
+      .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const cats = await _loadWithRestFallback('categories', viaSdk);
     cats.sort((a,b) => (a.order||99) - (b.order||99));
     return cats;
   } catch (e) { console.warn('fsLoadCategories:', e); return []; }
