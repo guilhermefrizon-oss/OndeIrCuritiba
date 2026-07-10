@@ -307,20 +307,58 @@ function renderCard() {
       bindDrag(card);
     }
     stack.appendChild(card);
+    // Já define a foto dos 3 cards visíveis (topo + 2 de trás), então
+    // quando um card de trás vira o topo a foto já está lá.
+    setCardBg(card, p);
   }
 
   const top = filtered[idx%filtered.length];
-  if (Array.isArray(top.photos) && top.photos.length) {
-    const bg = stack.querySelector('.place-card[data-top="1"] .card-bg');
-    if (bg) { bg.style.backgroundImage=`url("${top.photos[0]}")`; bg.style.backgroundSize='cover'; }
-  } else if (top.pid && !top.pid.startsWith('ID_GOOGLE_')) {
-    fetchPlacePhoto(top.pid).then(url => {
+  initCardPhotos(top);
+
+  // Pré-baixa as fotos das PRÓXIMAS cartas pro cache do navegador,
+  // pra troca não ter atraso ao arrastar.
+  prefetchUpcoming(3);
+}
+
+// Define a foto de fundo de um card (usa foto salva ou busca no Google)
+function setCardBg(card, p) {
+  const bg = card.querySelector('.card-bg');
+  if (!bg) return;
+  if (Array.isArray(p.photos) && p.photos.length) {
+    bg.style.backgroundImage = `url("${p.photos[0]}")`;
+    bg.style.backgroundSize  = 'cover';
+  } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+    fetchPlacePhoto(p.pid).then(url => {
       if (!url) return;
-      const bg = stack.querySelector('.place-card[data-top="1"] .card-bg');
-      if (bg) { bg.style.backgroundImage=`url("${url}")`; bg.style.backgroundSize='cover'; }
+      bg.style.backgroundImage = `url("${url}")`;
+      bg.style.backgroundSize  = 'cover';
     });
   }
-  initCardPhotos(top);
+}
+
+// ── Pré-carregamento das fotos das próximas cartas ────────────────
+const _preloadedUrls = new Set();
+function preloadImage(url) {
+  if (!url || _preloadedUrls.has(url)) return;
+  _preloadedUrls.add(url);
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = url; // baixa e deixa no cache do navegador
+}
+
+function prefetchUpcoming(count = 3) {
+  if (!filtered.length) return;
+  const seen = new Set();
+  for (let i = 1; i <= count; i++) {
+    const p = filtered[(idx + i) % filtered.length];
+    if (!p || seen.has(p.id)) continue;
+    seen.add(p.id);
+    if (Array.isArray(p.photos) && p.photos.length) {
+      preloadImage(p.photos[0]);
+    } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+      fetchPlacePhoto(p.pid).then(preloadImage);
+    }
+  }
 }
 
 // ── Erro ao carregar (rede/transporte do Firestore) ───────────────
