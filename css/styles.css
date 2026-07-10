@@ -1080,16 +1080,18 @@ body {
 .b-been:hover .c { background: rgba(245,158,11,.14); }
 
 /* ── Nav: 5 tabs with center pill ────────────────────────────────── */
-.nav { display: flex; padding: 6px 8px env(safe-area-inset-bottom, 12px); gap: 2px; border-top: 1.5px solid var(--bg4); background: var(--bg2); flex-shrink: 0; align-items: center; }
-.ni { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 2px; border-radius: 14px; transition: background .15s; background: none; border: none; }
+.nav { display: flex; padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 14px); gap: 2px; border-top: 1.5px solid var(--bg4); background: var(--bg2); flex-shrink: 0; align-items: flex-start; }
+.ni { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; padding: 8px 2px; border-radius: 16px; transition: background .15s; background: none; border: none; color: var(--text3); }
 .ni.on { background: var(--p100); }
-.ni-icon { font-size: 18px; line-height: 1; }
-.ni-lbl { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); }
+.ni-icon { display: flex; line-height: 1; }
+.ni-icon svg { width: 21px; height: 21px; }
+.ni-lbl { font-size: 10px; font-weight: 600; letter-spacing: .2px; color: var(--text3); white-space: nowrap; }
 .ni.on .ni-lbl { color: var(--acc); }
-.ni-discover-center { flex: 0 0 58px; width: 68px; border-radius: 34px !important; background: var(--acc) !important; box-shadow: var(--shadow-card); margin: 0 2px; padding: 8px 4px 6px; gap: 3px; }
+.ni-discover-center { flex: 0 0 60px; width: 68px; border-radius: 34px !important; background: var(--acc) !important; box-shadow: var(--shadow-card); margin: 0 2px; padding: 10px 4px 8px; gap: 6px; transform: translateY(-6px); }
 .ni-discover-center.on { background: var(--acc) !important; }
-.ni-discover-center .ni-lbl { color: #fff !important; }
-.ni-center-icon { font-size: 22px; line-height: 1; color: #fff; }
+.ni-discover-center .ni-lbl { color: var(--acc-ink) !important; font-weight: 700; }
+.ni-center-icon { display: flex; line-height: 1; color: var(--acc-ink); }
+.ni-center-icon svg { width: 23px; height: 23px; }
 
 /* ── Stamps ──────────────────────────────────────────────────────── */
 .stamp-been { left: 50%; transform: translateX(-50%) rotate(-8deg); top: 50%; background: rgba(245,158,11,.12); border: 2.5px solid #f59e0b; color: #f59e0b; }
