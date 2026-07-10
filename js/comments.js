@@ -7,6 +7,7 @@ import {
   db,
   addDoc, collection, query, orderBy, onSnapshot, serverTimestamp
 } from './firebase.js';
+import { ic } from './icons.js';
 import { loadRating, submitRating } from './ratings.js';
 import { awardXp } from './xp.js';
 import { checkAndAwardBadges } from './badges.js';
@@ -22,7 +23,7 @@ export function renderCommentsSection(placeId) {
   section.className = 'comments-section';
   section.id = 'commentsSection';
   section.innerHTML = `
-    <div class="comments-title">⭐ Avalie e comente</div>
+    <div class="comments-title">${ic('star', 16)} Avalie e comente</div>
     <div id="commentInputArea"></div>
     <div class="comment-list" id="commentList">
       <div class="comment-loading"><div class="spinner"></div></div>
