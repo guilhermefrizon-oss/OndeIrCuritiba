@@ -102,9 +102,23 @@ async function init() {
     </div>`;
   if (stack) stack.appendChild(loader);
 
-  const [cats, places] = await Promise.all([
-    fsLoadCategories(), fsLoadPlaces()
+  // Rede de segurança: se as leituras não voltarem (transporte do Firestore
+  // bloqueado, offline), não deixa o spinner "Carregando lugares…" para
+  // sempre — mostra um aviso com botão de tentar de novo.
+  const TIMEOUT = Symbol('timeout');
+  const loadData = Promise.all([fsLoadCategories(), fsLoadPlaces()]);
+  const result = await Promise.race([
+    loadData,
+    new Promise(res => setTimeout(() => res(TIMEOUT), 20000)),
   ]);
+
+  if (result === TIMEOUT) {
+    loader.remove();
+    renderLoadError(stack);
+    return;
+  }
+
+  const [cats, places] = result;
   loader.remove();
 
   if (cats.length) {
@@ -307,6 +321,20 @@ function renderCard() {
     });
   }
   initCardPhotos(top);
+}
+
+// ── Erro ao carregar (rede/transporte do Firestore) ───────────────
+function renderLoadError(stack) {
+  if (!stack) return;
+  stack.querySelector('.deck-empty')?.remove();
+  const el = document.createElement('div');
+  el.className = 'deck-empty';
+  el.innerHTML = `
+    <div class="deck-empty-ico">${ic('frown', 40, 1.5)}</div>
+    <div class="deck-empty-title">Não conseguimos carregar</div>
+    <div class="deck-empty-sub">Verifique sua conexão. Se estiver usando<br>VPN ou Modo Privado, tente desativar.</div>
+    <button class="deck-empty-btn" onclick="location.reload()">Tentar de novo</button>`;
+  stack.appendChild(el);
 }
 
 // ── Fim do baralho ─────────────────────────────────────────────────
