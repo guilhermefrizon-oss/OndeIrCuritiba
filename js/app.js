@@ -82,18 +82,24 @@ async function loadAllRatings() {
   renderCard();
 }
 async function init() {
+  // IMPORTANTE: não usar stack.innerHTML aqui — isso apagava os stamps
+  // (#likeStamp etc.) e quebrava o arrastar do card.
   const stack = document.getElementById('cardStack');
-  if (stack) stack.innerHTML = `
+  const loader = document.createElement('div');
+  loader.className = 'stack-loading';
+  loader.innerHTML = `
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;
       align-items:center;justify-content:center;gap:14px;color:var(--text3)">
       <div style="width:36px;height:36px;border:3px solid var(--bg4);
         border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite"></div>
       <span style="font-size:14px">Carregando lugares…</span>
     </div>`;
+  if (stack) stack.appendChild(loader);
 
   const [cats, places] = await Promise.all([
     fsLoadCategories(), fsLoadPlaces()
   ]);
+  loader.remove();
 
   if (cats.length) {
     CATS = ['Todos', ...cats.map(c => c.name)];
@@ -455,6 +461,7 @@ function onDragMove(e) {
   activeCard.style.transform = `translateX(${dx}px) rotate(${dx*0.05}deg)`;
   const ls = document.getElementById('likeStamp');
   const ns = document.getElementById('nopeStamp');
+  if (!ls || !ns) return;
   const t  = Math.abs(dx)>20 ? Math.min((Math.abs(dx)-20)/70,1) : 0;
   if (dx>20)       { ls.style.opacity=t; ns.style.opacity=0; }
   else if (dx<-20) { ns.style.opacity=t; ls.style.opacity=0; }
@@ -464,8 +471,10 @@ function onDragMove(e) {
 function onDragEnd() {
   if (!dragActive||!activeCard) { dragActive=false; return; }
   dragActive=false;
-  document.getElementById('likeStamp').style.opacity=0;
-  document.getElementById('nopeStamp').style.opacity=0;
+  const ls = document.getElementById('likeStamp');
+  const ns = document.getElementById('nopeStamp');
+  if (ls) ls.style.opacity=0;
+  if (ns) ns.style.opacity=0;
 
   // Threshold menor = swipe mais natural (≈85px num 390px)
   const threshold = window.innerWidth * 0.22;
@@ -514,10 +523,11 @@ function completeSwipe(p) {
 }
 
 // ── Desfazer ───────────────────────────────────────────────────────
+window.undoSwipe = undoLast;
 function undoLast() {
   if (!lastAction) return;
   const { type, place: p } = lastAction;
-  lastAction = null;
+  setLastAction(null);
 
   if (type === 'skip') {
     delete skipped[p.id];
@@ -582,7 +592,7 @@ window.savePlace = () => {
     showToast('✓ Já está nos salvos');
   } else if (!localStorage.getItem('cwb_hint_save')) {
     localStorage.setItem('cwb_hint_save','1');
-    showToast('🔖 Salvo para depois! Fica na aba "Salvos"');
+    showToast('🔖 Salvo para depois! Fica na aba "Salvos"', true);
   } else {
     showToast('🔖 Salvo para depois!');
   }
@@ -596,7 +606,7 @@ window.markBeenThere = () => {
   pulseBtn(document.querySelector('.b-been .c'));
   const bs = document.getElementById('beenStamp');
   if (bs) { bs.style.opacity='1'; setTimeout(()=>{ bs.style.opacity='0'; },600); }
-  showToast('📍 Marcado como visitado!', { label:'Desfazer', fn: undoLast });
+  showToast('📍 Marcado como visitado!');
   if (activeCard) animateOut(activeCard, 'left');
   setTimeout(() => completeSwipe(p), 380);
 };
@@ -609,6 +619,12 @@ function doSave(p) {
   }
 }
 
+function setLastAction(a) {
+  lastAction = a;
+  const btn = document.getElementById('undoBtn');
+  if (btn) btn.classList.toggle('undo-available', !!a);
+}
+
 function doWantToday(p) {
   if (!wantToday.find(w=>w.id===p.id)) {
     wantToday.push(p);
@@ -616,26 +632,29 @@ function doWantToday(p) {
     fsIncrementLike(p.id);
     updateWantBadge();
   }
-  lastAction = { type:'want', place: p };
+  setLastAction({ type:'want', place: p });
+  // Explica só na primeira vez — depois o badge da aba já dá o feedback
   if (!localStorage.getItem('cwb_hint_want')) {
     localStorage.setItem('cwb_hint_want','1');
-    showToast('❤️ No seu rolê de hoje! Veja na aba "Quero ir"', { label:'Desfazer', fn: undoLast });
-  } else {
-    showToast('❤️ Adicionado ao rolê de hoje', { label:'Desfazer', fn: undoLast });
+    showToast('❤️ Salvo no rolê de hoje — veja na aba "Quero ir"', true);
   }
 }
 
 function doSkip(p) {
   skipped[p.id] = true;
   fsSkip(p.id);
-  lastAction = { type:'skip', place: p };
-  showToast('👋 Pulado — volta amanhã', { label:'Desfazer', fn: undoLast });
+  setLastAction({ type:'skip', place: p });
+  // Explica só na primeira vez
+  if (!localStorage.getItem('cwb_hint_skip')) {
+    localStorage.setItem('cwb_hint_skip','1');
+    showToast('👋 Pulado — esse lugar volta amanhã', true);
+  }
 }
 
 function doBeenThere(p) {
   beenThere[p.id] = { visitedAt: new Date().toISOString(), ...p };
   fsBeenThere(p);
-  lastAction = { type:'been', place: p };
+  setLastAction({ type:'been', place: p });
   // Concede XP e verifica badges por visita
   awardXp('visited', { placeId: p.id, placeName: p.n, category: p.c, bairro: p.b });
   checkAndAwardBadges();
@@ -658,29 +677,19 @@ function updateWantBadge() {
 }
 
 // ── Animation helpers ──────────────────────────────────────────────
-function showToast(msg, action) {
+function showToast(msg, longer = false) {
   let t = document.getElementById('appToast');
   if (!t) {
     t = document.createElement('div');
     t.id = 'appToast';
     document.querySelector('.phone').appendChild(t);
   }
-  if (action) {
-    t.innerHTML = `<span>${msg}</span><button class="toast-action">${action.label}</button>`;
-    t.classList.add('has-action');
-    t.querySelector('.toast-action').onclick = () => {
-      t.classList.remove('toast-in');
-      action.fn();
-    };
-  } else {
-    t.textContent = msg;
-    t.classList.remove('has-action');
-  }
+  t.textContent = msg;
   t.classList.remove('toast-in');
   void t.offsetWidth; // force reflow
   t.classList.add('toast-in');
   clearTimeout(t._to);
-  t._to = setTimeout(() => t.classList.remove('toast-in'), action ? 3500 : 1800);
+  t._to = setTimeout(() => t.classList.remove('toast-in'), longer ? 2600 : 1500);
 }
 
 // ── Dica de swipe (primeira visita) ────────────────────────────────

@@ -1259,18 +1259,36 @@ body {
   backdrop-filter: blur(10px);
 }
 
-/* Toast com botão de ação (Desfazer) */
-#appToast.has-action {
-  pointer-events: auto; display: flex; align-items: center; gap: 12px;
-  white-space: normal; max-width: 82%; text-align: left;
+/* Toast: sempre discreto, nunca bloqueia toque, acima dos botões */
+#appToast {
+  bottom: 215px;
+  white-space: normal; width: max-content; max-width: 85%; text-align: center;
+  border-radius: 16px; line-height: 1.45; padding: 9px 18px;
+  font-size: 12.5px;
 }
-.toast-action {
-  flex-shrink: 0; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
-  color: #fff; font-family: inherit; font-size: 12px; font-weight: 800;
-  padding: 6px 12px; border-radius: 100px; cursor: pointer;
-  text-transform: uppercase; letter-spacing: .5px;
+
+/* Botão Desfazer (apagado até haver algo para desfazer) */
+.b-undo { opacity: .28; pointer-events: none; transition: opacity .2s; }
+.b-undo.undo-available { opacity: 1; pointer-events: auto; }
+.b-undo .c { width: 46px; height: 46px; border-color: var(--bg4); color: var(--text2); background: var(--bg2); }
+.b-undo .lbl { color: var(--text3); }
+
+/* Com 5 botões a fileira precisa ser mais compacta */
+.btns { gap: 12px; padding: 12px 10px 14px; }
+@media (max-width: 350px) {
+  .btns { gap: 8px; }
+  .b-pass .c, .b-like .c { width: 56px; height: 56px; }
+  .b-been .c, .b-save .c { width: 44px; height: 44px; }
+  .b-undo .c { width: 40px; height: 40px; }
 }
-.toast-action:active { transform: scale(.94); }
+
+/* Card sempre opaco (sem "vazar" o card de trás) e drag confiável no
+   celular: touch-action none impede o navegador de roubar o gesto. */
+.place-card {
+  background: linear-gradient(165deg,#EAEAE5 0%,#9C9B90 50%,#232219 100%);
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
 
 /* Fim do baralho */
 .deck-empty {
