@@ -191,7 +191,7 @@ function placeMarker(place, coords, bounds) {
     icon: {
       path: window.google.maps.SymbolPath.CIRCLE,
       scale: 10,
-      fillColor: '#7C3AED',
+      fillColor: '#14140F',
       fillOpacity: 1,
       strokeColor: '#fff',
       strokeWeight: 2,
@@ -200,10 +200,10 @@ function placeMarker(place, coords, bounds) {
 
   const infoWindow = new window.google.maps.InfoWindow({
     content: `
-      <div style="font-family:'DM Sans',sans-serif;padding:4px 2px;max-width:200px;">
-        <div style="font-weight:800;font-size:14px;color:#0F0A1E;margin-bottom:2px;">${place.n}</div>
-        <div style="font-size:12px;color:#4B4466;">${place.c} · ${place.b}</div>
-        <div style="font-size:11px;color:#9490A8;margin-top:2px;">${place.h}</div>
+      <div style="font-family:'Manrope',sans-serif;padding:4px 2px;max-width:200px;">
+        <div style="font-weight:800;font-size:14px;color:#14140F;margin-bottom:2px;">${place.n}</div>
+        <div style="font-size:12px;color:#57564E;">${place.c} · ${place.b}</div>
+        <div style="font-size:11px;color:#9A988E;margin-top:2px;">${place.h}</div>
       </div>`
   });
 
