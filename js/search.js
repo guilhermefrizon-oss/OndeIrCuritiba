@@ -1,5 +1,6 @@
 // ── search.js ─────────────────────────────────────────────────────
 import { fetchPlacePhoto } from './photos.js';
+import { ic, catIcon } from './icons.js';
 
 let searchOpen = false;
 let allPlaces  = [];
@@ -30,7 +31,7 @@ export function openSearch(onOpenProfile) {
       <div class="search-filters" id="searchFilters"></div>
       <div class="search-results" id="searchResults">
         <div class="search-hint">
-          <span style="font-size:28px;">🔍</span>
+          <span style="opacity:.5">${ic('search', 34, 1.5)}</span>
           <span>Digite para buscar lugares</span>
         </div>
       </div>`;
@@ -107,7 +108,7 @@ function runSearch(query, onOpenProfile) {
   } else if (!activeNeighborhood) {
     results.innerHTML = `
       <div class="search-hint">
-        <span style="font-size:28px;">🔍</span>
+        <span style="opacity:.5">${ic('search', 34, 1.5)}</span>
         <span>Digite para buscar lugares</span>
       </div>`;
     return;
@@ -116,7 +117,7 @@ function runSearch(query, onOpenProfile) {
   if (!filtered.length) {
     results.innerHTML = `
       <div class="search-hint">
-        <span style="font-size:28px;">😔</span>
+        <span style="opacity:.5">${ic('frown', 34, 1.5)}</span>
         <span>Nenhum resultado encontrado</span>
       </div>`;
     return;
@@ -157,7 +158,7 @@ function renderResultGroup(label, places, container, onOpenProfile) {
     row.className = 'search-result-row';
     row.onclick = () => { closeSearch(); onOpenProfile(p); };
     row.innerHTML = `
-      <div class="search-result-thumb bg-${p.bg}" id="sthumb-${p.id}">${p.e}</div>
+      <div class="search-result-thumb bg-${p.bg}" id="sthumb-${p.id}">${catIcon(p.c, 20, 1.7)}</div>
       <div style="flex:1;min-width:0;">
         <div class="search-result-name">${p.n}</div>
         <div class="search-result-meta">${p.c} · ${p.b}</div>
@@ -170,11 +171,11 @@ function renderResultGroup(label, places, container, onOpenProfile) {
       fetchPlacePhoto(p.pid).then(url => {
         if (!url) return;
         const t = document.getElementById(`sthumb-${p.id}`);
-        if (t) { t.style.backgroundImage = `url("${url}")`; t.textContent = ''; }
+        if (t) { t.style.backgroundImage = `url("${url}")`; t.innerHTML = ''; }
       });
     } else if (Array.isArray(p.photos) && p.photos.length) {
       const t = document.getElementById(`sthumb-${p.id}`);
-      if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.textContent = ''; }
+      if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.innerHTML = ''; }
     }
   });
 }

@@ -8,27 +8,28 @@ import {
   doc, getDoc, setDoc,
   collection, getDocs
 } from './firebase.js';
+import { ic } from './icons.js';
 
 // ── Definição das badges ───────────────────────────────────────────
 export const BADGES = [
   // ── Visitas ───────────────────────────────────────────────────────
   {
     id:       'pioneer',
-    icon:     '🥇',
+    icon:     ic('award', 24),
     name:     'Pioneiro',
     desc:     'Marcou seu primeiro lugar visitado.',
     check:    ({ visited }) => visited.length >= 1,
   },
   {
     id:       'cwb_20',
-    icon:     '🏆',
+    icon:     ic('trophy', 24),
     name:     'Curitibano de Carteirinha',
     desc:     'Visitou 20 lugares em Curitiba.',
     check:    ({ visited }) => visited.length >= 20,
   },
   {
     id:       'coffee_5',
-    icon:     '☕',
+    icon:     ic('coffee', 24),
     name:     'Cafézinho',
     desc:     'Visitou 5 cafés ou cafeterias.',
     check:    ({ visited }) =>
@@ -36,7 +37,7 @@ export const BADGES = [
   },
   {
     id:       'bar_5',
-    icon:     '🌙',
+    icon:     ic('moon', 24),
     name:     'Notívago',
     desc:     'Visitou 5 barzinhos ou baladas.',
     check:    ({ visited }) =>
@@ -44,7 +45,7 @@ export const BADGES = [
   },
   {
     id:       'explorer_3',
-    icon:     '🗺️',
+    icon:     ic('map', 24),
     name:     'Explorador',
     desc:     'Visitou lugares em 3 bairros diferentes.',
     check:    ({ visited }) =>
@@ -52,7 +53,7 @@ export const BADGES = [
   },
   {
     id:       'foodie',
-    icon:     '🍽️',
+    icon:     ic('utensils', 24),
     name:     'Gourmet',
     desc:     'Visitou 5 restaurantes.',
     check:    ({ visited }) =>
@@ -62,28 +63,28 @@ export const BADGES = [
   // ── Comentários ───────────────────────────────────────────────────
   {
     id:       'first_comment',
-    icon:     '💬',
+    icon:     ic('message-circle', 24),
     name:     'Primeira Impressão',
     desc:     'Deixou seu primeiro comentário.',
     check:    ({ commentCount }) => commentCount >= 1,
   },
   {
     id:       'active_voice',
-    icon:     '🗣️',
+    icon:     ic('message-circle', 24),
     name:     'Voz Ativa',
     desc:     'Deixou 10 comentários.',
     check:    ({ commentCount }) => commentCount >= 10,
   },
   {
     id:       'local_critic',
-    icon:     '📝',
+    icon:     ic('edit', 24),
     name:     'Crítico Local',
     desc:     'Deixou 25 comentários.',
     check:    ({ commentCount }) => commentCount >= 25,
   },
   {
     id:       'influencer',
-    icon:     '🎙️',
+    icon:     ic('mic', 24),
     name:     'Influenciador',
     desc:     'Deixou 50 comentários.',
     check:    ({ commentCount }) => commentCount >= 50,
@@ -162,7 +163,7 @@ export function renderBadges(earnedIds, container) {
   container.innerHTML = '';
 
   if (!earnedIds.length) {
-    container.innerHTML = `<div class="badges-empty">Nenhuma badge ainda.<br>Explore Curitiba para conquistar! 🗺️</div>`;
+    container.innerHTML = `<div class="badges-empty">Nenhuma badge ainda.<br>Explore Curitiba para conquistar!</div>`;
     return;
   }
 
@@ -178,7 +179,7 @@ export function renderBadges(earnedIds, container) {
       <div class="badge-icon">${badge.icon}</div>
       <div class="badge-name">${badge.name}</div>
       <div class="badge-desc">${badge.desc}</div>
-      ${isEarned ? '<div class="badge-check">✓</div>' : '<div class="badge-lock">🔒</div>'}`;
+      ${isEarned ? '<div class="badge-check">✓</div>' : `<div class="badge-lock">${ic('lock', 12)}</div>`}`;
     container.appendChild(el);
   });
 }

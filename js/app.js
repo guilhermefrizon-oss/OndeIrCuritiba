@@ -13,11 +13,12 @@ import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
+import { ic, catIcon } from './icons.js';
 
 // ── State ──────────────────────────────────────────────────────────
 let P        = [];
 let CATS     = ['Todos'];
-let CE       = { Todos: '🗺️' };
+let CE       = {};  // emojis do banco não são mais usados na UI
 let cat      = 'Todos';
 let filtered = [];
 let idx      = 0;
@@ -103,7 +104,7 @@ async function init() {
 
   if (cats.length) {
     CATS = ['Todos', ...cats.map(c => c.name)];
-    CE   = { Todos: '🗺️' };
+    CE   = {};
     cats.forEach(c => { CE[c.name] = c.emoji || ''; });
   }
 
@@ -163,7 +164,7 @@ function distLabel(p) {
   if (!userPos || !p.lat || !p.lng) return '';
   const km = distanceKm(userPos, { lat: p.lat, lng: p.lng });
   const txt = km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1).replace('.',',')} km`;
-  return `<span class="dist-chip">📏 ${txt}</span>`;
+  return `<span class="dist-chip">${ic('navigation', 11)} ${txt}</span>`;
 }
 
 // ── Aberto agora (parse de "Seg-Dom 09h-20h") ──────────────────────
@@ -211,11 +212,24 @@ function buildCategoryRow() {
   CATS.forEach(c => {
     const b = document.createElement('button');
     b.className = 'cat-pill' + (c === cat ? ' on' : '');
-    b.innerHTML = `<span style="font-size:13px">${CE[c]||''}</span>${c}`;
+    b.innerHTML = `${catIcon(c, 14)}${c}`;
     b.onclick = () => setCat(c);
     row.appendChild(b);
   });
 }
+
+// ── Filtro "Abertos agora" ─────────────────────────────────────────
+let openNowOnly = false;
+
+window.toggleOpenNow = () => {
+  openNowOnly = !openNowOnly;
+  const btn = document.getElementById('openNowBtn');
+  if (btn) btn.classList.toggle('on', openNowOnly);
+  applyUserFilters();
+  renderCard(); renderProgress();
+  const mapView = document.getElementById('mapView');
+  if (mapView && mapView.style.display !== 'none') renderMapView();
+};
 
 export function setCat(c) {
   cat = c;
@@ -234,6 +248,7 @@ function applyUserFilters() {
   });
   filtered = base.filter(p =>
     !skipped[p.id] && !beenThere[p.id] && !wantToday.find(w => w.id === p.id)
+    && (!openNowOnly || parseOpenNow(p.h) === true)
   );
   idx = 0;
 }
@@ -299,18 +314,24 @@ function renderDeckEmpty(stack) {
   const el = document.createElement('div');
   el.className = 'deck-empty';
 
-  if (!baseCount) {
+  if (openNowOnly && baseCount) {
     el.innerHTML = `
-      <div class="deck-empty-ico">🔍</div>
+      <div class="deck-empty-ico">${ic('clock', 40, 1.5)}</div>
+      <div class="deck-empty-title">Nada aberto agora</div>
+      <div class="deck-empty-sub">Nenhum lugar aberto neste horário<br>com esses filtros.</div>
+      <button class="deck-empty-btn" onclick="window.toggleOpenNow()">Mostrar todos os horários</button>`;
+  } else if (!baseCount) {
+    el.innerHTML = `
+      <div class="deck-empty-ico">${ic('search', 40, 1.5)}</div>
       <div class="deck-empty-title">Nada por aqui ainda</div>
       <div class="deck-empty-sub">Nenhum lugar nessa categoria.<br>Explore outra!</div>
-      <button class="deck-empty-btn" onclick="window.setCatTodos()">Ver todos os lugares 🗺️</button>`;
+      <button class="deck-empty-btn" onclick="window.setCatTodos()">Ver todos os lugares</button>`;
   } else {
     el.innerHTML = `
-      <div class="deck-empty-ico">🎉</div>
+      <div class="deck-empty-ico">${ic('check-circle', 40, 1.5)}</div>
       <div class="deck-empty-title">Você viu tudo por hoje!</div>
       <div class="deck-empty-sub">Os lugares que você pulou<br>voltam amanhã.</div>
-      <button class="deck-empty-btn" onclick="window.resetSkipped()">↩️ Rever lugares pulados</button>
+      <button class="deck-empty-btn" onclick="window.resetSkipped()">Rever lugares pulados</button>
       ${cat !== 'Todos' ? '<button class="deck-empty-btn ghost" onclick="window.setCatTodos()">Ver outras categorias</button>' : ''}`;
   }
   stack.appendChild(el);
@@ -323,19 +344,21 @@ window.resetSkipped = () => {
   fsClearSkipped();
   applyUserFilters();
   renderCard(); renderProgress();
-  showToast('↩️ Lugares pulados de volta ao baralho!');
+  showToast('Lugares pulados de volta ao baralho!');
 };
 
 function makeCard(p) {
   const el = document.createElement('div');
-  el.className = 'place-card su';
+  // ATENÇÃO: nada de classe com animation aqui — animação CSS com
+  // fill-mode sobrescreve o style.transform e mata o drag do card.
+  el.className = 'place-card';
 
   const ratingHTML = p._avgRating?.avg > 0
     ? `<div class="card-rating">★ ${p._avgRating.avg.toFixed(1)}</div>`
     : '';
 
   el.innerHTML = `
-    <div class="card-bg bg-${p.bg}"><div class="photo-loading">${p.e}</div></div>
+    <div class="card-bg bg-${p.bg}"><div class="photo-loading">${catIcon(p.c, 44, 1.5)}</div></div>
     <div class="card-overlay"></div>
     <div class="card-glow"></div>
     <div class="card-top">
@@ -351,13 +374,13 @@ function makeCard(p) {
         <div class="card-name">${p.n}</div>
         ${ratingHTML}
       </div>
-      <div class="card-addr">📍 ${p.a}</div>
+      <div class="card-addr">${ic('map-pin', 13)} ${p.a}</div>
       <div class="card-meta">
-        <span>${p.b}</span><div class="meta-sep"></div><span>🕐 ${p.h}</span>
+        <span>${p.b}</span><div class="meta-sep"></div><span>${ic('clock', 12)} ${p.h}</span>
       </div>
       <div class="card-status-row">${openBadgeHTML(p)}${distLabel(p)}</div>
       <div class="card-footer">
-        <div class="ig-chip"><span style="font-size:12px">📷</span>${p.ig}</div>
+        <div class="ig-chip">${ic('camera', 12)}${p.ig}</div>
         <div class="card-profile-hint">Ver perfil →</div>
       </div>
     </div>`;
@@ -547,7 +570,7 @@ function undoLast() {
     filtered.splice(idx % (filtered.length || 1), 0, p);
   }
   renderCard(); renderProgress();
-  showToast('↩️ Desfeito!');
+  showToast('Desfeito!');
 }
 
 document.addEventListener('touchmove', onDragMove, {passive:false});
@@ -592,9 +615,9 @@ window.savePlace = () => {
     showToast('✓ Já está nos salvos');
   } else if (!localStorage.getItem('cwb_hint_save')) {
     localStorage.setItem('cwb_hint_save','1');
-    showToast('🔖 Salvo para depois! Fica na aba "Salvos"', true);
+    showToast('Salvo para depois! Fica na aba "Salvos"', true);
   } else {
-    showToast('🔖 Salvo para depois!');
+    showToast('Salvo para depois!');
   }
 };
 
@@ -606,7 +629,7 @@ window.markBeenThere = () => {
   pulseBtn(document.querySelector('.b-been .c'));
   const bs = document.getElementById('beenStamp');
   if (bs) { bs.style.opacity='1'; setTimeout(()=>{ bs.style.opacity='0'; },600); }
-  showToast('📍 Marcado como visitado!');
+  showToast('Marcado como visitado!');
   if (activeCard) animateOut(activeCard, 'left');
   setTimeout(() => completeSwipe(p), 380);
 };
@@ -636,7 +659,7 @@ function doWantToday(p) {
   // Explica só na primeira vez — depois o badge da aba já dá o feedback
   if (!localStorage.getItem('cwb_hint_want')) {
     localStorage.setItem('cwb_hint_want','1');
-    showToast('❤️ Salvo no rolê de hoje — veja na aba "Quero ir"', true);
+    showToast('Salvo no rolê de hoje — veja na aba "Quero ir"', true);
   }
 }
 
@@ -647,7 +670,7 @@ function doSkip(p) {
   // Explica só na primeira vez
   if (!localStorage.getItem('cwb_hint_skip')) {
     localStorage.setItem('cwb_hint_skip','1');
-    showToast('👋 Pulado — esse lugar volta amanhã', true);
+    showToast('Pulado — esse lugar volta amanhã', true);
   }
 }
 
@@ -710,9 +733,9 @@ function maybeShowSwipeHint() {
   const hint = document.createElement('div');
   hint.className = 'swipe-hint';
   hint.innerHTML = `
-    <div class="swipe-hint-label swipe-hint-nope">✕ Não hoje</div>
-    <div class="swipe-hint-hand">👆</div>
-    <div class="swipe-hint-label swipe-hint-like">Quero ir! ❤️</div>
+    <div class="swipe-hint-label swipe-hint-nope">${ic('x', 13, 2.5)} Não hoje</div>
+    <div class="swipe-hint-hand">${ic('move-horizontal', 52, 2)}</div>
+    <div class="swipe-hint-label swipe-hint-like">Quero ir! ${ic('heart', 13, 2.5)}</div>
     <div class="swipe-hint-text">Deslize o card para os lados</div>`;
   stack.appendChild(hint);
 
@@ -733,7 +756,7 @@ function showHeartBurst() {
   if (!stack) return;
   const h = document.createElement('div');
   h.className = 'heart-burst';
-  h.textContent = '❤️';
+  h.innerHTML = '<svg width="46" height="46" viewBox="0 0 24 24" fill="#ef4444" stroke="none" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
   stack.appendChild(h);
   h.addEventListener('animationend', () => h.remove());
 }
@@ -821,7 +844,7 @@ async function openProfile(p) {
   document.getElementById('profileName').textContent = p.n;
   document.getElementById('profileCat').textContent  = p.c;
   document.getElementById('profilePrice').innerHTML  = priceHTML(p.p);
-  document.getElementById('profilePhotoFallback').textContent = p.e;
+  document.getElementById('profilePhotoFallback').innerHTML = catIcon(p.c, 54, 1.5);
   document.getElementById('profilePhotoImg').style.backgroundImage='';
   document.getElementById('profilePhotoImg').style.opacity='1';
 
@@ -843,23 +866,23 @@ async function openProfile(p) {
   const addrEscQ = p.a.replace(/'/g, "\\'");
   qEl.innerHTML = `
     <a class="pqa" href="https://www.google.com/maps/search/?api=1&query=${addrQ}" target="_blank" rel="noopener">
-      <span class="pqa-icon">🗺️</span><span class="pqa-label">Google Maps</span>
+      <span class="pqa-icon">${ic('map', 18)}</span><span class="pqa-label">Google Maps</span>
     </a>
     <button class="pqa" onclick="window._pqaCopy('${addrEscQ}')">
-      <span class="pqa-icon">📋</span><span class="pqa-label">Copiar end.</span>
+      <span class="pqa-icon">${ic('copy', 18)}</span><span class="pqa-label">Copiar end.</span>
     </button>
     <a class="pqa" href="https://instagram.com/${igHandle}" target="_blank" rel="noopener">
-      <span class="pqa-icon">📸</span><span class="pqa-label">Instagram</span>
+      <span class="pqa-icon">${ic('instagram', 18)}</span><span class="pqa-label">Instagram</span>
     </a>`;
   window._pqaCopy = (addr) => {
     navigator.clipboard.writeText(addr + ', Curitiba, PR')
-      .then(() => showToast('📋 Endereço copiado!'));
+      .then(() => showToast('Endereço copiado!'));
   };
 
   const addrEsc = p.a.replace(/'/g,"\\'");
   document.getElementById('profileInfoGrid').innerHTML=`
     <div class="info-card" style="cursor:pointer;" onclick="openAddrSheet('${addrEsc}')">
-      <div class="info-card-icon">📍</div>
+      <div class="info-card-icon">${ic('map-pin', 18)}</div>
       <div class="info-card-content">
         <div class="info-card-label">Endereço</div>
         <div class="info-card-value">${p.a}</div>
@@ -867,14 +890,14 @@ async function openProfile(p) {
       <button class="info-card-action" onclick="event.stopPropagation();openAddrSheet('${addrEsc}')">Ver opções</button>
     </div>
     <div class="info-card">
-      <div class="info-card-icon">🏘️</div>
+      <div class="info-card-icon">${ic('home', 18)}</div>
       <div class="info-card-content">
         <div class="info-card-label">Bairro</div>
         <div class="info-card-value">${p.b}</div>
       </div>
     </div>
     <div class="info-card">
-      <div class="info-card-icon">🕐</div>
+      <div class="info-card-icon">${ic('clock', 18)}</div>
       <div class="info-card-content">
         <div class="info-card-label">Horário</div>
         <div class="info-card-value">${p.h}</div>
@@ -947,7 +970,7 @@ window.openAddrSheet = (addr) => {
   };
   document.getElementById('addrBtnCopy').onclick = () => {
     navigator.clipboard.writeText(addr+', Curitiba, PR').then(()=>{
-      document.getElementById('addrBtnCopy').innerHTML='<span class="addr-sheet-btn-icon">✅</span> Copiado!';
+      document.getElementById('addrBtnCopy').innerHTML=`<span class="addr-sheet-btn-icon">${ic('check', 16)}</span> Copiado!`;
       setTimeout(window.closeAddrSheet, 1000);
     });
   };
@@ -975,14 +998,14 @@ window.selectCity = (city, id) => {
 // ── Welcome screen ─────────────────────────────────────────────────
 function getGreeting() {
   const h = new Date().getHours();
-  if (h<12) return 'Bom dia ☀️';
-  if (h<18) return 'Boa tarde 🌤️';
-  return 'Boa noite ✨';
+  if (h<12) return `Bom dia ${ic('sun', 13)}`;
+  if (h<18) return `Boa tarde ${ic('sun', 13)}`;
+  return `Boa noite ${ic('moon', 13)}`;
 }
 
 function showWelcomeScreen() {
   if (sessionStorage.getItem('cwb_welcomed')) return;
-  document.getElementById('welcomeGreeting').textContent = getGreeting();
+  document.getElementById('welcomeGreeting').innerHTML = getGreeting();
   document.getElementById('welcomeScreen').style.display = 'flex';
 
   const availCats = CATS.filter(c => c !== 'Todos');
@@ -994,7 +1017,7 @@ function showWelcomeScreen() {
       return cats.includes(c);
     }).length;
     return `<div class="wcat-card" onclick="window.closeWelcome('${c.replace(/'/g,"\\'")}')">
-      <div class="wcat-emoji">${CE[c]||'📍'}</div>
+      <div class="wcat-emoji">${catIcon(c, 26, 1.7)}</div>
       <div>
         <div class="wcat-name">${c}</div>
         <div class="wcat-count">${count} lugar${count!==1?'es':''}</div>
@@ -1022,7 +1045,7 @@ function renderWantToday() {
   if (!view) return;
 
   if (!window.currentUser) {
-    view.innerHTML = `<div class="empty"><div class="empty-ico">❤️</div>
+    view.innerHTML = `<div class="empty"><div class="empty-ico">${ic('heart', 40, 1.5)}</div>
       <div class="empty-title">Entre na sua conta</div>
       <div class="empty-sub">Faça login para ver os lugares que quer visitar hoje.</div>
       <button class="login-google-btn" style="margin-top:16px" onclick="showAuthModal()">Entrar</button></div>`;
@@ -1030,9 +1053,9 @@ function renderWantToday() {
   }
 
   if (!wantToday.length) {
-    view.innerHTML = `<div class="want-header"><div class="want-title">Quero ir hoje ❤️</div>
+    view.innerHTML = `<div class="want-header"><div class="want-title">Quero ir hoje ${ic('heart', 18, 2.2)}</div>
       <div class="want-sub">Zera à meia-noite</div></div>
-      <div class="empty"><div class="empty-ico">❤️</div>
+      <div class="empty"><div class="empty-ico">${ic('heart', 40, 1.5)}</div>
       <div class="empty-title">Nenhum lugar ainda</div>
       <div class="empty-sub">Deslize para a direita nos cards<br>para adicionar lugares aqui.</div></div>`;
     return;
@@ -1040,7 +1063,7 @@ function renderWantToday() {
 
   const grid = document.createElement('div');
   grid.className = 'fav-grid';
-  let html = `<div class="want-header"><div class="want-title">Quero ir hoje ❤️</div>
+  let html = `<div class="want-header"><div class="want-title">Quero ir hoje ${ic('heart', 18, 2.2)}</div>
     <div class="want-sub">${wantToday.length} lugar${wantToday.length>1?'es':''} · zera à meia-noite</div></div>`;
   view.innerHTML = html;
   view.appendChild(grid);
@@ -1051,7 +1074,7 @@ function renderWantToday() {
     row.style.animationDelay = `${i * 40}ms`;
     row.onclick = () => openProfile(p);
     row.innerHTML = `
-      <div class="saved-thumb bg-${p.bg}" id="wthumb-${p.id}">${p.e}</div>
+      <div class="saved-thumb bg-${p.bg}" id="wthumb-${p.id}">${catIcon(p.c, 22, 1.7)}</div>
       <div style="flex:1;min-width:0;">
         <div class="saved-name">${p.n}</div>
         <div class="saved-meta">${p.b} · ${p.h}</div>
@@ -1065,7 +1088,7 @@ function renderWantToday() {
     grid.appendChild(row);
     if (Array.isArray(p.photos) && p.photos.length) {
       const t = document.getElementById(`wthumb-${p.id}`);
-      if (t) { t.style.backgroundImage=`url("${p.photos[0]}")`; t.textContent=''; }
+      if (t) { t.style.backgroundImage=`url("${p.photos[0]}")`; t.innerHTML=''; }
     }
   });
 
@@ -1087,7 +1110,7 @@ function renderMapView() {
   if (!view) return;
 
   if (!P.length) {
-    view.innerHTML = `<div class="empty"><div class="empty-ico">🗺️</div>
+    view.innerHTML = `<div class="empty"><div class="empty-ico">${ic('map', 40, 1.5)}</div>
       <div class="empty-title">Mapa</div>
       <div class="empty-sub">Nenhum lugar cadastrado ainda.</div></div>`;
     return;

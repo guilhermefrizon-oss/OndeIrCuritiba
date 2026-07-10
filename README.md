@@ -42,6 +42,13 @@ App estilo Tinder para descobrir os melhores lugares em Curitiba.
 - **Distância** — mostra a distância até o lugar se o usuário permitir geolocalização (requer lat/lng no cadastro do lugar)
 - Cards já curtidos/pulados saem do baralho de verdade (antes ficavam em loop)
 
+## UI de ícones + filtro (v4)
+
+- **Ícones de traço** (`js/icons.js`) substituem todos os emojis da UI — mesmo estilo da bottom nav; categorias mapeadas por nome em `catIconName()`
+- **Filtro "Abertos agora"** — pill ao lado da cidade; filtra baralho e mapa
+- **Drag consertado de vez**: a classe `.su` (animation com fill-mode `both`) sobrescrevia o `style.transform` do drag — cards não usam mais animação de entrada
+- Toasts sem emoji; card com fundo opaco; efeito de pilha visível
+
 ## Deploy (GitHub Pages)
 
 ```bash

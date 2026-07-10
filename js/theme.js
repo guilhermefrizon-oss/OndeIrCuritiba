@@ -1,11 +1,13 @@
 // ── theme.js ──────────────────────────────────────────────────────
+import { ic } from './icons.js';
+
 const K = 'cwb_theme';
 const get = () => localStorage.getItem(K) || 'light';
 
 function apply(t) {
   document.documentElement.setAttribute('data-theme', t);
   const b = document.getElementById('themeBtn');
-  if (b) b.textContent = t === 'dark' ? '☀️' : '🌙';
+  if (b) b.innerHTML = t === 'dark' ? ic('sun', 17) : ic('moon', 17);
 }
 
 export function toggleTheme() {

@@ -1335,3 +1335,41 @@ body {
   width: 10px; height: 10px; border-radius: 50%; display: inline-block;
   border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.12);
 }
+
+/* ── v4: ícones de traço + abertos agora ──────────────────────────── */
+
+/* Alinhamento padrão dos ícones inline */
+.ic { display: inline-block; vertical-align: -0.16em; flex-shrink: 0; }
+.cat-pill .ic, .loc-pill .ic, .fav-toggle .ic { vertical-align: middle; }
+
+/* Botão "Abertos agora" */
+.location-row { gap: 8px; }
+.open-now-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg2); border: 1.5px solid var(--bg4);
+  border-radius: 100px; padding: 7px 14px;
+  font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text2);
+  cursor: pointer; box-shadow: var(--shadow); transition: all .18s;
+  white-space: nowrap;
+}
+.open-now-pill.on {
+  background: rgba(52,211,153,.12); border-color: #34d399; color: #059669;
+  font-weight: 700;
+}
+[data-theme="dark"] .open-now-pill.on { color: #34d399; }
+
+/* Stamps com ícone svg */
+.stamp { display: flex; align-items: center; gap: 6px; }
+
+/* Mão da dica de swipe agora é svg */
+.swipe-hint-hand { color: #fff; display: flex; }
+.swipe-hint-label { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Ícones em containers que antes usavam emoji */
+.empty-ico svg, .deck-empty-ico svg { color: var(--text3); opacity: .7; }
+.saved-thumb svg, .search-result-thumb svg, .photo-loading svg { opacity: .55; }
+.wcat-emoji { display: flex; align-items: center; justify-content: center; color: var(--text2); }
+.fav-cat-emoji { display: inline-flex; vertical-align: middle; color: var(--text3); }
+.profile-photo-fallback svg { opacity: .5; }
+.want-title .ic { color: #ef4444; }
+.avatar svg { opacity: .9; }

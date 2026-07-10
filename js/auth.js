@@ -3,6 +3,7 @@ import {
   auth, GoogleAuthProvider,
   signInWithPopup, signOut, onAuthStateChanged
 } from './firebase.js';
+import { ic } from './icons.js';
 
 import {
   db, doc, setDoc, collection, getDocs, query
@@ -53,7 +54,7 @@ function updateAvatarUI(user) {
     avatar.title = user.displayName || user.email;
   } else {
     avatar.innerHTML = '';
-    avatar.textContent = '👤';
+    avatar.innerHTML = ic('user', 18);
     avatar.title = 'Entrar';
   }
 }
@@ -102,10 +103,10 @@ export function showAuthModal(reason = 'default') {
   }
 
   const reasons = {
-    like:    { icon: '❤️', title: 'Curtir lugares',    sub: 'Entre para salvar e curtir lugares que você ama.' },
-    save:    { icon: '🔖', title: 'Salvar lugares',    sub: 'Crie sua lista pessoal de lugares favoritos.' },
-    comment: { icon: '💬', title: 'Deixar um comentário', sub: 'Compartilhe sua experiência com outros usuários.' },
-    default: { icon: '✨', title: 'Entre na sua conta', sub: 'Acesse todos os recursos do Day Match.' },
+    like:    { icon: ic('heart', 30, 1.7), title: 'Curtir lugares',    sub: 'Entre para salvar e curtir lugares que você ama.' },
+    save:    { icon: ic('bookmark', 30, 1.7), title: 'Salvar lugares',    sub: 'Crie sua lista pessoal de lugares favoritos.' },
+    comment: { icon: ic('message-circle', 30, 1.7), title: 'Deixar um comentário', sub: 'Compartilhe sua experiência com outros usuários.' },
+    default: { icon: ic('sparkles', 30, 1.7), title: 'Entre na sua conta', sub: 'Acesse todos os recursos do Day Match.' },
   };
   const r = reasons[reason] || reasons.default;
 
@@ -135,7 +136,7 @@ export function showAuthModal(reason = 'default') {
         </div>
         <div class="auth-field-wrap">
           <input class="auth-field" id="loginPassword" type="password" placeholder="Senha" autocomplete="current-password">
-          <button class="auth-field-eye" id="loginEyeBtn" type="button">👁</button>
+          <button class="auth-field-eye" id="loginEyeBtn" type="button">${ic('eye', 16)}</button>
         </div>
         <div id="loginError" class="auth-error" style="display:none"></div>
 
@@ -150,7 +151,7 @@ export function showAuthModal(reason = 'default') {
       </div>
 
       <div id="authViewRegister" class="auth-view" style="display:none">
-        <div class="auth-modal-icon">🙌</div>
+        <div class="auth-modal-icon">${ic('check-circle', 30, 1.7)}</div>
         <div class="auth-modal-title">Criar conta</div>
         <div class="auth-modal-sub">Junte-se e descubra os melhores lugares de Curitiba.</div>
 
@@ -174,7 +175,7 @@ export function showAuthModal(reason = 'default') {
         </div>
         <div class="auth-field-wrap">
           <input class="auth-field" id="regPassword" type="password" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password">
-          <button class="auth-field-eye" id="regEyeBtn" type="button">👁</button>
+          <button class="auth-field-eye" id="regEyeBtn" type="button">${ic('eye', 16)}</button>
         </div>
         <div id="regError" class="auth-error" style="display:none"></div>
 
@@ -187,7 +188,7 @@ export function showAuthModal(reason = 'default') {
       </div>
 
       <div id="authViewForgot" class="auth-view" style="display:none">
-        <div class="auth-modal-icon">🔑</div>
+        <div class="auth-modal-icon">${ic('key', 30, 1.7)}</div>
         <div class="auth-modal-title">Recuperar senha</div>
         <div class="auth-modal-sub">Enviaremos um link para redefinir sua senha.</div>
 
@@ -195,7 +196,7 @@ export function showAuthModal(reason = 'default') {
           <input class="auth-field" id="forgotEmail" type="email" placeholder="Seu e-mail">
         </div>
         <div id="forgotError" class="auth-error" style="display:none"></div>
-        <div id="forgotSuccess" class="auth-success" style="display:none">✅ E-mail enviado! Verifique sua caixa de entrada.</div>
+        <div id="forgotSuccess" class="auth-success" style="display:none">E-mail enviado! Verifique sua caixa de entrada.</div>
 
         <button class="auth-submit-btn" id="forgotSubmitBtn">Enviar link</button>
 
@@ -276,7 +277,7 @@ function _bindEye(btnId, fieldId) {
   btn.onclick = () => {
     const vis = field.type === 'text';
     field.type = vis ? 'password' : 'text';
-    btn.textContent = vis ? '👁' : '🙈';
+    btn.innerHTML = vis ? ic('eye', 16) : ic('eye-off', 16);
   };
 }
 
@@ -347,7 +348,7 @@ export function showUserProfile() {
         </button>
         <span class="ups-topbar-title">Meu Perfil</span>
         <div class="ups-privacy-toggle" id="upsPrivacyToggle" title="Visibilidade do perfil">
-          <span id="upsPrivacyIcon">🔒</span>
+          <span id="upsPrivacyIcon">${ic('lock', 13)}</span>
           <span id="upsPrivacyLbl">Privado</span>
         </div>
       </div>
@@ -360,7 +361,7 @@ export function showUserProfile() {
             ${photoURL
               ? `<img class="ups-avatar-img" src="${photoURL}" alt="${displayName}">`
               : `<div class="ups-avatar-initials">${initials}</div>`}
-            <div class="ups-avatar-badge" title="${isGoogle ? 'Google' : 'E-mail'}">${isGoogle ? '🔵' : '✉️'}</div>
+            <div class="ups-avatar-badge" title="${isGoogle ? 'Google' : 'E-mail'}">${isGoogle ? 'G' : ic('mail', 11)}</div>
           </div>
           <div class="ups-user-info">
             <div class="ups-name">${displayName}</div>
@@ -372,7 +373,7 @@ export function showUserProfile() {
         <!-- Nível -->
         <div class="ups-level-bar" id="upsLevelBar">
           <div class="ups-level-top">
-            <span class="ups-level-icon" id="upsLevelIcon">🌱</span>
+            <span class="ups-level-icon" id="upsLevelIcon">${ic('leaf', 18)}</span>
             <span class="ups-level-name" id="upsLevelName">Novato</span>
             <span class="ups-level-xp"  id="upsLevelXp">0 XP</span>
           </div>
@@ -434,17 +435,17 @@ export function showUserProfile() {
           <div class="ups-actions">
             ${!isGoogle ? `
             <button class="ups-action-row" id="upsChangeNameBtn">
-              <span class="ups-action-icon">✏️</span>
+              <span class="ups-action-icon">${ic('edit', 16)}</span>
               <span class="ups-action-label">Alterar nome</span>
               <span class="ups-action-chevron">›</span>
             </button>
             <button class="ups-action-row" id="upsChangePwdBtn">
-              <span class="ups-action-icon">🔑</span>
+              <span class="ups-action-icon">${ic('key', 16)}</span>
               <span class="ups-action-label">Alterar senha</span>
               <span class="ups-action-chevron">›</span>
             </button>` : ''}
             <button class="ups-action-row ups-action-danger" id="upsSignOutBtn">
-              <span class="ups-action-icon">🚪</span>
+              <span class="ups-action-icon">${ic('log-out', 16)}</span>
               <span class="ups-action-label">Sair da conta</span>
               <span class="ups-action-chevron">›</span>
             </button>
@@ -462,10 +463,10 @@ export function showUserProfile() {
             <div class="ups-section-title" style="margin-top:12px">Alterar senha</div>
             <div class="auth-field-wrap">
               <input class="auth-field" id="upsNewPwd" type="password" placeholder="Nova senha (mín. 6 caracteres)">
-              <button class="auth-field-eye" id="upsPwdEyeBtn" type="button">👁</button>
+              <button class="auth-field-eye" id="upsPwdEyeBtn" type="button">${ic('eye', 16)}</button>
             </div>
             <div id="upsPwdError" class="auth-error" style="display:none"></div>
-            <div id="upsPwdSuccess" class="auth-success" style="display:none">✅ Senha alterada!</div>
+            <div id="upsPwdSuccess" class="auth-success" style="display:none">Senha alterada!</div>
             <button class="auth-submit-btn" id="upsSavePwdBtn">Alterar senha</button>
             <button class="ups-link-btn" id="upsCancelPwdBtn">Cancelar</button>
           </div>
@@ -620,7 +621,7 @@ function _setPrivacyUI(isPublic) {
   const icon = document.getElementById('upsPrivacyIcon');
   const lbl  = document.getElementById('upsPrivacyLbl');
   const wrap = document.getElementById('upsPrivacyToggle');
-  if (icon) icon.textContent = isPublic ? '🌍' : '🔒';
+  if (icon) icon.innerHTML = isPublic ? ic('globe', 13) : ic('lock', 13);
   if (lbl)  lbl.textContent  = isPublic ? 'Público' : 'Privado';
   if (wrap) wrap.classList.toggle('privacy-public', isPublic);
 }
@@ -639,7 +640,7 @@ async function _loadHistory(user) {
     );
 
     if (!places.length) {
-      list.innerHTML = '<div class="ups-empty-tab">Nenhum lugar visitado ainda.<br>Use o botão 📍 nos cards!</div>';
+      list.innerHTML = '<div class="ups-empty-tab">Nenhum lugar visitado ainda.<br>Use o botão "Já fui" nos cards!</div>';
       return;
     }
 
@@ -649,7 +650,7 @@ async function _loadHistory(user) {
       const row  = document.createElement('div');
       row.className = 'ups-history-row';
       row.innerHTML = `
-        <div class="ups-history-thumb bg-${p.bg||'1'}">${p.e||'📍'}</div>
+        <div class="ups-history-thumb bg-${p.bg||'1'}">${window.catIcon ? window.catIcon(p.c, 20, 1.7) : ''}</div>
         <div class="ups-history-info">
           <div class="ups-history-name">${p.n||'Lugar'}</div>
           <div class="ups-history-meta">${p.c||''} · ${p.b||''}</div>
@@ -695,12 +696,12 @@ async function _loadStats(user) {
 
     container.innerHTML = `
       <div class="ups-stat-block">
-        <div class="ups-stat-block-title">🏆 Total de lugares visitados</div>
+        <div class="ups-stat-block-title">${ic('trophy', 13)} Total de lugares visitados</div>
         <div class="ups-stat-block-val">${places.length}</div>
       </div>
 
       <div class="ups-stat-block">
-        <div class="ups-stat-block-title">❤️ Categoria favorita</div>
+        <div class="ups-stat-block-title">${ic('heart', 13)} Categoria favorita</div>
         ${topCat.slice(0,3).map(([cat,n]) => `
           <div class="ups-stat-bar-row">
             <span class="ups-stat-bar-lbl">${cat}</span>
@@ -712,7 +713,7 @@ async function _loadStats(user) {
       </div>
 
       <div class="ups-stat-block">
-        <div class="ups-stat-block-title">📍 Bairro favorito</div>
+        <div class="ups-stat-block-title">${ic('map-pin', 13)} Bairro favorito</div>
         ${topBairro.slice(0,3).map(([b,n]) => `
           <div class="ups-stat-bar-row">
             <span class="ups-stat-bar-lbl">${b}</span>
@@ -740,7 +741,7 @@ function _renderLevel(totalXp) {
   if (el('upsLevelNext')) {
     el('upsLevelNext').textContent = info.next
       ? `${info.xpIntoLevel} / ${info.xpNeeded} XP para ${info.next.icon} ${info.next.name}`
-      : `Nível máximo atingido! 🎉`;
+      : `Nível máximo atingido!`;
   }
 }
 

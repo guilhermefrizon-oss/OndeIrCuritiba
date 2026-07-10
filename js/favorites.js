@@ -1,5 +1,6 @@
 // ── favorites.js ──────────────────────────────────────────────────
 import { fetchPlacePhoto } from './photos.js';
+import { ic, catIcon } from './icons.js';
 import { fsRemove } from './store.js';
 
 const GOOGLE_API_KEY = 'AIzaSyDiLhxU3veHWvx3fvA6kk6TluFFHYWHEzs';
@@ -59,8 +60,7 @@ function renderList(saved, grid, onOpenProfile, onRemove) {
     const header = document.createElement('div');
     header.className = 'fav-cat-header';
     // Use emoji from first place in group as category indicator
-    const catEmoji = places[0]?.e || '';
-    header.innerHTML = `<span class="fav-cat-emoji">${catEmoji}</span>${cat}<span class="fav-cat-count">${places.length}</span>`;
+    header.innerHTML = `<span class="fav-cat-emoji">${catIcon(cat, 15)}</span>${cat}<span class="fav-cat-count">${places.length}</span>`;
     grid.appendChild(header);
 
     places.forEach(p => {
@@ -71,7 +71,7 @@ function renderList(saved, grid, onOpenProfile, onRemove) {
       row.onclick = () => onOpenProfile(p);
 
       row.innerHTML = `
-        <div class="saved-thumb bg-${p.bg}" id="fthumb-${p.id}">${p.e}</div>
+        <div class="saved-thumb bg-${p.bg}" id="fthumb-${p.id}">${catIcon(p.c, 22, 1.7)}</div>
         <div style="flex:1;min-width:0;">
           <div class="saved-name">${p.n}</div>
           <div class="saved-meta">${p.b} · ${p.h}</div>
@@ -89,11 +89,11 @@ function renderList(saved, grid, onOpenProfile, onRemove) {
         fetchPlacePhoto(p.pid).then(url => {
           if (!url) return;
           const t = document.getElementById(`fthumb-${p.id}`);
-          if (t) { t.style.backgroundImage = `url("${url}")`; t.textContent = ''; }
+          if (t) { t.style.backgroundImage = `url("${url}")`; t.innerHTML = ''; }
         });
       } else if (Array.isArray(p.photos) && p.photos.length) {
         const t = document.getElementById(`fthumb-${p.id}`);
-        if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.textContent = ''; }
+        if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.innerHTML = ''; }
       }
     });
   });
@@ -329,7 +329,7 @@ function buildMainMap(places, mapEl, onOpenProfile) {
     marker.addListener('click', () => {
       infoWindow.setContent(`
         <div style="font-family:'Manrope',sans-serif;padding:4px 2px;max-width:210px;">
-          <div style="font-weight:800;font-size:14px;color:#14140F;margin-bottom:2px;">${p.e||''} ${p.n}</div>
+          <div style="font-weight:800;font-size:14px;color:#14140F;margin-bottom:2px;">${p.n}</div>
           <div style="font-size:12px;color:#57564E;">${p.c} · ${p.b}</div>
           <div style="font-size:11px;color:#9A988E;margin:2px 0 8px;">${p.h}</div>
           <button onclick="window._mapOpenProfile('${p.id}')"
@@ -365,8 +365,8 @@ export function toggleFavView(saved, onOpenProfile, onRemove) {
   const btn = document.getElementById('favToggle');
   if (btn) {
     btn.innerHTML = favViewMode === 'list'
-      ? `<span>🗺️</span> Ver no mapa`
-      : `<span>☰</span> Ver lista`;
+      ? `${ic('map', 14)} Ver no mapa`
+      : `${ic('list', 14)} Ver lista`;
   }
   renderFavorites(saved, onOpenProfile, onRemove);
 }

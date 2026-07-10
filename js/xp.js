@@ -18,12 +18,14 @@ export const XP_VALUES = {
 };
 
 // ── Configuração de níveis ─────────────────────────────────────────
+import { ic } from './icons.js';
+
 export const LEVELS = [
-  { name: 'Novato',      minXp: 0,    icon: '🌱' },
-  { name: 'Curioso',     minXp: 50,   icon: '👀' },
-  { name: 'Explorador',  minXp: 150,  icon: '🧭' },
-  { name: 'Conhecedor',  minXp: 350,  icon: '🎯' },
-  { name: 'Expert',      minXp: 700,  icon: '⭐' },
+  { name: 'Novato',      minXp: 0,    icon: ic('leaf', 18) },
+  { name: 'Curioso',     minXp: 50,   icon: ic('eye', 18) },
+  { name: 'Explorador',  minXp: 150,  icon: ic('compass', 18) },
+  { name: 'Conhecedor',  minXp: 350,  icon: ic('target', 18) },
+  { name: 'Expert',      minXp: 700,  icon: ic('star', 18) },
 ];
 
 export function getLevelInfo(totalXp) {

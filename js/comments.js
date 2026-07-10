@@ -196,7 +196,7 @@ function subscribeToComments(placeId) {
     const list = document.getElementById('commentList');
     if (!list) return;
     if (snap.empty) {
-      list.innerHTML = '<div class="comment-empty">Nenhum comentário ainda. Seja o primeiro! 🙌</div>';
+      list.innerHTML = '<div class="comment-empty">Nenhum comentário ainda. Seja o primeiro!</div>';
       return;
     }
     list.innerHTML = '';
