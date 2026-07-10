@@ -755,11 +755,15 @@ function _renderLevel(totalXp) {
 }
 
 // Fecha o DOM do perfil (idempotente). Chamado só pelo popstate/dismiss.
+// A visibilidade é controlada pela classe .ups-visible (display:flex
+// !important). É PRECISO removê-la — mexer só no style.display inline
+// não esconde (o !important ganha) e a tela reaparece deslizando.
 function doCloseUserProfile() {
   const screen = document.getElementById('userProfileScreen');
-  if (!screen || screen.style.display === 'none') return;
+  if (!screen || !screen.classList.contains('ups-visible')) return;
   screen.classList.add('ups-closing');
   setTimeout(() => {
+    screen.classList.remove('ups-visible');
     screen.classList.remove('ups-closing');
     screen.style.display = 'none';
   }, 260);
