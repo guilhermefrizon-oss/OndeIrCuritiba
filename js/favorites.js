@@ -258,6 +258,107 @@ function getMapStyle() {
   ];
 }
 
+// ── Mapa genérico (aba Mapa — todos os lugares) ────────────────────
+let mainMapInstance = null;
+let mainMapMarkers  = [];
+let mainMapEl       = null;
+
+export function renderFavMap(places, mapEl, onOpenProfile) {
+  if (!mapEl) return;
+  // Se o elemento mudou (view re-renderizada), descarta a instância antiga
+  if (mainMapEl !== mapEl) { mainMapInstance = null; mainMapMarkers = []; mainMapEl = mapEl; }
+
+  if (!window.google?.maps) {
+    if (!document.getElementById('gmapsScript')) {
+      const s = document.createElement('script');
+      s.id  = 'gmapsScript';
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&callback=_initGoogleMap`;
+      s.async = true;
+      document.head.appendChild(s);
+    }
+    // Encadeia no callback (pode já existir um pendente do mapa de favoritos)
+    const prev = window._initGoogleMap;
+    window._initGoogleMap = () => {
+      if (prev) prev();
+      mapInitialized = true;
+      buildMainMap(places, mapEl, onOpenProfile);
+    };
+    return;
+  }
+  buildMainMap(places, mapEl, onOpenProfile);
+}
+
+function buildMainMap(places, mapEl, onOpenProfile) {
+  if (!mapEl || !window.google?.maps) return;
+
+  if (!mainMapInstance) {
+    mainMapInstance = new window.google.maps.Map(mapEl, {
+      center: { lat: -25.4284, lng: -49.2733 }, // Curitiba
+      zoom: 13,
+      styles: getMapStyle(),
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: 'greedy',
+    });
+  }
+
+  mainMapMarkers.forEach(m => m.setMap(null));
+  mainMapMarkers = [];
+
+  const bounds = new window.google.maps.LatLngBounds();
+  let boundsCount = 0;
+  const infoWindow = new window.google.maps.InfoWindow();
+
+  const addMarker = (p, coords) => {
+    const isWant  = !!window._isWantToday?.(p.id);
+    const isSaved = !!window._isSaved?.(p.id);
+    const color = isWant ? '#ef4444' : isSaved ? '#f59e0b' : '#14140F';
+    const marker = new window.google.maps.Marker({
+      position: coords,
+      map: mainMapInstance,
+      title: p.n,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2,
+      }
+    });
+    marker.addListener('click', () => {
+      infoWindow.setContent(`
+        <div style="font-family:'Manrope',sans-serif;padding:4px 2px;max-width:210px;">
+          <div style="font-weight:800;font-size:14px;color:#14140F;margin-bottom:2px;">${p.e||''} ${p.n}</div>
+          <div style="font-size:12px;color:#57564E;">${p.c} · ${p.b}</div>
+          <div style="font-size:11px;color:#9A988E;margin:2px 0 8px;">${p.h}</div>
+          <button onclick="window._mapOpenProfile('${p.id}')"
+            style="width:100%;padding:8px;border-radius:10px;border:none;background:#14140F;color:#fff;
+            font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Ver perfil →</button>
+        </div>`);
+      infoWindow.open(mainMapInstance, marker);
+    });
+    mainMapMarkers.push(marker);
+    bounds.extend(coords);
+    boundsCount++;
+    if (boundsCount > 1) mainMapInstance.fitBounds(bounds, 48);
+  };
+
+  window._mapOpenProfile = (id) => {
+    const p = places.find(x => x.id === id);
+    if (p && onOpenProfile) onOpenProfile(p);
+  };
+
+  places.forEach(p => {
+    if (p.lat && p.lng) addMarker(p, { lat: p.lat, lng: p.lng });
+    else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+      fetchPlaceLatLng(p.pid).then(coords => { if (coords) addMarker(p, coords); });
+    } else if (p.a) {
+      geocodeAddress(p.a + ', Curitiba, PR').then(coords => { if (coords) addMarker(p, coords); });
+    }
+  });
+}
+
 // ── Toggle list/map ────────────────────────────────────────────────
 export function toggleFavView(saved, onOpenProfile, onRemove) {
   favViewMode = favViewMode === 'list' ? 'map' : 'list';

@@ -84,6 +84,20 @@ export const fsSkip = async (placeId) => {
   } catch (e) { console.warn('fsSkip:', e); }
 };
 
+export const fsUnskip = async (placeId) => {
+  const uid = getUid();
+  try { await deleteDoc(doc(db, 'skipped', uid, 'places', placeId)); }
+  catch (e) { console.warn('fsUnskip:', e); }
+};
+
+export const fsClearSkipped = async () => {
+  const uid = getUid();
+  try {
+    const snap = await getDocs(collection(db, 'skipped', uid, 'places'));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  } catch (e) { console.warn('fsClearSkipped:', e); }
+};
+
 export const fsLoadSkipped = async () => {
   const uid = getUid();
   try {
@@ -106,6 +120,12 @@ export const fsBeenThere = async (place) => {
       ...place, visitedAt: new Date().toISOString()
     });
   } catch (e) { console.warn('fsBeenThere:', e); }
+};
+
+export const fsRemoveBeenThere = async (placeId) => {
+  const uid = getUid();
+  try { await deleteDoc(doc(db, 'been_there', uid, 'places', placeId)); }
+  catch (e) { console.warn('fsRemoveBeenThere:', e); }
 };
 
 export const fsLoadBeenThere = async () => {
@@ -152,6 +172,21 @@ export const fsIncrementLike = async (placeId) => {
       setDoc(doc(db, 'places', placeId), { _likes: increment(1) }, { merge: true }),
     ]);
   } catch (e) { console.warn('fsIncrementLike:', e); }
+};
+
+export const fsRemoveLike = async (placeId) => {
+  const user = window.currentUser;
+  if (!user) return;
+  try {
+    const likeRef = doc(db, 'likes', placeId, 'users', user.uid);
+    const existing = await getDoc(likeRef);
+    if (!existing.exists()) return;
+    await Promise.all([
+      deleteDoc(likeRef),
+      deleteDoc(doc(db, 'likes_by_user', user.uid, 'places', placeId)),
+      setDoc(doc(db, 'places', placeId), { _likes: increment(-1) }, { merge: true }),
+    ]);
+  } catch (e) { console.warn('fsRemoveLike:', e); }
 };
 
 // Expose globally

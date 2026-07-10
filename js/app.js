@@ -1,15 +1,15 @@
 // ── app.js ────────────────────────────────────────────────────────
 import {
   fsLoadPlaces, fsLoadCategories,
-  fsLoadAll, fsSave, fsRemove, fsIncrementLike,
+  fsLoadAll, fsSave, fsRemove, fsIncrementLike, fsRemoveLike,
   fsWantToday, fsLoadWantToday, fsRemoveWantToday,
-  fsSkip, fsLoadSkipped,
-  fsBeenThere, fsLoadBeenThere
+  fsSkip, fsLoadSkipped, fsUnskip, fsClearSkipped,
+  fsBeenThere, fsLoadBeenThere, fsRemoveBeenThere
 } from './store.js';
 import { awardXp } from './xp.js';
 import { checkAndAwardBadges } from './badges.js';
 import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
-import { renderFavorites, toggleFavView } from './favorites.js';
+import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
@@ -30,6 +30,9 @@ let cardPhotos    = [];
 let cardPhotoIdx  = 0;
 let profilePhotos = [];
 let profilePhotoIdx = 0;
+
+let lastAction  = null;  // {type:'skip'|'want'|'been', place, prevIdx} — para desfazer
+let userPos     = null;  // {lat,lng} do usuário (geolocalização)
 
 let activeCard  = null;
 let dragActive  = false;
@@ -120,6 +123,79 @@ async function init() {
 
   // Carrega médias de rating em background e atualiza cards
   loadAllRatings();
+
+  // Distância até o usuário (pede permissão só se ainda não decidiu)
+  requestUserLocation();
+
+  // Dica de swipe na primeira visita
+  maybeShowSwipeHint();
+}
+
+// ── Geolocalização (distância nos cards) ──────────────────────────
+function requestUserLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      renderCard(); // re-renderiza para mostrar as distâncias
+    },
+    () => {}, // negado/erro: segue sem distância
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+  );
+}
+
+function distanceKm(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const s = Math.sin(dLat/2)**2 +
+    Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+
+function distLabel(p) {
+  if (!userPos || !p.lat || !p.lng) return '';
+  const km = distanceKm(userPos, { lat: p.lat, lng: p.lng });
+  const txt = km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1).replace('.',',')} km`;
+  return `<span class="dist-chip">📏 ${txt}</span>`;
+}
+
+// ── Aberto agora (parse de "Seg-Dom 09h-20h") ──────────────────────
+const DAY_IDX = { dom:0, seg:1, ter:2, qua:3, qui:4, sex:5, sab:6, 'sáb':6 };
+
+function parseOpenNow(hoursStr) {
+  if (!hoursStr) return null;
+  const s = hoursStr.toLowerCase();
+  const dayMatch  = s.match(/(dom|seg|ter|qua|qui|sex|sab|sáb)\s*[-–a]\s*(dom|seg|ter|qua|qui|sex|sab|sáb)/);
+  const timeMatch = s.match(/(\d{1,2})(?:[h:](\d{2})?)?\s*[-–às]+\s*(\d{1,2})(?:[h:](\d{2})?)?/);
+  if (!timeMatch) return null;
+
+  const now = new Date();
+  const today = now.getDay();
+
+  if (dayMatch) {
+    const d1 = DAY_IDX[dayMatch[1]], d2 = DAY_IDX[dayMatch[2]];
+    const inRange = d1 <= d2 ? (today >= d1 && today <= d2)
+                             : (today >= d1 || today <= d2); // ex: Sex-Dom cruzando a semana
+    if (!inRange) return false;
+  }
+
+  const openMin  = parseInt(timeMatch[1],10)*60 + (parseInt(timeMatch[2]||'0',10));
+  let   closeMin = parseInt(timeMatch[3],10)*60 + (parseInt(timeMatch[4]||'0',10));
+  const nowMin   = now.getHours()*60 + now.getMinutes();
+  if (closeMin === 0) closeMin = 24*60; // "00h" = meia-noite
+  if (closeMin < openMin) { // fecha depois da meia-noite (ex: 18h-02h)
+    return nowMin >= openMin || nowMin < closeMin;
+  }
+  return nowMin >= openMin && nowMin < closeMin;
+}
+
+function openBadgeHTML(p) {
+  const open = parseOpenNow(p.h);
+  if (open === null) return '';
+  return open
+    ? '<span class="open-badge open">● Aberto agora</span>'
+    : '<span class="open-badge closed">● Fechado</span>';
 }
 
 // ── Category row ───────────────────────────────────────────────────
@@ -137,9 +213,12 @@ function buildCategoryRow() {
 
 export function setCat(c) {
   cat = c;
-  document.querySelectorAll('.cat-pill').forEach((b,i) => b.classList.toggle('on', CATS[i]===c));
+  document.querySelectorAll('#catsRow .cat-pill').forEach((b,i) => b.classList.toggle('on', CATS[i]===c));
   applyUserFilters();
   idx=0; renderCard(); renderProgress();
+  // Se a aba Mapa estiver aberta, atualiza os pins
+  const mapView = document.getElementById('mapView');
+  if (mapView && mapView.style.display !== 'none') renderMapView();
 }
 
 function applyUserFilters() {
@@ -147,7 +226,9 @@ function applyUserFilters() {
     const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
     return cats.includes(cat);
   });
-  filtered = base.filter(p => !skipped[p.id] && !beenThere[p.id]);
+  filtered = base.filter(p =>
+    !skipped[p.id] && !beenThere[p.id] && !wantToday.find(w => w.id === p.id)
+  );
   idx = 0;
 }
 
@@ -169,7 +250,8 @@ function renderProgress() {
 function renderCard() {
   const stack = document.getElementById('cardStack');
   stack.querySelectorAll('.place-card').forEach(e => e.remove());
-  if (!filtered.length) return;
+  stack.querySelector('.deck-empty')?.remove();
+  if (!filtered.length) { renderDeckEmpty(stack); return; }
 
   for (let i=Math.min(2,filtered.length-1); i>=0; i--) {
     const p = filtered[(idx+i)%filtered.length];
@@ -201,6 +283,43 @@ function renderCard() {
   initCardPhotos(top);
 }
 
+// ── Fim do baralho ─────────────────────────────────────────────────
+function renderDeckEmpty(stack) {
+  const baseCount = cat === 'Todos' ? P.length : P.filter(p => {
+    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    return cats.includes(cat);
+  }).length;
+
+  const el = document.createElement('div');
+  el.className = 'deck-empty';
+
+  if (!baseCount) {
+    el.innerHTML = `
+      <div class="deck-empty-ico">🔍</div>
+      <div class="deck-empty-title">Nada por aqui ainda</div>
+      <div class="deck-empty-sub">Nenhum lugar nessa categoria.<br>Explore outra!</div>
+      <button class="deck-empty-btn" onclick="window.setCatTodos()">Ver todos os lugares 🗺️</button>`;
+  } else {
+    el.innerHTML = `
+      <div class="deck-empty-ico">🎉</div>
+      <div class="deck-empty-title">Você viu tudo por hoje!</div>
+      <div class="deck-empty-sub">Os lugares que você pulou<br>voltam amanhã.</div>
+      <button class="deck-empty-btn" onclick="window.resetSkipped()">↩️ Rever lugares pulados</button>
+      ${cat !== 'Todos' ? '<button class="deck-empty-btn ghost" onclick="window.setCatTodos()">Ver outras categorias</button>' : ''}`;
+  }
+  stack.appendChild(el);
+}
+
+window.setCatTodos = () => setCat('Todos');
+
+window.resetSkipped = () => {
+  skipped = {};
+  fsClearSkipped();
+  applyUserFilters();
+  renderCard(); renderProgress();
+  showToast('↩️ Lugares pulados de volta ao baralho!');
+};
+
 function makeCard(p) {
   const el = document.createElement('div');
   el.className = 'place-card su';
@@ -230,6 +349,7 @@ function makeCard(p) {
       <div class="card-meta">
         <span>${p.b}</span><div class="meta-sep"></div><span>🕐 ${p.h}</span>
       </div>
+      <div class="card-status-row">${openBadgeHTML(p)}${distLabel(p)}</div>
       <div class="card-footer">
         <div class="ig-chip"><span style="font-size:12px">📷</span>${p.ig}</div>
         <div class="card-profile-hint">Ver perfil →</div>
@@ -361,14 +481,16 @@ function onDragEnd() {
       window.showAuthModal && window.showAuthModal('like');
       return;
     }
+    const p = place();
     animateOut(card,'right');
-    doWantToday(place());
-    setTimeout(() => { nextCard(); dragHappened=false; }, 400);
+    doWantToday(p);
+    setTimeout(() => { completeSwipe(p); dragHappened=false; }, 400);
   } else if (dragCurX < -threshold) {
     dragHappened = true;
+    const p = place();
     animateOut(card,'left');
-    doSkip(place());
-    setTimeout(() => { nextCard(); dragHappened=false; }, 400);
+    doSkip(p);
+    setTimeout(() => { completeSwipe(p); dragHappened=false; }, 400);
   } else {
     card.style.transition='transform .45s cubic-bezier(.34,1.4,.64,1)';
     card.style.transform='';
@@ -384,9 +506,38 @@ function animateOut(card, dir) {
   card.style.opacity='0';
 }
 
-function nextCard() {
-  idx = (idx+1) % filtered.length;
+// Remove o card do baralho após o swipe (assim o baralho termina de verdade)
+function completeSwipe(p) {
+  filtered = filtered.filter(f => f.id !== p.id);
+  if (idx >= filtered.length) idx = 0;
   renderCard(); renderProgress();
+}
+
+// ── Desfazer ───────────────────────────────────────────────────────
+function undoLast() {
+  if (!lastAction) return;
+  const { type, place: p } = lastAction;
+  lastAction = null;
+
+  if (type === 'skip') {
+    delete skipped[p.id];
+    fsUnskip(p.id);
+  } else if (type === 'want') {
+    wantToday = wantToday.filter(w => w.id !== p.id);
+    fsRemoveWantToday(p.id);
+    fsRemoveLike(p.id);
+    updateWantBadge();
+  } else if (type === 'been') {
+    delete beenThere[p.id];
+    fsRemoveBeenThere(p.id);
+  }
+
+  // Devolve o card ao topo do baralho
+  if (!filtered.find(f => f.id === p.id)) {
+    filtered.splice(idx % (filtered.length || 1), 0, p);
+  }
+  renderCard(); renderProgress();
+  showToast('↩️ Desfeito!');
 }
 
 document.addEventListener('touchmove', onDragMove, {passive:false});
@@ -396,25 +547,27 @@ document.addEventListener('mouseup',   onDragEnd);
 
 // ── Swipe buttons ──────────────────────────────────────────────────
 window.swipe = (dir, fromBtn = false) => {
-  if (!activeCard) return;
+  if (!activeCard || !filtered.length) return;
+  const p = place();
   if (dir === 'right') {
     if (!window.currentUser) {
       window.showAuthModal && window.showAuthModal('like');
       return;
     }
-    doWantToday(place());
+    doWantToday(p);
     pulseBtn(document.querySelector('.b-like .c'));
     if (fromBtn) showHeartBurst();
   }
   if (dir === 'left') {
-    doSkip(place());
+    doSkip(p);
     if (fromBtn) pulseBtn(document.querySelector('.b-pass .c'));
   }
   animateOut(activeCard, dir);
-  setTimeout(nextCard, 380);
+  setTimeout(() => completeSwipe(p), 380);
 };
 
 window.savePlace = () => {
+  if (!filtered.length) return;
   const p = place();
   const alreadySaved = !!saved.find(s => s.id === p.id);
   if (!alreadySaved) doSave(p);
@@ -425,19 +578,27 @@ window.savePlace = () => {
     clearTimeout(st._to);
     st._to = setTimeout(() => { st.style.opacity = '0'; }, 900);
   }
-  showToast(alreadySaved ? '✓ Já está nos favoritos' : '🔖 Adicionado aos favoritos!');
+  if (alreadySaved) {
+    showToast('✓ Já está nos salvos');
+  } else if (!localStorage.getItem('cwb_hint_save')) {
+    localStorage.setItem('cwb_hint_save','1');
+    showToast('🔖 Salvo para depois! Fica na aba "Salvos"');
+  } else {
+    showToast('🔖 Salvo para depois!');
+  }
 };
 
 window.markBeenThere = () => {
   if (!window.currentUser) { window.showAuthModal && window.showAuthModal('like'); return; }
+  if (!filtered.length) return;
   const p = place();
   doBeenThere(p);
   pulseBtn(document.querySelector('.b-been .c'));
   const bs = document.getElementById('beenStamp');
   if (bs) { bs.style.opacity='1'; setTimeout(()=>{ bs.style.opacity='0'; },600); }
-  showToast('📍 Marcado como visitado!');
+  showToast('📍 Marcado como visitado!', { label:'Desfazer', fn: undoLast });
   if (activeCard) animateOut(activeCard, 'left');
-  setTimeout(nextCard, 380);
+  setTimeout(() => completeSwipe(p), 380);
 };
 
 function doSave(p) {
@@ -455,16 +616,26 @@ function doWantToday(p) {
     fsIncrementLike(p.id);
     updateWantBadge();
   }
+  lastAction = { type:'want', place: p };
+  if (!localStorage.getItem('cwb_hint_want')) {
+    localStorage.setItem('cwb_hint_want','1');
+    showToast('❤️ No seu rolê de hoje! Veja na aba "Quero ir"', { label:'Desfazer', fn: undoLast });
+  } else {
+    showToast('❤️ Adicionado ao rolê de hoje', { label:'Desfazer', fn: undoLast });
+  }
 }
 
 function doSkip(p) {
   skipped[p.id] = true;
   fsSkip(p.id);
+  lastAction = { type:'skip', place: p };
+  showToast('👋 Pulado — volta amanhã', { label:'Desfazer', fn: undoLast });
 }
 
 function doBeenThere(p) {
   beenThere[p.id] = { visitedAt: new Date().toISOString(), ...p };
   fsBeenThere(p);
+  lastAction = { type:'been', place: p };
   // Concede XP e verifica badges por visita
   awardXp('visited', { placeId: p.id, placeName: p.n, category: p.c, bairro: p.b });
   checkAndAwardBadges();
@@ -487,19 +658,65 @@ function updateWantBadge() {
 }
 
 // ── Animation helpers ──────────────────────────────────────────────
-function showToast(msg) {
+function showToast(msg, action) {
   let t = document.getElementById('appToast');
   if (!t) {
     t = document.createElement('div');
     t.id = 'appToast';
     document.querySelector('.phone').appendChild(t);
   }
-  t.textContent = msg;
+  if (action) {
+    t.innerHTML = `<span>${msg}</span><button class="toast-action">${action.label}</button>`;
+    t.classList.add('has-action');
+    t.querySelector('.toast-action').onclick = () => {
+      t.classList.remove('toast-in');
+      action.fn();
+    };
+  } else {
+    t.textContent = msg;
+    t.classList.remove('has-action');
+  }
   t.classList.remove('toast-in');
   void t.offsetWidth; // force reflow
   t.classList.add('toast-in');
   clearTimeout(t._to);
-  t._to = setTimeout(() => t.classList.remove('toast-in'), 1800);
+  t._to = setTimeout(() => t.classList.remove('toast-in'), action ? 3500 : 1800);
+}
+
+// ── Dica de swipe (primeira visita) ────────────────────────────────
+function maybeShowSwipeHint() {
+  if (localStorage.getItem('cwb_hint_swipe')) return;
+  if (!filtered.length) return;
+
+  // Espera a tela de boas-vindas fechar antes de mostrar a dica
+  const welcome = document.getElementById('welcomeScreen');
+  if (welcome && welcome.style.display !== 'none') {
+    window.addEventListener('welcomeClosed', () => maybeShowSwipeHint(), { once:true });
+    return;
+  }
+
+  const stack = document.getElementById('cardStack');
+  if (!stack) return;
+
+  const hint = document.createElement('div');
+  hint.className = 'swipe-hint';
+  hint.innerHTML = `
+    <div class="swipe-hint-label swipe-hint-nope">✕ Não hoje</div>
+    <div class="swipe-hint-hand">👆</div>
+    <div class="swipe-hint-label swipe-hint-like">Quero ir! ❤️</div>
+    <div class="swipe-hint-text">Deslize o card para os lados</div>`;
+  stack.appendChild(hint);
+
+  const dismiss = () => {
+    localStorage.setItem('cwb_hint_swipe','1');
+    hint.classList.add('swipe-hint-out');
+    setTimeout(() => hint.remove(), 300);
+    stack.removeEventListener('touchstart', dismiss);
+    stack.removeEventListener('mousedown', dismiss);
+  };
+  stack.addEventListener('touchstart', dismiss, { once:false, passive:true });
+  stack.addEventListener('mousedown', dismiss);
+  setTimeout(dismiss, 7000);
 }
 
 function showHeartBurst() {
@@ -783,7 +1000,10 @@ window.closeWelcome = (category) => {
   const screen = document.getElementById('welcomeScreen');
   screen.style.transition='opacity .3s';
   screen.style.opacity='0';
-  setTimeout(()=>{ screen.style.display='none'; screen.style.opacity=''; },300);
+  setTimeout(()=>{
+    screen.style.display='none'; screen.style.opacity='';
+    window.dispatchEvent(new Event('welcomeClosed'));
+  },300);
   if (category) setCat(category);
 };
 
@@ -848,30 +1068,36 @@ function renderWantToday() {
   };
 }
 
-// ── Map view (placeholder — abre busca por enquanto) ───────────────
+// ── Map view (todos os lugares, filtrado pela categoria global) ────
+// Estado dos lugares para colorir os pins do mapa
+window._isWantToday = (id) => !!wantToday.find(w => w.id === id);
+window._isSaved     = (id) => !!saved.find(s => s.id === id);
+
 function renderMapView() {
   const view = document.getElementById('mapView');
   if (!view) return;
-  // Reutiliza o mapa de favoritos se tiver lugares salvos
-  if (saved.length) {
-    view.innerHTML = '';
-    const favMap = document.createElement('div');
-    favMap.id = 'mainMap';
-    favMap.style.cssText = 'flex:1;width:100%;min-height:0;';
-    view.appendChild(favMap);
-    // Importa e usa o mapa de favoritos
-    import('./favorites.js').then(({ renderFavMap }) => {
-      if (renderFavMap) renderFavMap(saved, favMap, openProfile);
-    }).catch(() => {
-      view.innerHTML = `<div class="empty"><div class="empty-ico">🗺️</div>
-        <div class="empty-title">Mapa</div>
-        <div class="empty-sub">Salve lugares para vê-los no mapa.</div></div>`;
-    });
-  } else {
+
+  if (!P.length) {
     view.innerHTML = `<div class="empty"><div class="empty-ico">🗺️</div>
       <div class="empty-title">Mapa</div>
-      <div class="empty-sub">Salve lugares para vê-los no mapa.</div></div>`;
+      <div class="empty-sub">Nenhum lugar cadastrado ainda.</div></div>`;
+    return;
   }
+
+  view.innerHTML = `
+    <div class="map-legend">
+      <span><i style="background:#ef4444"></i>Quero ir</span>
+      <span><i style="background:#f59e0b"></i>Salvos</span>
+      <span><i style="background:#14140F"></i>Demais</span>
+    </div>
+    <div id="mainMap" style="flex:1;width:100%;min-height:0;"></div>`;
+
+  const list = cat === 'Todos' ? P : P.filter(p => {
+    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    return cats.includes(cat);
+  });
+
+  renderFavMap(list, document.getElementById('mainMap'), openProfile);
 }
 
 // ── Badge unlock toast ────────────────────────────────────────────
