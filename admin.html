@@ -1160,11 +1160,19 @@ pre {
       </div>
 
       <div class="rules-card">
-        <h3>1. Adicionar admins autorizados</h3>
-        <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.6">Crie uma coleção <code>admins</code> no Firestore. Cada documento deve ter o <strong>e-mail do admin como ID</strong> e um campo <code>role: "admin"</code>.</p>
-        <pre>Firestore → Adicionar coleção: "admins"
-Documento ID: seuemail@gmail.com
-Campo: role = "admin"</pre>
+        <h3>Admins com acesso ao painel</h3>
+        <p style="font-size:14px; color:var(--text2); margin-bottom:14px; line-height:1.6">Quem pode entrar e editar. Adicione ou remova por e-mail (precisa ser conta Google). O <strong>primeiro</strong> admin é criado uma vez no Console; daqui pra frente, é tudo por aqui.</p>
+        <div id="adminsList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px">
+          <span style="color:var(--text3); font-size:13px">Carregando…</span>
+        </div>
+        <div style="display:flex; gap:8px">
+          <input class="form-input" id="newAdminEmail" placeholder="email@gmail.com" style="flex:1" onkeydown="if(event.key==='Enter')addAdmin()">
+          <button class="btn btn-primary" onclick="addAdmin()">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar
+          </button>
+        </div>
+        <div id="adminMsg" style="font-size:12.5px; color:var(--yellow); margin-top:8px; min-height:1px"></div>
       </div>
 
       <div class="rules-card">
@@ -1173,11 +1181,11 @@ Campo: role = "admin"</pre>
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Apenas admins leem a lista de admins
+    // Admins: qualquer admin pode ver e gerenciar a lista.
+    // (O 1º admin é criado uma vez no Console; os próximos, pelo painel.)
     match /admins/{email} {
-      allow read: if request.auth != null
-                  && request.auth.token.email == email;
-      allow write: if false;
+      allow read, write: if request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
     }
 
     // Lugares: leitura pública, escrita só para admins
@@ -2541,7 +2549,63 @@ window.showPage = (page) => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
+  if (page === 'rules') loadAdmins();
   closeSidebar(); // fecha a gaveta no mobile após navegar
+};
+
+// ── Gestão de admins ────────────────────────────────────────────
+async function loadAdmins() {
+  const box = document.getElementById('adminsList');
+  if (!box) return;
+  box.innerHTML = '<span style="color:var(--text3); font-size:13px">Carregando…</span>';
+  try {
+    const snap = await getDocs(collection(db, 'admins'));
+    const me = auth.currentUser?.email;
+    if (snap.empty) { box.innerHTML = '<span style="color:var(--text3); font-size:13px">Nenhum admin cadastrado.</span>'; return; }
+    box.innerHTML = snap.docs.map(d => {
+      const email = d.id;
+      const isMe = email === me;
+      return `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg3); border:1.5px solid var(--border); border-radius:12px; padding:10px 14px">
+        <span style="font-size:14px; color:var(--text); word-break:break-all">${email}${isMe ? ' <span style="color:var(--acc3); font-weight:700">· você</span>' : ''}</span>
+        ${isMe ? '' : `<button class="btn btn-danger" style="padding:6px 12px; font-size:12px; flex-shrink:0" onclick="removeAdmin('${email}')">Remover</button>`}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    box.innerHTML = `<span style="color:var(--yellow); font-size:13px">Não consegui listar os admins. Publique as regras atualizadas (card abaixo) e tente de novo.</span>`;
+    console.warn('loadAdmins:', e);
+  }
+}
+
+window.addAdmin = async () => {
+  const inp = document.getElementById('newAdminEmail');
+  const msg = document.getElementById('adminMsg');
+  msg.textContent = '';
+  const email = (inp.value || '').trim().toLowerCase();
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = 'Digite um e-mail válido.'; return; }
+  try {
+    await setDoc(doc(db, 'admins', email), {
+      role: 'admin', addedBy: auth.currentUser?.email || '', addedAt: serverTimestamp()
+    });
+    inp.value = '';
+    showToast('Admin adicionado!', 'success');
+    loadAdmins();
+  } catch (e) {
+    msg.textContent = 'Erro ao adicionar: ' + e.message + ' (as regras atualizadas já foram publicadas?)';
+    console.warn('addAdmin:', e);
+  }
+};
+
+window.removeAdmin = async (email) => {
+  if (email === auth.currentUser?.email) return; // nunca remove a si mesmo
+  if (!window.confirm(`Remover ${email} dos admins? Essa pessoa perde o acesso ao painel.`)) return;
+  try {
+    await deleteDoc(doc(db, 'admins', email));
+    showToast('Admin removido.', 'success');
+    loadAdmins();
+  } catch (e) {
+    showToast('Erro ao remover: ' + e.message, 'error');
+    console.warn('removeAdmin:', e);
+  }
 };
 
 // ── Sidebar mobile (gaveta) ─────────────────────────────────────
