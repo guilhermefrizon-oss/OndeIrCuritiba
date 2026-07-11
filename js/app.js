@@ -436,9 +436,9 @@ function makeCard(p) {
       <div class="cat-tag">${p.c}</div>
       <div class="price-tag">${p.p}</div>
     </div>
-    <div class="card-story-bars" id="cardStoryBars"></div>
-    <div class="card-photo-tap card-photo-tap-left"  id="cardTapLeft"></div>
-    <div class="card-photo-tap card-photo-tap-right" id="cardTapRight"></div>
+    <div class="card-story-bars"></div>
+    <div class="card-photo-tap card-photo-tap-left"></div>
+    <div class="card-photo-tap card-photo-tap-right"></div>
     <div class="card-bottom card-bottom-tap"
          onclick="event.stopPropagation();window._openProfileCurrent()">
       <div class="card-name-row">
@@ -470,15 +470,25 @@ function initCardPhotos(p) {
 
   const bindTap = (el, fn) => {
     if (!el) return;
-    let tsX = 0;
-    el.addEventListener('touchstart', e => { tsX = e.touches[0].clientX; }, {passive:true});
+    let tsX = 0, touched = false;
+    el.addEventListener('touchstart', e => { tsX = e.touches[0].clientX; touched = true; }, {passive:true});
     el.addEventListener('touchend',   e => {
-      if (Math.abs(e.changedTouches[0].clientX - tsX) < 15) { e.stopPropagation(); fn(); }
+      // Só conta como "tap" se o dedo não arrastou (senão é swipe do card)
+      if (Math.abs(e.changedTouches[0].clientX - tsX) < 15) {
+        e.preventDefault(); e.stopPropagation(); fn();
+      }
     });
-    el.addEventListener('click', e => { e.stopPropagation(); fn(); });
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (touched) { touched = false; return; } // no toque, o touchend já tratou
+      fn();
+    });
   };
-  bindTap(document.getElementById('cardTapLeft'),  cardPhotoPrev);
-  bindTap(document.getElementById('cardTapRight'), cardPhotoNext);
+  // IMPORTANTE: escopar ao card do TOPO — os 3 cards têm as mesmas
+  // classes, e um seletor global pegaria o card de trás (inerte).
+  const topCard = document.querySelector('.place-card[data-top="1"]');
+  bindTap(topCard?.querySelector('.card-photo-tap-left'),  cardPhotoPrev);
+  bindTap(topCard?.querySelector('.card-photo-tap-right'), cardPhotoNext);
 
   if (Array.isArray(p.photos) && p.photos.length) {
     cardPhotos = p.photos; cardPhotoIdx = 0; updateCardStoryBars(); return;
@@ -501,7 +511,7 @@ function setCardPhoto(i) {
 }
 
 function updateCardStoryBars() {
-  const bars = document.getElementById('cardStoryBars');
+  const bars = document.querySelector('.place-card[data-top="1"] .card-story-bars');
   if (!bars) return;
   if (cardPhotos.length <= 1) { bars.innerHTML=''; return; }
   bars.innerHTML='';
