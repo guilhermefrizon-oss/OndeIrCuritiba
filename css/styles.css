@@ -449,7 +449,7 @@ body {
   background: var(--bg2); border: 1.5px solid var(--bg4);
   cursor: pointer; transition: all .18s; flex-shrink: 0;
 }
-.wcat-card:hover, .wcat-card:active { background: var(--bg3); border-color: var(--acc2); transform: scale(1.02); }
+.wcat-card:hover, .wcat-card:active { background: var(--bg3); border-color: var(--acc2); }
 .wcat-emoji { font-size: 28px; line-height: 1; }
 .wcat-name  { font-size: 16px; font-weight: 700; color: var(--text); }
 .wcat-count { font-size: 12px; color: var(--text3); margin-top: 2px; }
