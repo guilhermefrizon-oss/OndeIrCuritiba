@@ -1611,19 +1611,16 @@ window.logout = async () => {
 };
 
 async function isAdmin(email) {
+  // Lê SÓ o próprio documento (as regras permitem ler o admin cujo id == seu
+  // e-mail). Admin de verdade → o doc existe. Qualquer erro/ausência → nega.
+  // Nada de "liberar em caso de erro": era isso que deixava estranhos entrarem.
+  if (!email) return false;
   try {
     const snap = await getDocs(query(collection(db, 'admins'), where('__name__', '==', email)));
-    // fallback: if no admins collection yet, allow first user (dev mode)
-    if (snap.empty) {
-      // Check if admins collection even exists
-      const allAdmins = await getDocs(collection(db, 'admins'));
-      if (allAdmins.empty) return true; // no admins set up yet → allow
-      return false;
-    }
-    return true;
+    return !snap.empty;
   } catch(e) {
-    // If permission denied on admins, still allow (Firestore rules may block)
-    return true;
+    console.warn('isAdmin:', e);
+    return false;
   }
 }
 
