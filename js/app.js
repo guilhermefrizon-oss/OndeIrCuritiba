@@ -371,9 +371,12 @@ function prefetchUpcoming(count = 3) {
     if (!p || seen.has(p.id)) continue;
     seen.add(p.id);
     if (Array.isArray(p.photos) && p.photos.length) {
-      preloadImage(p.photos[0]);
+      p.photos.slice(0, 3).forEach(preloadImage); // 1ª + próximas do card
     } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
-      fetchPlacePhoto(p.pid).then(preloadImage);
+      // Nas 2 cartas mais próximas, já baixa TODAS as fotos (2ª/3ª inclusas);
+      // nas mais distantes, só a 1ª pra não pesar. fetchAllPhotos tem cache.
+      if (i <= 2) fetchAllPhotos(p.pid).then(urls => urls.slice(0, 3).forEach(preloadImage));
+      else fetchPlacePhoto(p.pid).then(preloadImage);
     }
   }
 }
@@ -512,12 +515,15 @@ function initCardPhotos(p) {
 
   if (Array.isArray(p.photos) && p.photos.length) {
     cardPhotos = p.photos; cardPhotosPos = Array.isArray(p.photosPos) ? p.photosPos : [];
-    cardPhotoIdx = 0; updateCardStoryBars(); return;
+    cardPhotoIdx = 0; updateCardStoryBars();
+    cardPhotos.slice(1, 4).forEach(preloadImage); // pré-carrega as próximas fotos do card
+    return;
   }
   if (!p.pid || p.pid.startsWith('ID_GOOGLE_')) return;
   fetchAllPhotos(p.pid).then(urls => {
     if (!urls.length) return;
     cardPhotos = urls; cardPhotosPos = []; cardPhotoIdx = 0; updateCardStoryBars();
+    urls.slice(1, 4).forEach(preloadImage); // pré-carrega as próximas fotos do card
   });
 }
 
@@ -825,9 +831,9 @@ function doBeenThere(p) {
   beenThere[p.id] = { visitedAt: new Date().toISOString(), ...p };
   fsBeenThere(p);
   setLastAction({ type:'been', place: p });
-  // Concede XP e verifica badges por visita
+  // Concede XP e verifica badges por visita (badges só se a feature estiver on)
   awardXp('visited', { placeId: p.id, placeName: p.n, category: p.c, bairro: p.b });
-  checkAndAwardBadges();
+  if (window.FEATURES?.badges) checkAndAwardBadges();
   // Remove do feed imediatamente
   filtered = filtered.filter(f => f.id !== p.id);
 }
@@ -963,15 +969,26 @@ window.setFavFilter = (f) => {
     b.classList.toggle('on', b.dataset.filter === f)
   );
   let list = [...saved];
+  let onRemove = removeFav;
   if (f === 'been') {
-    const beenIds = Object.keys(beenThere);
-    list = saved.filter(p => beenIds.includes(p.id));
+    // "Já fui" não precisa estar salvo — lista tudo que foi marcado como
+    // visitado (o beenThere guarda o lugar inteiro), mais recente primeiro.
+    list = Object.values(beenThere).sort((a,b) =>
+      new Date(b.visitedAt || 0) - new Date(a.visitedAt || 0));
+    onRemove = removeBeen;
   } else if (f === 'rated') {
     // Filtra os que têm _avgRating
     list = saved.filter(p => p._avgRating?.avg > 0 || P.find(x=>x.id===p.id)?._avgRating?.avg > 0);
   }
-  renderFavorites(list, openProfile, removeFav);
+  renderFavorites(list, openProfile, onRemove);
 };
+
+// Remove um lugar da lista "Já fui" (desmarca o visitado)
+function removeBeen(id) {
+  delete beenThere[id];
+  fsRemoveBeenThere(id);
+  setFavFilter('been'); // re-renderiza a lista já filtrada
+}
 
 // ── Search ─────────────────────────────────────────────────────────
 window.openSearchOverlay = () => openSearch(openProfile);
@@ -1368,6 +1385,7 @@ function renderMapView() {
 
 // ── Badge unlock toast ────────────────────────────────────────────
 window.addEventListener('badgeUnlocked', (e) => {
+  if (!window.FEATURES?.badges) return; // badges ocultas: sem notificação
   const badge = e.detail;
   if (!badge) return;
   let toast = document.getElementById('badgeToast');
