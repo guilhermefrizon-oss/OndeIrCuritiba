@@ -669,39 +669,6 @@ td {
 .toast.error   { background: rgba(248,113,113,.15); border: 1px solid rgba(248,113,113,.3); color: var(--red); }
 .toast.info    { background: rgba(242,242,237,.10);  border: 1px solid rgba(242,242,237,.25);  color: var(--acc); }
 
-/* Migrate page */
-.migrate-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 32px;
-  max-width: 700px;
-}
-.migrate-title {
-  font-family: 'Bricolage Grotesque', sans-serif;
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-.migrate-sub { font-size: 14px; color: var(--text2); margin-bottom: 28px; line-height: 1.6; }
-.migrate-log {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--r2);
-  padding: 16px;
-  font-family: monospace;
-  font-size: 12px;
-  color: var(--text2);
-  max-height: 300px;
-  overflow-y: auto;
-  margin-top: 20px;
-  display: none;
-}
-.log-line { line-height: 2; }
-.log-ok   { color: var(--green); }
-.log-err  { color: var(--red); }
-.log-info { color: var(--acc3); }
-
 /* Confirm modal */
 .confirm-text { font-size: 15px; color: var(--text2); line-height: 1.6; margin-bottom: 4px; }
 .confirm-name { font-weight: 700; color: var(--text); }
@@ -995,10 +962,6 @@ pre {
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Categorias
     </button>
-    <button class="nav-item" onclick="showPage('migrate')" id="nav-migrate">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-      Migrar Dados
-    </button>
     <button class="nav-item" onclick="showPage('rules')" id="nav-rules">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       Regras / Admins
@@ -1028,16 +991,10 @@ pre {
           <div class="page-title">Lugares</div>
           <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
         </div>
-        <div style="display:flex; gap:10px">
-          <button class="btn btn-secondary" onclick="openImportModal()">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Importar Curitiba
-          </button>
-          <button class="btn btn-primary" onclick="openAddModal()">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Novo Lugar
-          </button>
-        </div>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Lugar
+        </button>
       </div>
 
       <div class="stats-bar" id="statsBar">
@@ -1117,34 +1074,6 @@ pre {
       </div>
     </div>
 
-    <!-- ── Migrate Page ── -->
-    <div id="page-migrate" style="display:none">
-      <div class="page-header">
-        <div>
-          <div class="page-title">Migrar Dados</div>
-          <div class="page-subtitle">Importar os 90 lugares do código para o Firestore</div>
-        </div>
-      </div>
-
-      <div class="alert-box warn">
-        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-        <div><strong>Execute uma vez!</strong> Este processo lê o array hardcoded do <code>index.html</code> e salva cada lugar como documento na coleção <code>places</code> do Firestore. Se já existirem documentos, serão sobrescritos pelo ID.</div>
-      </div>
-
-      <div class="migrate-card">
-        <div class="migrate-title">Importar lugares para o Firestore</div>
-        <div class="migrate-sub">Ao clicar em Iniciar Migração, todos os 90 lugares definidos no código serão salvos no Firestore. Depois disso, o <code>index.html</code> deverá ser atualizado para buscar do Firestore (veja a aba Regras).</div>
-        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
-          <button class="btn btn-primary" id="btnMigrate" onclick="runMigration()">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-            Iniciar Migração
-          </button>
-          <span id="migrateStatus" style="font-size:13px; color:var(--text3)"></span>
-        </div>
-        <div class="migrate-log" id="migrateLog"></div>
-      </div>
-    </div>
-
     <!-- ── Rules Page ── -->
     <div id="page-rules" style="display:none">
       <div class="page-header">
@@ -1176,7 +1105,7 @@ pre {
       </div>
 
       <div class="rules-card">
-        <h3>2. Regras de segurança do Firestore</h3>
+        <h3>Regras de segurança do Firestore</h3>
         <pre id="rulesCode">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -1246,28 +1175,6 @@ service cloud.firestore {
         <button class="copy-btn" onclick="copyRules()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar regras</button>
       </div>
 
-      <div class="rules-card">
-        <h3>3. Atualizar o index.html</h3>
-        <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.6">Após migrar, substitua o array <code>const P = [...]</code> do <code>index.html</code> por este código que busca do Firestore:</p>
-        <pre id="indexCode">// Substitua "const P = [...]" por:
-let P = [];
-
-async function loadPlacesFromFirestore() {
-  const { getFirestore, collection, getDocs } =
-    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-  const db = getFirestore();
-  const snap = await getDocs(collection(db, 'places'));
-  P = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  filtered = [...P];
-  renderCard();
-  renderProgress();
-  renderCats();
-}
-
-// Chame no init():
-loadPlacesFromFirestore();</pre>
-        <button class="copy-btn" onclick="copyIndex()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código</button>
-      </div>
     </div>
 
   </main>
@@ -1421,30 +1328,6 @@ loadPlacesFromFirestore();</pre>
       <button class="btn btn-primary" id="btnSavePhotos" onclick="savePhotos()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         Salvar fotos
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ Modal: Importar lugares ═══════════════════════════════════ -->
-<div class="modal-backdrop" id="importModalBackdrop" onclick="closeImportOnBackdrop(event)">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-header">
-      <div>
-        <div class="modal-title">Importar lugares de Curitiba</div>
-        <div style="font-size:12px; color:var(--text3); margin-top:3px">Lote curado — Place ID, endereço, bairro e horário já preenchidos.</div>
-      </div>
-      <button class="modal-close" onclick="closeImportModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="importInfo" style="font-size:13.5px; color:var(--text2); line-height:1.7">Carregando lote…</div>
-      <div id="importProgress" style="display:none; margin-top:14px; font-size:13px; font-weight:600; color:var(--acc3)"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeImportModal()">Cancelar</button>
-      <button class="btn btn-primary" id="btnRunImport" onclick="runBulkImport()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        Importar agora
       </button>
     </div>
   </div>
@@ -2079,8 +1962,8 @@ async function loadPlaces() {
     const isPermErr = e.message?.includes('permission') || e.message?.includes('Missing');
     document.getElementById('tableLoading').innerHTML = isPermErr
       ? `<div style="color:var(--yellow); line-height:1.8">
-           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> <strong>Coleção "places" ainda não existe no Firestore.</strong><br>
-           <span style="color:var(--text3); font-size:13px">Vá em <strong style="color:var(--acc3)">Migrar Dados</strong> para importar os 90 lugares e criar a coleção.</span>
+           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> <strong>Sem permissão para ler os lugares.</strong><br>
+           <span style="color:var(--text3); font-size:13px">Confira se o seu e-mail está na lista de admins (aba <strong style="color:var(--acc3)">Regras / Admins</strong>) e se as regras foram publicadas no Firebase.</span>
          </div>`
       : `<div style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
   }
@@ -2311,68 +2194,6 @@ window.savePlace = async () => {
   }
 };
 
-// ── Importar lugares em massa ───────────────────────────────────
-let importData = null;
-
-window.openImportModal = async () => {
-  document.getElementById('importModalBackdrop').classList.add('open');
-  document.getElementById('importProgress').style.display = 'none';
-  document.getElementById('importProgress').textContent = '';
-  const info = document.getElementById('importInfo');
-  const btn  = document.getElementById('btnRunImport');
-  btn.disabled = true;
-  info.textContent = 'Carregando lote…';
-  try {
-    const res = await fetch('data/places-curitiba.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    importData = await res.json();
-
-    const byCat = {};
-    importData.forEach(p => { byCat[p.c] = (byCat[p.c] || 0) + 1; });
-    const known   = new Set((allCategoriesList || []).map(c => c.name));
-    const missing = [...new Set(importData.map(p => p.c))].filter(c => known.size && !known.has(c));
-
-    info.innerHTML =
-      `<b>${importData.length} lugares</b> prontos pra importar:<br>` +
-      Object.entries(byCat).map(([c, n]) => `• ${c}: ${n}`).join('<br>') +
-      `<br><br><span style="color:var(--text3)">Já vêm com foto (via Place ID), endereço, bairro e horário. Importar de novo só atualiza — não duplica.</span>` +
-      (missing.length
-        ? `<br><br><span style="color:var(--yellow)">⚠️ Categorias que não achei no seu app: ${missing.join(', ')}. Os lugares entram assim mesmo, mas confira se o nome bate.</span>`
-        : '');
-    btn.disabled = false;
-  } catch (e) {
-    info.textContent = 'Erro ao carregar o lote: ' + e.message;
-  }
-};
-
-window.runBulkImport = async () => {
-  if (!importData || !importData.length) return;
-  const btn  = document.getElementById('btnRunImport');
-  const prog = document.getElementById('importProgress');
-  btn.disabled = true;
-  prog.style.display = 'block';
-  let ok = 0, fail = 0;
-  for (const p of importData) {
-    try {
-      await setDoc(
-        doc(db, 'places', p.id),
-        { ...p, _updatedAt: serverTimestamp(), _createdAt: serverTimestamp() },
-        { merge: true }
-      );
-      ok++;
-    } catch (e) { fail++; console.warn('import falhou:', p.n, e); }
-    prog.textContent = `Importando… ${ok + fail}/${importData.length}`;
-  }
-  prog.textContent = `Pronto! ${ok} importados${fail ? `, ${fail} falharam (veja o console)` : ''}.`;
-  showToast(`${ok} lugares importados!`, 'success');
-  btn.disabled = false;
-  if (typeof loadPlaces === 'function') loadPlaces();
-};
-
-window.closeImportModal = () => document.getElementById('importModalBackdrop').classList.remove('open');
-window.closeImportOnBackdrop = (e) => {
-  if (e.target === document.getElementById('importModalBackdrop')) closeImportModal();
-};
 
 // ── Delete ──────────────────────────────────────────────────────
 window.openConfirm = (docId, name) => {
@@ -2407,145 +2228,9 @@ window.confirmDelete = async () => {
   }
 };
 
-// ── Migration ───────────────────────────────────────────────────
-const PLACES_DATA = [
-  {id:"1",n:"Terrazza 40",c:"Céu aberto",p:"$$$$",b:"Bigorrilho",a:"Rua Padre Anchieta 1287",h:"Seg-Dom 12h-15h e 19h-23h",ig:"@terrazza40",e:"🌆",bg:"rooftop",pid:"ChIJe4Q-kGrj3JQRvgQODR0GUdc"},
-  {id:"2",n:"Gards Rooftop",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. do Batel 1868",h:"Ter-Sab 17h-01h",ig:"@gardsrooftop",e:"🌇",bg:"rooftop",pid:"ChIJW2d2vXrj3JQRXuz0lvifxE4"},
-  {id:"3",n:"Souq Curitiba",c:"Céu aberto",p:"$$",b:"Vila Izabel",a:"Av. Iguaçu 4399",h:"Ter-Dom 17h-23h",ig:"@souqcuritiba",e:"🏙️",bg:"rooftop",pid:"ChIJQYo5of3j3JQRw9xpkSEtGvY"},
-  {id:"31",n:"The Five Lounge",c:"Céu aberto",p:"$$$",b:"Centro",a:"Rua Nunes Machado 68",h:"Seg-Sab 15h-23h",ig:"@thefivelounge",e:"🍹",bg:"rooftop",pid:"ChIJtW_qWVvl3JQR9NAuuA2gBJQ"},
-  {id:"32",n:"Porks Museu do Olho",c:"Céu aberto",p:"$",b:"Centro Cívico",a:"Rua Marechal Hermes 1092",h:"Ter-Dom 17h-00h",ig:"@porks_museudoolho",e:"🐷",bg:"rooftop",pid:"ChIJo7CGz5Pl3JQRf47RQL8OOj4"},
-  {id:"33",n:"Santa Villa Gastronomia",c:"Céu aberto",p:"$$",b:"Xaxim",a:"Rua Francisco Derosso 3488",h:"Ter-Dom 18h-23h",ig:"@santavillagastronomia",e:"🌿",bg:"rooftop",pid:"ChIJ4YMRoUj73JQRWTdFO51Fi4g"},
-  {id:"61",n:"+55 Bar",c:"Céu aberto",p:"$$$",b:"Batel",a:"Av. Vicente Machado 866",h:"Qua-Dom 18h-02h",ig:"@mais55bar",e:"🎶",bg:"rooftop",pid:"ChIJwTDOvYrj3JQRv9pItkT-cI8"},
-  {id:"62",n:"Umbar",c:"Céu aberto",p:"$$",b:"Ahú",a:"Rua Prof. João Cândido Ferreira 123",h:"Ter-Dom 17h-23h",ig:"@umbar_curitiba",e:"🌙",bg:"rooftop",pid:"ChIJJxaL7rH-3JQRfM5b2k1kOBQ"},
-  {id:"63",n:"Pátio Faivre",c:"Céu aberto",p:"$",b:"Centro",a:"Rua Doutor Faivre 229",h:"Seg-Sab 11h-23h",ig:"@patiofaivre",e:"☀️",bg:"rooftop",pid:"ChIJCeAtMz7k3JQRwxfqSwHfYus"},
-  {id:"4",n:"Lucca Cafés Especiais",c:"Café da tarde",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 40",h:"Seg-Dom 08h-20h",ig:"@luccacafesespeciais",e:"☕",bg:"cafe",pid:"ChIJ67SzWiDl3JQR-Xa2kN5Ujhw"},
-  {id:"5",n:"Prestinaria",c:"Café da tarde",p:"$$",b:"Bigorrilho",a:"Rua Euclides da Cunha 699",h:"Seg-Dom 07h-20h",ig:"@prestinaria",e:"🥐",bg:"cafe",pid:"ChIJoxBMMO3j3JQRSjOnxx6TOLg"},
-  {id:"6",n:"Café do Viajante",c:"Café da tarde",p:"$$",b:"Centro Cívico",a:"Rua Comendador Fontana 229",h:"Ter-Dom 12h-19h",ig:"@cafedoviajante",e:"✈️",bg:"cafe",pid:"ChIJ1fFa0xnk3JQREbP9TwcrX84"},
-  {id:"34",n:"Supernova Coffee",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Coronel Dulcídio 544",h:"Seg-Dom 08h-19h",ig:"@supernovacoffee",e:"🌟",bg:"cafe",pid:"ChIJiURL83Xk3JQRzfy9UC-8XVY"},
-  {id:"35",n:"Fábrica Cafeteria",c:"Café da tarde",p:"$$",b:"Centro",a:"Rua Comendador Araújo 143",h:"Seg-Sab 08h-20h",ig:"@fabricacafeteria",e:"🏭",bg:"cafe",pid:"ChIJmTIGcjHl3JQRYZPp6cphBMU"},
-  {id:"36",n:"Rause Café + Vinho",c:"Café da tarde",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 696",h:"Seg-Sab 09h-20h",ig:"@rausecafe",e:"🍷",bg:"cafe",pid:"ChIJ0WMwKQvk3JQRKscraBW4ma0"},
-  {id:"64",n:"Café Cultura",c:"Café da tarde",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 558",h:"Seg-Dom 09h-20h",ig:"@cafecultura",e:"📚",bg:"cafe",pid:"ChIJ_YMu3jzl3JQRtc0SXD41Vo4"},
-  {id:"65",n:"The Coffee",c:"Café da tarde",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1227",h:"Seg-Dom 07h-20h",ig:"@thecoffee.jp",e:"☕",bg:"cafe",pid:"ChIJYX0n55Hj3JQRbQrFhn59EXE"},
-  {id:"66",n:"Go Coffee",c:"Café da tarde",p:"$",b:"Centro Cívico",a:"Rua Ernâni Santiago de Oliveira 130",h:"Seg-Sab 08h-19h",ig:"@gocoffeebrasil",e:"🚀",bg:"cafe",pid:"ChIJTeVf2c393JQRrow6_YNMyYY"},
-  {id:"7",n:"Ponto Gin",c:"Barzinho",p:"$$",b:"Mercês",a:"Rua Brigadeiro Franco 1193",h:"Ter-Sab 18h-00h",ig:"@pontogin",e:"🍸",bg:"bar",pid:"ChIJW_KeYbfj3JQRgju7RRPX6_s"},
-  {id:"8",n:"Sirène Fish & Chips",c:"Barzinho",p:"$",b:"Centro",a:"Rua Trajano Reis 150",h:"Ter-Dom 18h-23h",ig:"@sirenebrazil",e:"🐟",bg:"bar",pid:"ChIJ28g1OXXk3JQRhcQ4NKLF3Dc"},
-  {id:"9",n:"A Ostra Bêbada",c:"Barzinho",p:"$$",b:"Centro",a:"Rua Ermelino de Leão 95",h:"Ter-Sab 11h-23h",ig:"@aostrabebada",e:"🦪",bg:"bar",pid:"ChIJ3as1SA3k3JQRbbnoTQgzp2E"},
-  {id:"37",n:"We Are Bastards Pub",c:"Barzinho",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2300",h:"Ter-Dom 18h-01h",ig:"@wearebastardspub",e:"🍺",bg:"bar",pid:"ChIJQ6V_jnjk3JQR7PJen5oxpus"},
-  {id:"38",n:"Izakaya Hyotan",c:"Barzinho",p:"$$$",b:"Bigorrilho",a:"Alameda Augusto Stellfeld 2051",h:"Ter-Sab 18h-23h",ig:"@izakayahyotan",e:"🍜",bg:"bar",pid:"ChIJl7nur_Xj3JQRepJhcGX115c"},
-  {id:"39",n:"Janela Bar",c:"Barzinho",p:"$",b:"Centro",a:"Alameda Prudente de Moraes 1239",h:"Ter-Dom 17h-01h",ig:"@janelabar",e:"🪟",bg:"bar",pid:"ChIJeZkZOwvk3JQRatYyRL6KZvo"},
-  {id:"67",n:"Bossa Bar",c:"Barzinho",p:"$$$",b:"Centro Cívico",a:"Rua Senador Xavier da Silva 210",h:"Sex-Sab 21h-04h",ig:"@bossabarcuritiba",e:"🎵",bg:"bar",pid:"ChIJOa7Vnhrk3JQRQbbZYgvuIr4"},
-  {id:"68",n:"Bar do Victor",c:"Barzinho",p:"$$$",b:"São Lourenço",a:"Rua Lívio Moreira 284",h:"Ter-Sab 18h-23h",ig:"@bardovictor",e:"🥃",bg:"bar",pid:"ChIJbY90vLvm3JQRKbr0ro5yjOk"},
-  {id:"69",n:"O Torto Bar",c:"Barzinho",p:"$",b:"Centro Cívico",a:"Rua Paula Gomes 794",h:"Seg-Sab 17h-00h",ig:"@otortobar",e:"🍻",bg:"bar",pid:"ChIJs5vD1xHk3JQRdr1udu27ocQ"},
-  {id:"10",n:"Sheridans Irish Pub",c:"Balada",p:"$$",b:"Batel",a:"Rua Bispo Dom José 2258",h:"Seg-Sab 18h-02h",ig:"@sheridansirishpub",e:"🎸",bg:"balada",pid:"ChIJaxXC2ZHj3JQRXMrXsDwH18Q"},
-  {id:"11",n:"Crossroads",c:"Balada",p:"$$",b:"Água Verde",a:"Av. Iguaçu 2304",h:"Qua-Sab 20h-04h",ig:"@barcrossroads",e:"🎵",bg:"balada",pid:"ChIJ-UuJj3jk3JQRywQ-1G40fW4"},
-  {id:"12",n:"Paradis Club",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Paula Gomes 306",h:"Qui-Sab 22h-05h",ig:"@paradisclub",e:"🎉",bg:"balada",pid:"ID_GOOGLE_012"},
-  {id:"40",n:"James Bar",c:"Balada",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 680",h:"Qua-Sab 22h-05h",ig:"@jamesbarcwb",e:"🕺",bg:"balada",pid:"ChIJi-dKvorj3JQRXctwoAzT6Sg"},
-  {id:"41",n:"Club Vibe",c:"Balada",p:"$$$",b:"Batel",a:"Rua Desembargador Motta 2311",h:"Sex-Sab 23h-06h",ig:"@clubvibe",e:"💃",bg:"balada",pid:"ChIJF7T3S3Xk3JQRaXviIl8YfDA"},
-  {id:"42",n:"VU Bar",c:"Balada",p:"$",b:"Centro",a:"Av. Manoel Ribas 146",h:"Qui-Sab 22h-05h",ig:"@vubar",e:"🔊",bg:"balada",pid:"ChIJT3WJPAbk3JQRgH4yw1ryeTM"},
-  {id:"70",n:"Jokers Pub",c:"Balada",p:"$$",b:"Centro",a:"Rua São Francisco 164",h:"Ter-Sab 18h-03h",ig:"@jokerspub",e:"🃏",bg:"balada",pid:"ChIJrzqodBPk3JQRVGhS1QIiRuc"},
-  {id:"71",n:"Basement Cultural",c:"Balada",p:"$$",b:"São Francisco",a:"Rua Des. Benvindo Valente 260",h:"Qui-Sab 20h-04h",ig:"@basementcultural",e:"🎤",bg:"balada",pid:"ChIJuYjb8ATk3JQRpi3Q65JR838"},
-  {id:"72",n:"Vale da Música",c:"Balada",p:"$$",b:"Abranches",a:"Rua João Gava 920",h:"Ter-Dom 10h-18h",ig:"@valedamusica",e:"🎻",bg:"balada",pid:"ChIJ9VsTK2jn3JQRkEQgTpixey4"},
-  {id:"13",n:"L'Épicerie",c:"Romântico",p:"$$$$",b:"Bigorrilho",a:"Rua Fernando Simas 340",h:"Ter-Sab 19h-23h",ig:"@lepiceriecuritiba",e:"🕯️",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
-  {id:"14",n:"Ile de France",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1550",h:"Seg-Sab 19h-23h",ig:"@iledefrancecuritiba",e:"🥂",bg:"romantico",pid:"ChIJNf4NZRLk3JQRVt5N3tnCDUg"},
-  {id:"15",n:"Poco Tapas",c:"Romântico",p:"$$$",b:"Batel",a:"Av. Vicente Machado 2786",h:"Seg-Sab 19h-23h",ig:"@pocotapas",e:"🍷",bg:"romantico",pid:"ChIJf_rYp5Xj3JQR2cNkEgSO2lk"},
-  {id:"43",n:"Nomade Restaurante",c:"Romântico",p:"$$$$",b:"Batel",a:"Rua Gutemberg 168",h:"Seg-Dom 19h-23h",ig:"@nomaderestaurante",e:"🌍",bg:"romantico",pid:"ChIJVVVF_orj3JQRuvICUUVDKLs"},
-  {id:"44",n:"Chalet Suisse",c:"Romântico",p:"$$$$",b:"Santa Felicidade",a:"Rua Francisco Dallalibera 1428",h:"Ter-Sab 19h-23h",ig:"@chaletsuissecwb",e:"🏔️",bg:"romantico",pid:"ChIJV3TitFLg3JQRNdAOy12Bnto"},
-  {id:"45",n:"Avenida Paulista Pizzeria",c:"Romântico",p:"$$$",b:"Centro",a:"Rua Emiliano Perneta 680",h:"Seg-Dom 18h-00h",ig:"@avenidapaulistapizzeria",e:"🍕",bg:"romantico",pid:"ChIJ5_JL53Pk3JQRcgKFrzAdJj0"},
-  {id:"73",n:"La Varenne",c:"Romântico",p:"$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Dom 12h-23h",ig:"@lavarenneoficial",e:"🥩",bg:"romantico",pid:"ChIJn_vck47j3JQRAp0-oujzOFg"},
-  {id:"74",n:"Barolo Trattoria",c:"Romântico",p:"$$$",b:"Água Verde",a:"Av. Silva Jardim 2487",h:"Seg-Dom 12h-00h",ig:"@barolotrattoria",e:"🍝",bg:"romantico",pid:"ChIJlXv0iofj3JQRc24bbmersAA"},
-  {id:"75",n:"L'Entrecôte de Paris",c:"Romântico",p:"$$$",b:"Batel",a:"Alameda Dr. Carlos de Carvalho 1362",h:"Ter-Dom 12h-23h",ig:"@lentrecotedeparis",e:"🥗",bg:"romantico",pid:"ChIJlbXyafTj3JQRWYlGH6bY3EI"},
-  {id:"16",n:"Bife Sujo",c:"Baratinho",p:"$",b:"Centro",a:"Rua Emiliano Perneta 714",h:"Seg-Sab 11h-23h",ig:"@bifesujocuritiba",e:"🍔",bg:"barato",pid:"ChIJYxb3BQ3k3JQRO4gfaOGZ2xg"},
-  {id:"17",n:"Bar Palácio",c:"Baratinho",p:"$$",b:"Centro",a:"Rua André de Barros 500",h:"Ter-Sab 19h-01h",ig:"@barpalacio",e:"🍺",bg:"barato",pid:"ChIJ9TMZVWnk3JQRnbTa9HLZBG0"},
-  {id:"18",n:"Pastelaria Juvevê",c:"Baratinho",p:"$",b:"Juvevê",a:"Av. João Gualberto 1817",h:"Seg-Sab 09h-21h",ig:"@pastelariajuveve",e:"🥟",bg:"barato",pid:"ChIJqVgsDiTk3JQRmP3qNRLvSoI"},
-  {id:"46",n:"Restaurante Imperial",c:"Baratinho",p:"$",b:"Centro",a:"Rua José Loureiro 135",h:"Seg-Sab 11h-15h",ig:"@restauranteimperial",e:"👑",bg:"barato",pid:"ChIJORUYVmzk3JQR02ILWQoLmqI"},
-  {id:"47",n:"Cantina do Délio",c:"Baratinho",p:"$$",b:"Alto da XV",a:"Rua Itupava 1094",h:"Ter-Dom 11h-15h e 18h-23h",ig:"@cantinadodelio",e:"🍝",bg:"barato",pid:"ChIJF-N-EDbk3JQRxIdQ5RBj6iI"},
-  {id:"48",n:"Al-Sultan",c:"Baratinho",p:"$",b:"Centro",a:"Rua São Francisco 32",h:"Seg-Sab 10h-20h",ig:"@alsultancwb",e:"🥙",bg:"barato",pid:"ChIJJSTgNnnj3JQR9ZvvSsx7C1o"},
-  {id:"76",n:"Comendador Grill",c:"Baratinho",p:"$",b:"Centro",a:"Rua Comendador Macedo 178",h:"Seg-Sab 11h-15h",ig:"@comendadorgrill",e:"🔥",bg:"barato",pid:"ChIJQUtpcwDl3JQRKYmjkZ6GM6A"},
-  {id:"77",n:"Baggio Pizzeria",c:"Baratinho",p:"$$",b:"Água Verde",a:"Rua Salgado Filho 383",h:"Seg-Dom 18h-23h",ig:"@pizzariabaggio",e:"🍕",bg:"barato",pid:"ChIJLSDfcUD73JQR2PJArxwNKhU"},
-  {id:"78",n:"Whatafuck Hamburgueria",c:"Baratinho",p:"$",b:"Centro",a:"Av. Vicente Machado 845",h:"Ter-Dom 18h-01h",ig:"@whatafuck",e:"🍔",bg:"barato",pid:"ChIJ2ysVmIrj3JQRHpjplDbJY_o"},
-  {id:"19",n:"Durski",c:"Alta gastronomia",p:"$$$$$",b:"Centro Histórico",a:"Av. Jaime Reis 254",h:"Qua-Sab 19h-23h",ig:"@restaurantedurski",e:"👨‍🍳",bg:"alta",pid:"ChIJD5hDYQ7k3JQRmBpFUqD7xFI"},
-  {id:"20",n:"Manu",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Alameda Dom Pedro II 317",h:"Qua-Sab 19h-23h",ig:"@restaurantemanu",e:"⭐",bg:"alta",pid:"ChIJHeVzMwjl3JQRiFIbAh_hREk"},
-  {id:"21",n:"Obst.",c:"Alta gastronomia",p:"$$$$",b:"Centro",a:"Alameda Prudente de Moraes 983",h:"Ter-Sab 19h-23h",ig:"@obst.lugar",e:"🍽️",bg:"alta",pid:"ID_GOOGLE_021"},
-  {id:"49",n:"Bobardí",c:"Alta gastronomia",p:"$$$$",b:"Cabral",a:"Av. Munhoz da Rocha 53",h:"Ter-Dom 19h-23h",ig:"@bobardi",e:"🌟",bg:"alta",pid:"ChIJ050Ozyjk3JQRuwiwNz-6s14"},
-  {id:"50",n:"K.sa Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Fernando Simas 260",h:"Ter-Sab 19h-23h",ig:"@ksarestaurante",e:"🏠",bg:"alta",pid:"ChIJQQb3DUbj3JQR1MO5Y5hy_o4"},
-  {id:"51",n:"Aisō",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Bispo Dom José 2772",h:"Ter-Sab 19h-23h",ig:"@aisorestaurante",e:"🎌",bg:"alta",pid:"ChIJT0LGv6bl3JQR_Fx3RVkYIfg"},
-  {id:"79",n:"Emy by Kazuo",c:"Alta gastronomia",p:"$$$$$",b:"Batel",a:"Av. do Batel 1868",h:"Seg-Sab 19h-23h",ig:"@emybykazuo",e:"🍣",bg:"alta",pid:"ChIJizTylLvj3JQRx53Pg785h70"},
-  {id:"80",n:"Igor Restaurante",c:"Alta gastronomia",p:"$$$$",b:"Água Verde",a:"Rua Gutemberg 151",h:"Ter-Sab 19h-23h",ig:"@igor.restaurante",e:"🍴",bg:"alta",pid:"ChIJAQADV4rj3JQRyUsQ_Zhl4lA"},
-  {id:"81",n:"Ninna Cozinha",c:"Alta gastronomia",p:"$$$$",b:"Batel",a:"Rua Desembargador Motta 2500",h:"Ter-Sab 19h-23h",ig:"@ninnacozinha",e:"🧑‍🍳",bg:"alta",pid:"ChIJlVVNLSfl3JQRMOK5gS1nz_k"},
-  {id:"22",n:"Veg Veg",c:"Vegano",p:"$$",b:"Centro",a:"Rua Visconde de Nácar 655",h:"Seg-Sab 11h-20h",ig:"@vegvegcuritiba",e:"🥗",bg:"vegano",pid:"ChIJ08dZL3Pk3JQRdS4b1N_Pim8"},
-  {id:"23",n:"Bouquet Garni",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Alameda Dr. Carlos de Carvalho 271",h:"Seg-Sab 11h-15h",ig:"@bouquetgarnicuritiba",e:"🌿",bg:"vegano",pid:"ChIJx7TgUu7j3JQRCzZ-nRtN44c"},
-  {id:"24",n:"Verd&Co",c:"Vegano",p:"$$",b:"Batel",a:"Rua Coronel Dulcídio 588",h:"Seg-Sab 11h-22h",ig:"@verd.co",e:"🌱",bg:"vegano",pid:"ChIJyUGbftzl3JQRyp-QQrjgA5Q"},
-  {id:"52",n:"Semente de Girassol",c:"Vegano",p:"$",b:"Centro",a:"Rua Treze de Maio 512",h:"Seg-Sab 11h-15h",ig:"@sementedegirassolcwb",e:"🌻",bg:"vegano",pid:"ChIJKb3zyRPk3JQRSFeyinHEksU"},
-  {id:"53",n:"Mornings",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Coronel Agostinho Macedo 60",h:"Seg-Dom 09h-16h",ig:"@morningscwb",e:"🌅",bg:"vegano",pid:"ChIJT1YKvdLl3JQRp9HnoRUX3CI"},
-  {id:"54",n:"Oidê",c:"Vegano",p:"$$",b:"Centro",a:"Rua Cruz Machado 274",h:"Ter-Sab 18h-23h",ig:"@oide.cwb",e:"🫐",bg:"vegano",pid:"ChIJo5jeKbXl3JQRIHQHoaWF0Qs"},
-  {id:"82",n:"Veg e Lev",c:"Vegano",p:"$$",b:"Centro",a:"Alameda Prudente de Moraes 1218",h:"Seg-Sab 11h-15h",ig:"@vegelev",e:"🥦",bg:"vegano",pid:"ChIJRRGAHgvk3JQRKdSg7FiEPpE"},
-  {id:"83",n:"Sorella",c:"Vegano",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 728",h:"Seg-Sab 11h-15h",ig:"@sorellacwb",e:"🍃",bg:"vegano",pid:"ChIJO8gl3oTj3JQRxdgCcApX8lI"},
-  {id:"84",n:"Amora",c:"Vegano",p:"$$",b:"Mercês",a:"Rua Pe. Agostinho 185",h:"Seg-Sab 11h-15h",ig:"@amoracwb",e:"🫒",bg:"vegano",pid:"ChIJoxh_pznl3JQRMsD3UeIE7KM"},
-  {id:"25",n:"Degusto Café",c:"Pet friendly",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 536",h:"Seg-Sab 09h-20h",ig:"@degustocafe",e:"🐾",bg:"pet",pid:"ChIJ-XRO4Irj3JQRTpTPfLMg3ao"},
-  {id:"26",n:"Garden Hamburgueria",c:"Pet friendly",p:"$$",b:"São Francisco",a:"Av. Jaime Reis 22",h:"Seg-Dom 17h-00h",ig:"@gardencwb",e:"🐶",bg:"pet",pid:"ChIJU31M-A3k3JQR0GUk0uNwiuA"},
-  {id:"27",n:"SFCO 179",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua São Francisco 179",h:"Ter-Dom 10h-23h",ig:"@sfco179",e:"🏡",bg:"pet",pid:"ChIJd1MDPRbl3JQRHY4YL026jBI"},
-  {id:"55",n:"Goodies Bakery",c:"Pet friendly",p:"$$",b:"Ahú",a:"Rua Brasilino Moura 382",h:"Seg-Sab 12h-19h",ig:"@goodiesbakery",e:"🧁",bg:"pet",pid:"ChIJT2QGaaPm3JQRjg79LGc0lB4"},
-  {id:"56",n:"Brisket Smokehouse",c:"Pet friendly",p:"$$$",b:"Juvevê",a:"Rua Augusto Stresser 318",h:"Ter-Dom 18h-23h",ig:"@brisketcwb",e:"🥩",bg:"pet",pid:"ChIJMTD2Y97v3JQRnfnzpo0DWoM"},
-  {id:"57",n:"O Barba Hamburgueria",c:"Pet friendly",p:"$$",b:"Centro",a:"Av. Vicente Machado 578",h:"Seg-Dom 18h-00h",ig:"@obarbahamburgueria",e:"🧔",bg:"pet",pid:"ChIJaRm8I3Xk3JQR8nJGYgeElLk"},
-  {id:"85",n:"Chelsea Burgers",c:"Pet friendly",p:"$$",b:"Centro Cívico",a:"Rua Marechal Hermes 113",h:"Seg-Dom 11h-22h",ig:"@chelseaburgerbr",e:"🍔",bg:"pet",pid:"ChIJBYvDORjk3JQRj3IKFvjvwmY"},
-  {id:"86",n:"Mercado Sal",c:"Pet friendly",p:"$$",b:"Portão",a:"Rua Itacolomi 1515",h:"Ter-Dom 17h-23h",ig:"@mercadosal",e:"🧂",bg:"pet",pid:"ChIJ8QOlrRXj3JQR8isKhBdzevo"},
-  {id:"87",n:"Vila Urbana",c:"Pet friendly",p:"$$",b:"Centro",a:"Rua Marechal Deodoro 686",h:"Seg-Dom 11h-23h",ig:"@vilaurbana",e:"🌇",bg:"pet",pid:"ChIJtY5fvVjj3JQRisz1QOnkY7c"},
-  {id:"28",n:"Botanique",c:"Instagramável",p:"$$",b:"Centro",a:"Rua Brigadeiro Franco 1193",h:"Seg-Dom 10h-23h",ig:"@botaniquecafebar",e:"🌺",bg:"insta",pid:"ChIJAQAU9Qrk3JQRtHKuC8egp1U"},
-  {id:"29",n:"Cosmos Gastrobar",c:"Instagramável",p:"$$",b:"Batel",a:"Alameda Presidente Taunay 543",h:"Ter-Sab 18h-00h",ig:"@cosmosgastrobar",e:"✨",bg:"insta",pid:"ChIJvcfsMPXj3JQRuQEovdrZExY"},
-  {id:"30",n:"Officina Restô Bar",c:"Instagramável",p:"$$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 1154",h:"Ter-Sab 18h-00h",ig:"@officinarestobar",e:"📸",bg:"insta",pid:"ChIJ3680MvXj3JQRXbyzKyeftns"},
-  {id:"58",n:"Lolla Bar",c:"Instagramável",p:"$$",b:"Bom Retiro",a:"Rua Fernando Amaro 84",h:"Ter-Sab 18h-01h",ig:"@lollabar",e:"🌈",bg:"insta",pid:"ChIJGUdSUWD73JQR_KuSjDuXnbo"},
-  {id:"59",n:"Ginger Bowtie",c:"Instagramável",p:"$$$",b:"Centro",a:"Rua Saldanha Marinho 1220",h:"Ter-Sab 19h-01h",ig:"@gingerbowtie",e:"🎀",bg:"insta",pid:"ChIJKcf4kQrk3JQRIIWoz1z9DdQ"},
-  {id:"60",n:"O Pão Que O Viado Amassou",c:"Instagramável",p:"$$",b:"Centro",a:"Alameda Dr. Carlos de Carvalho 74",h:"Seg-Sab 09h-20h",ig:"@opaoqueoviadoamassou",e:"🥖",bg:"insta",pid:"ChIJqzM_TQDl3JQRynSUhyiIdlk"},
-  {id:"88",n:"Café das Orquídeas",c:"Instagramável",p:"$$",b:"Seminário",a:"Rua Machado de Assis 223",h:"Ter-Dom 12h-19h",ig:"@cafedasorquideas",e:"🌸",bg:"insta",pid:"ChIJh0860U3v3JQRAtSXVzaSIg0"},
-  {id:"89",n:"Hard Rock Cafe",c:"Instagramável",p:"$$$",b:"Batel",a:"Rua Buenos Aires 50",h:"Seg-Dom 11h-00h",ig:"@hrccuritiba",e:"🎸",bg:"insta",pid:"ChIJeVmuOnTk3JQRspABB4pSZeQ"},
-  {id:"90",n:"Chō Street Food",c:"Instagramável",p:"$$",b:"Batel",a:"Av. Vicente Machado 521",h:"Ter-Sab 18h-23h",ig:"@cho.streetfood",e:"🍡",bg:"insta",pid:"ChIJc2lTdnbk3JQRPXYL2HlXLQ8"},
-];
-
-window.runMigration = async () => {
-  const btn = document.getElementById('btnMigrate');
-  const log = document.getElementById('migrateLog');
-  const status = document.getElementById('migrateStatus');
-  btn.disabled = true;
-  log.style.display = 'block';
-  log.innerHTML = '';
-
-  const addLog = (msg, cls='') => {
-    const line = document.createElement('div');
-    line.className = 'log-line ' + cls;
-    line.textContent = msg;
-    log.appendChild(line);
-    log.scrollTop = log.scrollHeight;
-  };
-
-  addLog(`[INFO] Iniciando migração de ${PLACES_DATA.length} lugares…`, 'log-info');
-  let ok = 0, err = 0;
-
-  for (const p of PLACES_DATA) {
-    try {
-    const placeData = { ...p, cats: [p.c], _createdAt: serverTimestamp(), _updatedAt: serverTimestamp() };
-      await setDoc(doc(db, 'places', p.id), placeData);
-      addLog(`[OK] ${p.id} — ${p.n}`, 'log-ok');
-      ok++;
-    } catch(e) {
-      addLog(`[ERR] ${p.id} — ${p.n}: ${e.message}`, 'log-err');
-      err++;
-    }
-    status.textContent = `${ok + err}/${PLACES_DATA.length}`;
-    await new Promise(r => setTimeout(r, 80));
-  }
-
-  addLog(`\n[DONE] ${ok} salvos, ${err} erros.`, ok === PLACES_DATA.length ? 'log-ok' : 'log-err');
-  status.textContent = `Concluído: ${ok} ok, ${err} erros`;
-  btn.disabled = false;
-  if (ok > 0) {
-    showToast(`${ok} lugares migrados com sucesso!`, 'success');
-    loadPlaces();
-  }
-};
-
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','categories','migrate','rules'].forEach(p => {
+  ['places','categories','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
@@ -2632,10 +2317,6 @@ window.showToast = (msg, type='info') => {
 window.copyRules = () => {
   navigator.clipboard.writeText(document.getElementById('rulesCode').textContent);
   showToast('Regras copiadas!', 'success');
-};
-window.copyIndex = () => {
-  navigator.clipboard.writeText(document.getElementById('indexCode').textContent);
-  showToast('Código copiado!', 'success');
 };
 </script>
 </body>
