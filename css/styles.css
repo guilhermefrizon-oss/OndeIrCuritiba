@@ -154,7 +154,7 @@ body {
 .cat-pill.on { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); font-weight: 700; box-shadow: var(--shadow); }
 
 /* ── Card stack ──────────────────────────────────────────────────── */
-.stack-wrap { flex: 1; position: relative; padding: 0 18px 12px; display: flex; align-items: flex-start; justify-content: center; min-height: 0; }
+.stack-wrap { flex: 1; position: relative; padding: 0 18px 8px; display: flex; align-items: flex-start; justify-content: center; min-height: 0; }
 .stack { position: relative; width: 100%; height: 100%; }
 
 .place-card {
@@ -244,9 +244,6 @@ body {
 .stamp-nope { right: 22px; background: rgba(248,113,113,.12); border: 2.5px solid var(--red); color: var(--red); transform: rotate(14deg); }
 
 /* Progress dots */
-.progress-row { display: flex; justify-content: center; gap: 5px; padding: 10px 0 4px; flex-shrink: 0; }
-.pdot { width: 6px; height: 6px; border-radius: 50%; background: var(--bg4); transition: all .2s; }
-.pdot.on { background: var(--acc); width: 18px; border-radius: 3px; }
 
 /* ── Action buttons ───────────────────────────────────────────────── */
 .btns { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 14px 24px 12px; flex-shrink: 0; }

@@ -280,6 +280,7 @@ function place() { return filtered[idx % filtered.length]; }
 // ── Progress dots ──────────────────────────────────────────────────
 function renderProgress() {
   const row = document.getElementById('progressRow');
+  if (!row) return; // indicador de progresso removido
   const total = Math.min(filtered.length, 5);
   row.innerHTML = '';
   for (let i=0; i<total; i++) {
