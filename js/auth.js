@@ -801,15 +801,17 @@ async function _loadStats(user) {
 function _renderLevel(totalXp) {
   const el   = id => document.getElementById(id);
   const info = getLevelInfo(totalXp);
-  if (el('upsLevelIcon')) el('upsLevelIcon').textContent = info.current.icon;
+  // .icon é uma STRING de SVG → precisa de innerHTML (textContent mostraria o código cru)
+  if (el('upsLevelIcon')) el('upsLevelIcon').innerHTML = info.current.icon;
   if (el('upsLevelName')) el('upsLevelName').textContent = info.current.name;
   if (el('upsLevelXp'))   el('upsLevelXp').textContent  = `${totalXp} XP`;
   if (el('upsLevelFill')) {
     el('upsLevelFill').style.width = `${Math.round(info.progress * 100)}%`;
   }
   if (el('upsLevelNext')) {
+    // sem o ícone SVG no meio do texto (não renderiza como texto e polui)
     el('upsLevelNext').textContent = info.next
-      ? `${info.xpIntoLevel} / ${info.xpNeeded} XP para ${info.next.icon} ${info.next.name}`
+      ? `${info.xpIntoLevel} / ${info.xpNeeded} XP para ${info.next.name}`
       : `Nível máximo atingido!`;
   }
 }
