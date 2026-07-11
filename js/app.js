@@ -300,9 +300,14 @@ function renderCard() {
     const p = filtered[(idx+i)%filtered.length];
     const card = makeCard(p);
     if (i > 0) {
-      card.style.transform = `translateY(${i*10}px) scale(${1-i*0.04})`;
+      // Cartas de trás em leque: pivô na base + leve rotação pros lados,
+      // então elas "vazam" pra esquerda/direita em vez de pra baixo (o que
+      // deixava tudo grudado nos botões). Sobe um tico pra base ficar limpa.
+      const rot = i === 1 ? 4 : -4;
+      card.style.transformOrigin = 'bottom center';
+      card.style.transform = `translateY(${-i*4}px) rotate(${rot}deg) scale(${1-i*0.035})`;
       card.style.zIndex    = 10 - i;
-      card.style.opacity   = 1 - i*0.2;
+      card.style.opacity   = 1 - i*0.18;
       card.style.pointerEvents = 'none';
     } else {
       card.style.zIndex = 20;
