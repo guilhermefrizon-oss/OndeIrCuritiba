@@ -193,8 +193,8 @@ body {
 
 .card-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.08) 0%, transparent 60%); }
 
-.card-top { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: flex-start; }
-.card-top-left { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+/* top: 34px dá respiro entre os risquinhos das fotos e a linha da categoria */
+.card-top { position: absolute; top: 34px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .cat-tag {
   background: rgba(255,255,255,.2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255,255,255,.35); color: #fff;
@@ -683,8 +683,11 @@ body {
 
 /* Rating badge no card */
 .card-name-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
 }
+/* Estrela (se houver) + preço empilhados à direita do nome. Sem estrela,
+   o preço fica sozinho e alinha com o topo do nome. */
+.card-name-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 .card-rating {
   font-size: 13px; font-weight: 700; color: #F59E0B;
   background: rgba(245,158,11,.18); border-radius: 20px;
@@ -772,7 +775,23 @@ body {
 /* ── Profile: quick action buttons ──────────────────────────────── */
 .profile-qactions {
   display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 8px; margin-bottom: 18px;
+  gap: 8px; margin-bottom: 12px;
+}
+
+/* Botão "Já fui aqui" no perfil (movido dos cards) */
+.profile-been-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-bottom: 18px;
+  padding: 14px 18px; border-radius: 18px; cursor: pointer;
+  background: var(--bg2); border: 1.5px solid #f59e0b; color: #f59e0b;
+  font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 700;
+  box-shadow: var(--shadow); transition: background .15s, transform .12s;
+}
+.profile-been-btn:hover  { background: rgba(245,158,11,.10); }
+.profile-been-btn:active { transform: scale(.98); }
+.profile-been-btn.done {
+  border-color: var(--green); color: var(--green);
+  background: rgba(52,211,153,.10); cursor: default;
 }
 .pqa {
   display: flex; flex-direction: column; align-items: center; gap: 6px;

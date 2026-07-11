@@ -433,11 +433,8 @@ function makeCard(p) {
     <div class="card-overlay"></div>
     <div class="card-glow"></div>
     <div class="card-top">
-      <div class="card-top-left">
-        <div class="cat-tag">${p.c}</div>
-        ${openBadgeHTML(p)}
-      </div>
-      <div class="price-tag">${p.p}</div>
+      <div class="cat-tag">${p.c}</div>
+      ${openBadgeHTML(p)}
     </div>
     <div class="card-story-bars"></div>
     <div class="card-photo-tap card-photo-tap-left"></div>
@@ -446,7 +443,10 @@ function makeCard(p) {
          onclick="event.stopPropagation();window._openProfileCurrent()">
       <div class="card-name-row">
         <div class="card-name">${p.n}</div>
-        ${ratingHTML}
+        <div class="card-name-right">
+          ${ratingHTML}
+          <div class="price-tag">${p.p}</div>
+        </div>
       </div>
       <div class="card-addr">${ic('map-pin', 13)} ${p.a}</div>
       <div class="card-meta">
@@ -718,6 +718,23 @@ window.markBeenThere = () => {
   setTimeout(() => completeSwipe(p), 380);
 };
 
+// "Já fui" a partir do perfil do lugar (o botão saiu dos cards)
+window.markBeenThereProfile = () => {
+  if (!window.currentUser) { window.showAuthModal && window.showAuthModal('like'); return; }
+  const p = _profilePlace;
+  if (!p || beenThere[p.id]) return;
+  doBeenThere(p);
+  const btn = document.getElementById('profileBeenBtn');
+  if (btn) {
+    btn.classList.add('done');
+    btn.disabled = true;
+    btn.innerHTML = `${ic('check', 17)} Você já foi aqui`;
+  }
+  showToast('Marcado como visitado!');
+  // O lugar sai do baralho (o feed atrás do perfil já reflete isso)
+  applyUserFilters(); renderCard(); renderProgress();
+};
+
 function doSave(p) {
   if (!saved.find(s=>s.id===p.id)) {
     saved.push(p);
@@ -956,8 +973,11 @@ window.addEventListener('popstate', () => {
   if (top) { try { top.closeFn(); } catch (e) {} }
 });
 
+let _profilePlace = null;
+
 async function openProfile(p) {
   window._currentProfilePlaceId = p.id;
+  _profilePlace = p;
   profilePhotos=[]; profilePhotoIdx=0;
   const screen = document.getElementById('profileScreen');
   const wasOpen = screen.style.display === 'flex';
@@ -1001,6 +1021,22 @@ async function openProfile(p) {
     navigator.clipboard.writeText(addr + ', Curitiba, PR')
       .then(() => showToast('Endereço copiado!'));
   };
+
+  // ── Botão "Já fui" (movido dos cards pra cá) ────────────────────
+  let beenBtn = document.getElementById('profileBeenBtn');
+  if (!beenBtn) {
+    beenBtn = document.createElement('button');
+    beenBtn.id = 'profileBeenBtn';
+    beenBtn.className = 'profile-been-btn';
+    beenBtn.onclick = () => window.markBeenThereProfile();
+    qEl.insertAdjacentElement('afterend', beenBtn);
+  }
+  const alreadyBeen = !!beenThere[p.id];
+  beenBtn.classList.toggle('done', alreadyBeen);
+  beenBtn.disabled = alreadyBeen;
+  beenBtn.innerHTML = alreadyBeen
+    ? `${ic('check', 17)} Você já foi aqui`
+    : `${ic('map-pin', 17)} Já fui aqui`;
 
   const addrEsc = p.a.replace(/'/g,"\\'");
   document.getElementById('profileInfoGrid').innerHTML=`
