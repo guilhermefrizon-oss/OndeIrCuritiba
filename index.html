@@ -48,18 +48,11 @@
     </div>
   </div>
 
-  <!-- ── Location pill ── -->
-  <div class="location-row">
-    <div class="loc-pill" id="cityPill" onclick="openCitySheet()" style="cursor:pointer;user-select:none;">
-      <div class="loc-dot"></div>
-      <span id="cityLabel">Curitiba, PR</span>
-      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:2px;opacity:.5"><path d="M6 9l6 6 6-6"/></svg>
-    </div>
-    <button class="open-now-pill" id="openNowBtn" onclick="toggleOpenNow()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Abertos agora</button>
-  </div>
-
   <!-- ── Category pills ── -->
-  <div class="cats-label">Categoria</div>
+  <div class="cats-header">
+    <div class="cats-label">Categoria</div>
+    <button class="open-now-pill" id="openNowBtn" onclick="toggleOpenNow()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Abertos agora</button>
+  </div>
   <div class="cats-scroll" id="catsRow"></div>
 
   <!-- ── Discover view ── -->
