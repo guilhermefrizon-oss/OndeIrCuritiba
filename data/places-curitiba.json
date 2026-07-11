@@ -1,0 +1,674 @@
+[
+{
+"id": "ChIJv7u9lzrl3JQRuObisKj8YmQ",
+"n": "Royalty Café",
+"cats": [
+"Café da tarde"
+],
+"c": "Café da tarde",
+"p": "$$",
+"a": "R. São Francisco, 179",
+"b": "Centro",
+"ig": "",
+"h": "Seg-Ter 10h-20h · Qua-Sáb 10h-23h · Dom 10h-20h",
+"pid": "ChIJv7u9lzrl3JQRuObisKj8YmQ",
+"bg": "cafe",
+"e": "☕"
+},
+{
+"id": "ChIJMe2J8wbl3JQRZHbp7YCXD50",
+"n": "Temporal Cafés Especiais",
+"cats": [
+"Café da tarde"
+],
+"c": "Café da tarde",
+"p": "$$",
+"a": "R. Padre Germano Mayer, 679",
+"b": "Cristo Rei",
+"ig": "",
+"h": "Seg-Sáb 09h-18h30",
+"pid": "ChIJMe2J8wbl3JQRZHbp7YCXD50",
+"bg": "cafe",
+"e": "☕"
+},
+{
+"id": "ChIJxcbPJwDl3JQR-QE3fwo0ScE",
+"n": "MoaCoa Caféteria",
+"cats": [
+"Café da tarde"
+],
+"c": "Café da tarde",
+"p": "$$",
+"a": "Av. dos Estados, 504",
+"b": "Água Verde",
+"ig": "",
+"h": "Seg-Sex 12h-19h · Sáb 09h-19h",
+"pid": "ChIJxcbPJwDl3JQR-QE3fwo0ScE",
+"bg": "cafe",
+"e": "☕"
+},
+{
+"id": "ChIJ_YMu3jzl3JQRtc0SXD41Vo4",
+"n": "Café Cultura Batel",
+"cats": [
+"Café da tarde"
+],
+"c": "Café da tarde",
+"p": "$$",
+"a": "R. Cel. Dulcídio, 558",
+"b": "Batel",
+"ig": "",
+"h": "Seg-Sáb 08h-20h · Dom 08h-19h",
+"pid": "ChIJ_YMu3jzl3JQRtc0SXD41Vo4",
+"bg": "cafe",
+"e": "☕"
+},
+{
+"id": "ChIJd_jaAsfj3JQR9sgigkYTIQI",
+"n": "Santé Café",
+"cats": [
+"Café da tarde"
+],
+"c": "Café da tarde",
+"p": "$$",
+"a": "Av. Rep. Argentina, 1037",
+"b": "Água Verde",
+"ig": "",
+"h": "Seg-Sex 11h-18h30 · Sáb 09h-18h30",
+"pid": "ChIJd_jaAsfj3JQR9sgigkYTIQI",
+"bg": "cafe",
+"e": "☕"
+},
+{
+"id": "ChIJWy5mzJrj3JQRmleB0-9F41k",
+"n": "Cheia de Graça Pâtisserie",
+"cats": [
+"Café da tarde"
+],
+"c": "Café da tarde",
+"p": "$$$",
+"a": "R. Bpo. Dom José, 2465",
+"b": "Batel",
+"ig": "",
+"h": "Seg-Sáb 11h-19h",
+"pid": "ChIJWy5mzJrj3JQRmleB0-9F41k",
+"bg": "cafe",
+"e": "☕"
+},
+{
+"id": "ChIJ___7Whrk3JQRt7owdN4hP3Y",
+"n": "Hop'n Roll",
+"cats": [
+"Barzinho"
+],
+"c": "Barzinho",
+"p": "$$",
+"a": "R. Mateus Leme, 1098",
+"b": "Bom Retiro",
+"ig": "",
+"h": "Seg-Qui 18h-00h · Sex 18h-01h · Sáb 15h-01h",
+"pid": "ChIJ___7Whrk3JQRt7owdN4hP3Y",
+"bg": "bar",
+"e": "🍸"
+},
+{
+"id": "ChIJqxBcZfTs3JQRAgHqpz2-9cE",
+"n": "Maniacs Brewing Co",
+"cats": [
+"Barzinho"
+],
+"c": "Barzinho",
+"p": "$$",
+"a": "Av. Munhoz da Rocha, 1049",
+"b": "Cabral",
+"ig": "",
+"h": "Ter-Qui 17h-23h30 · Sex 15h-00h · Sáb 11h-00h · Dom 11h-21h",
+"pid": "ChIJqxBcZfTs3JQRAgHqpz2-9cE",
+"bg": "bar",
+"e": "🍸"
+},
+{
+"id": "ChIJ_zP7HXrv3JQRerxiJpxc8AU",
+"n": "Bastards Brewery",
+"cats": [
+"Barzinho"
+],
+"c": "Barzinho",
+"p": "$$",
+"a": "Rua Comendador Lustoza de Andrade, 69",
+"b": "Bom Retiro",
+"ig": "",
+"h": "Ter-Qui 12h-23h · Sex-Sáb 12h-00h · Dom 12h-22h",
+"pid": "ChIJ_zP7HXrv3JQRerxiJpxc8AU",
+"bg": "bar",
+"e": "🍸"
+},
+{
+"id": "ChIJheEqWwDj3JQR--xi28mJvLU",
+"n": "Gruit Beers Pub",
+"cats": [
+"Barzinho"
+],
+"c": "Barzinho",
+"p": "$$",
+"a": "Av. dos Estados, 1019",
+"b": "Água Verde",
+"ig": "",
+"h": "Qua-Sex 17h-23h · Sáb 12h-23h · Dom 12h-17h",
+"pid": "ChIJheEqWwDj3JQR--xi28mJvLU",
+"bg": "bar",
+"e": "🍸"
+},
+{
+"id": "ChIJ8TDxeZjl3JQRrg5rv75RAt8",
+"n": "Boa Praça",
+"cats": [
+"Barzinho"
+],
+"c": "Barzinho",
+"p": "$$",
+"a": "R. Comendador Araújo, 1066",
+"b": "Batel",
+"ig": "",
+"h": "Ter-Qua 17h-00h · Qui 17h-01h · Sex 17h-02h · Sáb 12h-00h · Dom 12h-23h",
+"pid": "ChIJ8TDxeZjl3JQRrg5rv75RAt8",
+"bg": "bar",
+"e": "🍸"
+},
+{
+"id": "ChIJXffPRRLk3JQR63Uele4YuvQ",
+"n": "Quintal do Monge",
+"cats": [
+"Barzinho"
+],
+"c": "Barzinho",
+"p": "$$",
+"a": "R. Dr. Claudino dos Santos, 24",
+"b": "São Francisco",
+"ig": "",
+"h": "Seg-Qui 11h-23h30 · Sex-Sáb 11h-00h30 · Dom 11h-20h",
+"pid": "ChIJXffPRRLk3JQR63Uele4YuvQ",
+"bg": "bar",
+"e": "🍸"
+},
+{
+"id": "ChIJIYha50Pj3JQRN3XTkEhC5oo",
+"n": "Tetto Rooftop Curitiba",
+"cats": [
+"Céu aberto"
+],
+"c": "Céu aberto",
+"p": "$$",
+"a": "R. Padre Anchieta, 1291",
+"b": "Bigorrilho",
+"ig": "",
+"h": "Ter-Sáb 18h-00h · Dom 16h30-23h",
+"pid": "ChIJIYha50Pj3JQRN3XTkEhC5oo",
+"bg": "rooftop",
+"e": "🌆"
+},
+{
+"id": "ChIJe4Q-kGrj3JQRvgQODR0GUdc",
+"n": "Terrazza 40",
+"cats": [
+"Céu aberto"
+],
+"c": "Céu aberto",
+"p": "$$$",
+"a": "R. Padre Anchieta, 1287",
+"b": "Bigorrilho",
+"ig": "",
+"h": "Seg-Sáb 12h-15h, 19h-23h",
+"pid": "ChIJe4Q-kGrj3JQRvgQODR0GUdc",
+"bg": "rooftop",
+"e": "🌆"
+},
+{
+"id": "ChIJW2d2vXrj3JQRXuz0lvifxE4",
+"n": "Gards Rooftop",
+"cats": [
+"Céu aberto"
+],
+"c": "Céu aberto",
+"p": "$$",
+"a": "Comendador Macedo 630",
+"b": "Alto da Glória",
+"ig": "",
+"h": "Qua-Sex 17h30-00h · Sáb 12h-16h, 17h30-00h · Dom 12h-18h",
+"pid": "ChIJW2d2vXrj3JQRXuz0lvifxE4",
+"bg": "rooftop",
+"e": "🌆"
+},
+{
+"id": "ChIJNVYuR3fn3JQRatB_4h3ENq8",
+"n": "Jardim do Bosque Gastronomia",
+"cats": [
+"Céu aberto"
+],
+"c": "Céu aberto",
+"p": "$$",
+"a": "Tv. João Bonn, 54",
+"b": "Centro Cívico",
+"ig": "",
+"h": "Ter-Qui 09h-18h · Sex-Sáb 09h-22h · Dom 09h-17h",
+"pid": "ChIJNVYuR3fn3JQRatB_4h3ENq8",
+"bg": "rooftop",
+"e": "🌆"
+},
+{
+"id": "ChIJ69HQOQzk3JQRAMFReS3irlk",
+"n": "Sense Curitiba",
+"cats": [
+"Balada"
+],
+"c": "Balada",
+"p": "$$",
+"a": "R. Des. Clotário Portugal, 176",
+"b": "Centro",
+"ig": "",
+"h": "Seg-Sex 12h-23h · Sáb 14h-20h",
+"pid": "ChIJ69HQOQzk3JQRAMFReS3irlk",
+"bg": "balada",
+"e": "🎵"
+},
+{
+"id": "ChIJRfdjuorj3JQR5DIYC69YyaU",
+"n": "Class Night Club",
+"cats": [
+"Balada"
+],
+"c": "Balada",
+"p": "$$",
+"a": "Alameda Pres. Taunay, 393",
+"b": "Batel",
+"ig": "",
+"h": "Seg-Dom 20h-04h",
+"pid": "ChIJRfdjuorj3JQR5DIYC69YyaU",
+"bg": "balada",
+"e": "🎵"
+},
+{
+"id": "ChIJvXTG-ZLl3JQR9n2of-cRBoA",
+"n": "Dante Club",
+"cats": [
+"Balada"
+],
+"c": "Balada",
+"p": "$$",
+"a": "Al. Dr. Muricy, 1091",
+"b": "São Francisco",
+"ig": "",
+"h": "Sex-Sáb 22h-05h",
+"pid": "ChIJvXTG-ZLl3JQR9n2of-cRBoA",
+"bg": "balada",
+"e": "🎵"
+},
+{
+"id": "ChIJlXv0iofj3JQRc24bbmersAA",
+"n": "Barolo Curitiba",
+"cats": [
+"Romântico"
+],
+"c": "Romântico",
+"p": "$$$",
+"a": "Av. Silva Jardim, 2487",
+"b": "Água Verde",
+"ig": "",
+"h": "Seg-Sex 12h-14h30, 19h-00h · Sáb 12h-15h30, 19h-00h · Dom 11h30-16h",
+"pid": "ChIJlXv0iofj3JQRc24bbmersAA",
+"bg": "romantico",
+"e": "🕯️"
+},
+{
+"id": "ChIJk2We4Xbk3JQRojFzc3DRUzo",
+"n": "Château de Gazon",
+"cats": [
+"Romântico"
+],
+"c": "Romântico",
+"p": "$$$",
+"a": "R. Pasteur, 134",
+"b": "Batel",
+"ig": "",
+"h": "Seg 18h30-23h · Ter-Sáb 18h30-23h30 · Dom 18h30-23h",
+"pid": "ChIJk2We4Xbk3JQRojFzc3DRUzo",
+"bg": "romantico",
+"e": "🕯️"
+},
+{
+"id": "ChIJ9-Wy3Wvk3JQRRFA07FKMSqM",
+"n": "Palco dos 5 Sentidos",
+"cats": [
+"Romântico"
+],
+"c": "Romântico",
+"p": "$$",
+"a": "R. Barão do Rio Branco, 438",
+"b": "Centro",
+"ig": "",
+"h": "Ter-Sáb 19h-23h",
+"pid": "ChIJ9-Wy3Wvk3JQRRFA07FKMSqM",
+"bg": "romantico",
+"e": "🕯️"
+},
+{
+"id": "ChIJBRS7fvXj3JQRpsOcTNo7Ez0",
+"n": "La Mafia Trattoria",
+"cats": [
+"Romântico"
+],
+"c": "Romântico",
+"p": "$$",
+"a": "R. Des. Motta, 2601",
+"b": "Batel",
+"ig": "",
+"h": "Seg-Sáb 18h30-23h45",
+"pid": "ChIJBRS7fvXj3JQRpsOcTNo7Ez0",
+"bg": "romantico",
+"e": "🕯️"
+},
+{
+"id": "ChIJ6VFiaerj3JQRYvZ1Ir_ryos",
+"n": "General Gastronomia",
+"cats": [
+"Alta gastronomia"
+],
+"c": "Alta gastronomia",
+"p": "$$",
+"a": "Rua Guilherme Pugsley, 1483",
+"b": "Água Verde",
+"ig": "",
+"h": "Seg 11h15-14h30 · Ter-Qua 11h15-14h30, 18h30-22h · Qui 11h15-15h, 18h30-22h · Sex 11h15-14h30, 18h30-22h · Sáb 11h15-15h, 18h30-22h",
+"pid": "ChIJ6VFiaerj3JQRYvZ1Ir_ryos",
+"bg": "alta",
+"e": "⭐"
+},
+{
+"id": "ChIJd0JWC4nj3JQRESbU6mByFXU",
+"n": "Quintana Gastronomia",
+"cats": [
+"Alta gastronomia"
+],
+"c": "Alta gastronomia",
+"p": "$$",
+"a": "Av. do Batel, 1440",
+"b": "Batel",
+"ig": "",
+"h": "Seg-Sex 11h30-14h30 · Sáb-Dom 11h30-15h30",
+"pid": "ChIJd0JWC4nj3JQRESbU6mByFXU",
+"bg": "alta",
+"e": "⭐"
+},
+{
+"id": "ChIJ9bpEcZvj3JQRxkMMVsCDk2o",
+"n": "Gianttura Ristorante",
+"cats": [
+"Alta gastronomia"
+],
+"c": "Alta gastronomia",
+"p": "$$",
+"a": "Largo Pedro Deconto, 295",
+"b": "Bigorrilho",
+"ig": "",
+"h": "Ter-Sex 11h30-15h, 18h30-23h · Sáb 11h45-15h30, 18h30-23h · Dom 11h45-15h30",
+"pid": "ChIJ9bpEcZvj3JQRxkMMVsCDk2o",
+"bg": "alta",
+"e": "⭐"
+},
+{
+"id": "ChIJ61qqKwrk3JQRsQan_u3rtbo",
+"n": "Lisboa Gastronomia",
+"cats": [
+"Alta gastronomia"
+],
+"c": "Alta gastronomia",
+"p": "$$$",
+"a": "Alameda Princesa Izabel, 420 Mercês Curitiba – PR CEP:",
+"b": "Mercês",
+"ig": "",
+"h": "Ter-Sáb 19h-23h · Dom 12h-15h",
+"pid": "ChIJ61qqKwrk3JQRsQan_u3rtbo",
+"bg": "alta",
+"e": "⭐"
+},
+{
+"id": "ChIJtY5fvVjj3JQRisz1QOnkY7c",
+"n": "Villa Bistrô Hamburgueria em Curitiba",
+"cats": [
+"Baratinho"
+],
+"c": "Baratinho",
+"p": "$$",
+"a": "Av. Sete de Setembro, 6334",
+"b": "Batel",
+"ig": "",
+"h": "Seg-Qui 11h30-22h30 · Sex-Sáb 11h30-23h30",
+"pid": "ChIJtY5fvVjj3JQRisz1QOnkY7c",
+"bg": "barato",
+"e": "🍔"
+},
+{
+"id": "ChIJpeHDYGjj3JQRg1Kfm2m1BL8",
+"n": "Drive in Burger",
+"cats": [
+"Baratinho"
+],
+"c": "Baratinho",
+"p": "$$",
+"a": "Rua Luiz Parigot de Souza, 248",
+"b": "Portão",
+"ig": "",
+"h": "Seg-Qui 11h-23h15 · Sex-Sáb 11h-00h · Dom 11h-23h30",
+"pid": "ChIJpeHDYGjj3JQRg1Kfm2m1BL8",
+"bg": "barato",
+"e": "🍔"
+},
+{
+"id": "ChIJlT1XH3_k3JQRZp02XtNFgVU",
+"n": "Cidadão do Mundo Burgers & Arts - Unidade Água Verde",
+"cats": [
+"Baratinho"
+],
+"c": "Baratinho",
+"p": "$$",
+"a": "R. Bento Viana, 352",
+"b": "Água Verde",
+"ig": "",
+"h": "Seg-Dom 11h-23h30",
+"pid": "ChIJlT1XH3_k3JQRZp02XtNFgVU",
+"bg": "barato",
+"e": "🍔"
+},
+{
+"id": "ChIJv3IKFJvj3JQRJVgojXzsZSQ",
+"n": "Mercearia Anos 30",
+"cats": [
+"Baratinho"
+],
+"c": "Baratinho",
+"p": "$$",
+"a": "Av. Iguaçu, 3645",
+"b": "Vila Izabel",
+"ig": "",
+"h": "Seg-Dom 18h30-23h",
+"pid": "ChIJv3IKFJvj3JQRJVgojXzsZSQ",
+"bg": "barato",
+"e": "🍔"
+},
+{
+"id": "ChIJ08dZL3Pk3JQRdS4b1N_Pim8",
+"n": "Veg Veg",
+"cats": [
+"Vegano"
+],
+"c": "Vegano",
+"p": "$$",
+"a": "Rua Visconde de Nácar, 655",
+"b": "São Francisco",
+"ig": "",
+"h": "Ter-Dom 11h30-18h30",
+"pid": "ChIJ08dZL3Pk3JQRdS4b1N_Pim8",
+"bg": "vegano",
+"e": "🌱"
+},
+{
+"id": "ChIJKb3zyRPk3JQRSFeyinHEksU",
+"n": "Semente de Girassol",
+"cats": [
+"Vegano"
+],
+"c": "Vegano",
+"p": "$",
+"a": "R. Mateus Leme, 115",
+"b": "São Francisco",
+"ig": "",
+"h": "Seg-Dom 11h-17h",
+"pid": "ChIJKb3zyRPk3JQRSFeyinHEksU",
+"bg": "vegano",
+"e": "🌱"
+},
+{
+"id": "ChIJ4yZNO5jj3JQRhuKLQsGUims",
+"n": "Restaurante Dom Veggie",
+"cats": [
+"Vegano"
+],
+"c": "Vegano",
+"p": "$$",
+"a": "Av. Sete de Setembro, 6797",
+"b": "Seminário",
+"ig": "",
+"h": "Ter-Sex 11h30-14h30 · Sáb-Dom 11h30-15h",
+"pid": "ChIJ4yZNO5jj3JQRhuKLQsGUims",
+"bg": "vegano",
+"e": "🌱"
+},
+{
+"id": "ChIJ3cHQSWLj3JQRogiEeKNT9WI",
+"n": "Domo Café Bistrô Vegetariano",
+"cats": [
+"Vegano"
+],
+"c": "Vegano",
+"p": "$$",
+"a": "R. Acre, 655",
+"b": "Água Verde",
+"ig": "",
+"h": "Seg-Sex 11h30-18h · Sáb 11h30-14h",
+"pid": "ChIJ3cHQSWLj3JQRogiEeKNT9WI",
+"bg": "vegano",
+"e": "🌱"
+},
+{
+"id": "ChIJ-XRO4Irj3JQRTpTPfLMg3ao",
+"n": "Degusto Café",
+"cats": [
+"Pet friendly"
+],
+"c": "Pet friendly",
+"p": "$$",
+"a": "Alameda Dr. Carlos de Carvalho, 1148",
+"b": "Batel",
+"ig": "",
+"h": "Seg-Dom 09h-20h",
+"pid": "ChIJ-XRO4Irj3JQRTpTPfLMg3ao",
+"bg": "pet",
+"e": "🐾"
+},
+{
+"id": "ChIJ2fML1Nnl3JQRsFwaaXL7YRM",
+"n": "Ué Pet Café",
+"cats": [
+"Pet friendly"
+],
+"c": "Pet friendly",
+"p": "$$",
+"a": "Alameda Prudente de Moraes, 1201",
+"b": "Centro",
+"ig": "",
+"h": "Ter-Sáb 14h-23h · Dom 11h-18h",
+"pid": "ChIJ2fML1Nnl3JQRsFwaaXL7YRM",
+"bg": "pet",
+"e": "🐾"
+},
+{
+"id": "ChIJe9zszz7l3JQRqzYPTrBU4XQ",
+"n": "Casa de Tia Empório & Bistrô",
+"cats": [
+"Pet friendly"
+],
+"c": "Pet friendly",
+"p": "$$",
+"a": "R. Urbâno Lopes, 21",
+"b": "Jardim Botânico",
+"ig": "",
+"h": "Seg-Dom 09h-22h",
+"pid": "ChIJe9zszz7l3JQRqzYPTrBU4XQ",
+"bg": "pet",
+"e": "🐾"
+},
+{
+"id": "ChIJhxauXyrj3JQRge__hD0-Jhs",
+"n": "Onírico Café",
+"cats": [
+"Instagramável"
+],
+"c": "Instagramável",
+"p": "$$",
+"a": "R. Augusto de Mari, 3941",
+"b": "Portão",
+"ig": "",
+"h": "Ter-Sáb 10h-19h · Dom 14h-19h",
+"pid": "ChIJhxauXyrj3JQRge__hD0-Jhs",
+"bg": "insta",
+"e": "📸"
+},
+{
+"id": "ChIJBwvSrN_l3JQRwPrXAW9I3IA",
+"n": "Tangerina Café",
+"cats": [
+"Instagramável"
+],
+"c": "Instagramável",
+"p": "$$",
+"a": "R. Carneiro Lobo, 92",
+"b": "Água Verde",
+"ig": "",
+"h": "Seg-Sáb 09h-18h",
+"pid": "ChIJBwvSrN_l3JQRwPrXAW9I3IA",
+"bg": "insta",
+"e": "📸"
+},
+{
+"id": "ChIJxaW2jn_l3JQRdFqX0CapE50",
+"n": "Respiro Café",
+"cats": [
+"Instagramável"
+],
+"c": "Instagramável",
+"p": "$$",
+"a": "R. XV de Novembro, 621",
+"b": "Centro",
+"ig": "",
+"h": "Seg-Sex 07h30-18h · Sáb 09h-17h30",
+"pid": "ChIJxaW2jn_l3JQRdFqX0CapE50",
+"bg": "insta",
+"e": "📸"
+},
+{
+"id": "ChIJD8qUdonl3JQREQ8XBAgCqho",
+"n": "Luma Café & Co.",
+"cats": [
+"Instagramável"
+],
+"c": "Instagramável",
+"p": "$$",
+"a": "Av. João Gualberto, 1795",
+"b": "Juvevê",
+"ig": "",
+"h": "Seg-Sex 08h-18h · Sáb 09h-18h",
+"pid": "ChIJD8qUdonl3JQREQ8XBAgCqho",
+"bg": "insta",
+"e": "📸"
+}
+]

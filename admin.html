@@ -1028,10 +1028,16 @@ pre {
           <div class="page-title">Lugares</div>
           <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
         </div>
-        <button class="btn btn-primary" onclick="openAddModal()">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Novo Lugar
-        </button>
+        <div style="display:flex; gap:10px">
+          <button class="btn btn-secondary" onclick="openImportModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Importar Curitiba
+          </button>
+          <button class="btn btn-primary" onclick="openAddModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Lugar
+          </button>
+        </div>
       </div>
 
       <div class="stats-bar" id="statsBar">
@@ -1407,6 +1413,30 @@ loadPlacesFromFirestore();</pre>
       <button class="btn btn-primary" id="btnSavePhotos" onclick="savePhotos()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         Salvar fotos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Importar lugares ═══════════════════════════════════ -->
+<div class="modal-backdrop" id="importModalBackdrop" onclick="closeImportOnBackdrop(event)">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Importar lugares de Curitiba</div>
+        <div style="font-size:12px; color:var(--text3); margin-top:3px">Lote curado — Place ID, endereço, bairro e horário já preenchidos.</div>
+      </div>
+      <button class="modal-close" onclick="closeImportModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="importInfo" style="font-size:13.5px; color:var(--text2); line-height:1.7">Carregando lote…</div>
+      <div id="importProgress" style="display:none; margin-top:14px; font-size:13px; font-weight:600; color:var(--acc3)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeImportModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btnRunImport" onclick="runBulkImport()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Importar agora
       </button>
     </div>
   </div>
@@ -2274,6 +2304,69 @@ window.savePlace = async () => {
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar';
   }
+};
+
+// ── Importar lugares em massa ───────────────────────────────────
+let importData = null;
+
+window.openImportModal = async () => {
+  document.getElementById('importModalBackdrop').classList.add('open');
+  document.getElementById('importProgress').style.display = 'none';
+  document.getElementById('importProgress').textContent = '';
+  const info = document.getElementById('importInfo');
+  const btn  = document.getElementById('btnRunImport');
+  btn.disabled = true;
+  info.textContent = 'Carregando lote…';
+  try {
+    const res = await fetch('data/places-curitiba.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    importData = await res.json();
+
+    const byCat = {};
+    importData.forEach(p => { byCat[p.c] = (byCat[p.c] || 0) + 1; });
+    const known   = new Set((allCategoriesList || []).map(c => c.name));
+    const missing = [...new Set(importData.map(p => p.c))].filter(c => known.size && !known.has(c));
+
+    info.innerHTML =
+      `<b>${importData.length} lugares</b> prontos pra importar:<br>` +
+      Object.entries(byCat).map(([c, n]) => `• ${c}: ${n}`).join('<br>') +
+      `<br><br><span style="color:var(--text3)">Já vêm com foto (via Place ID), endereço, bairro e horário. Importar de novo só atualiza — não duplica.</span>` +
+      (missing.length
+        ? `<br><br><span style="color:var(--yellow)">⚠️ Categorias que não achei no seu app: ${missing.join(', ')}. Os lugares entram assim mesmo, mas confira se o nome bate.</span>`
+        : '');
+    btn.disabled = false;
+  } catch (e) {
+    info.textContent = 'Erro ao carregar o lote: ' + e.message;
+  }
+};
+
+window.runBulkImport = async () => {
+  if (!importData || !importData.length) return;
+  const btn  = document.getElementById('btnRunImport');
+  const prog = document.getElementById('importProgress');
+  btn.disabled = true;
+  prog.style.display = 'block';
+  let ok = 0, fail = 0;
+  for (const p of importData) {
+    try {
+      await setDoc(
+        doc(db, 'places', p.id),
+        { ...p, _updatedAt: serverTimestamp(), _createdAt: serverTimestamp() },
+        { merge: true }
+      );
+      ok++;
+    } catch (e) { fail++; console.warn('import falhou:', p.n, e); }
+    prog.textContent = `Importando… ${ok + fail}/${importData.length}`;
+  }
+  prog.textContent = `Pronto! ${ok} importados${fail ? `, ${fail} falharam (veja o console)` : ''}.`;
+  showToast(`${ok} lugares importados!`, 'success');
+  btn.disabled = false;
+  if (typeof loadPlaces === 'function') loadPlaces();
+};
+
+window.closeImportModal = () => document.getElementById('importModalBackdrop').classList.remove('open');
+window.closeImportOnBackdrop = (e) => {
+  if (e.target === document.getElementById('importModalBackdrop')) closeImportModal();
 };
 
 // ── Delete ──────────────────────────────────────────────────────
