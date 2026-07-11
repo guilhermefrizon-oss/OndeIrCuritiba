@@ -193,7 +193,8 @@ body {
 
 .card-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.08) 0%, transparent 60%); }
 
-.card-top { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: center; }
+.card-top { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: flex-start; }
+.card-top-left { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .cat-tag {
   background: rgba(255,255,255,.2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255,255,255,.35); color: #fff;
@@ -1322,10 +1323,12 @@ body {
 .card-status-row:empty { display: none; }
 .open-badge {
   font-size: 11px; font-weight: 800; letter-spacing: .3px;
-  padding: 4px 10px; border-radius: 100px; backdrop-filter: blur(6px);
+  padding: 5px 11px; border-radius: 100px;
+  background: rgba(0,0,0,.34);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
 }
-.open-badge.open   { color: #34d399; background: rgba(52,211,153,.16); border: 1px solid rgba(52,211,153,.4); }
-.open-badge.closed { color: #f87171; background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.35); }
+.open-badge.open   { color: #4ade80; border: 1px solid rgba(74,222,128,.55); }
+.open-badge.closed { color: #f87171; border: 1px solid rgba(248,113,113,.5); }
 .dist-chip {
   font-size: 11px; font-weight: 700; color: rgba(255,255,255,.85);
   padding: 4px 10px; border-radius: 100px;

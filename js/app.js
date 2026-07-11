@@ -433,7 +433,10 @@ function makeCard(p) {
     <div class="card-overlay"></div>
     <div class="card-glow"></div>
     <div class="card-top">
-      <div class="cat-tag">${p.c}</div>
+      <div class="card-top-left">
+        <div class="cat-tag">${p.c}</div>
+        ${openBadgeHTML(p)}
+      </div>
       <div class="price-tag">${p.p}</div>
     </div>
     <div class="card-story-bars"></div>
@@ -449,7 +452,7 @@ function makeCard(p) {
       <div class="card-meta">
         <span>${p.b}</span><div class="meta-sep"></div><span>${ic('clock', 12)} ${p.h}</span>
       </div>
-      <div class="card-status-row">${openBadgeHTML(p)}${distLabel(p)}</div>
+      <div class="card-status-row">${distLabel(p)}</div>
       <div class="card-footer">
         <div class="ig-chip">${ic('camera', 12)}${p.ig}</div>
         <div class="card-profile-hint">Ver perfil →</div>
