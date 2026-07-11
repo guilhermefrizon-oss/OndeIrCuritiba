@@ -139,10 +139,11 @@ async function init() {
   renderProgress();
   showWelcomeScreen();
 
-  const [allSaved, allSkipped, allBeen] = await Promise.all([
-    fsLoadAll(), fsLoadSkipped(), fsLoadBeenThere()
+  const [allSaved, allWant, allSkipped, allBeen] = await Promise.all([
+    fsLoadAll(), fsLoadWantToday(), fsLoadSkipped(), fsLoadBeenThere()
   ]);
   if (allSaved?.length) { saved = allSaved; updateBadge(); }
+  if (allWant?.length)  { wantToday = allWant; updateWantBadge(); }
   skipped   = allSkipped || {};
   beenThere = allBeen    || {};
 
@@ -150,7 +151,7 @@ async function init() {
   applyUserFilters();
 
   // Carrega médias de rating em background e atualiza cards
-  loadAllRatings();
+  if (window.FEATURES?.ratings) loadAllRatings();
 
   // Distância até o usuário (pede permissão só se ainda não decidiu)
   requestUserLocation();
@@ -434,7 +435,7 @@ function makeCard(p) {
   // fill-mode sobrescreve o style.transform e mata o drag do card.
   el.className = 'place-card';
 
-  const ratingHTML = p._avgRating?.avg > 0
+  const ratingHTML = (window.FEATURES?.ratings && p._avgRating?.avg > 0)
     ? `<div class="card-rating">★ ${p._avgRating.avg.toFixed(1)}</div>`
     : '';
 
@@ -1078,8 +1079,8 @@ async function openProfile(p) {
       </div>
     </div>`;
 
-  if (typeof renderRatingBlock === 'function') renderRatingBlock(p.id);
-  if (typeof renderCommentsSection === 'function') renderCommentsSection(p.id);
+  if (window.FEATURES?.ratings  && typeof renderRatingBlock    === 'function') renderRatingBlock(p.id);
+  if (window.FEATURES?.comments && typeof renderCommentsSection === 'function') renderCommentsSection(p.id);
 
   document.getElementById('storyBars').innerHTML='<div class="story-bar"><div class="story-bar-fill"></div></div>';
 

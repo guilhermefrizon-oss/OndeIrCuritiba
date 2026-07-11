@@ -393,6 +393,7 @@ export function showUserProfile() {
     (document.querySelector('.phone') || document.body).appendChild(screen);
   }
 
+  const F           = window.FEATURES || {};
   const initials    = getInitials(user);
   const displayName = user.displayName || 'Usuário';
   const email       = user.email || '';
@@ -437,7 +438,8 @@ export function showUserProfile() {
           </div>
         </div>
 
-        <!-- Nível -->
+        <!-- Nível (oculto por enquanto — FEATURES.levelXp) -->
+        ${F.levelXp ? `
         <div class="ups-level-bar" id="upsLevelBar">
           <div class="ups-level-top">
             <span class="ups-level-icon" id="upsLevelIcon">${ic('leaf', 18)}</span>
@@ -448,7 +450,7 @@ export function showUserProfile() {
             <div class="ups-level-fill" id="upsLevelFill" style="width:0%"></div>
           </div>
           <div class="ups-level-next" id="upsLevelNext"></div>
-        </div>
+        </div>` : ''}
 
         <!-- Stats -->
         <div class="ups-stats">
@@ -461,26 +463,28 @@ export function showUserProfile() {
             <div class="ups-stat-num" id="upsStatSaved">—</div>
             <div class="ups-stat-lbl">Salvos</div>
           </div>
+          ${F.ratings ? `
           <div class="ups-stat-divider"></div>
           <div class="ups-stat">
             <div class="ups-stat-num" id="upsStatRatings">—</div>
             <div class="ups-stat-lbl">Avaliações</div>
-          </div>
+          </div>` : ''}
         </div>
 
         <!-- Abas -->
         <div class="ups-tabs">
-          <button class="ups-tab on" data-tab="badges"     onclick="upsSetTab('badges')">Badges</button>
-          <button class="ups-tab"     data-tab="stats"     onclick="upsSetTab('stats')">Estatísticas</button>
-          <button class="ups-tab"     data-tab="settings"  onclick="upsSetTab('settings')">Conta</button>
+          ${F.badges ? `<button class="ups-tab" data-tab="badges" onclick="upsSetTab('badges')">Badges</button>` : ''}
+          <button class="ups-tab" data-tab="stats"    onclick="upsSetTab('stats')">Estatísticas</button>
+          <button class="ups-tab" data-tab="settings" onclick="upsSetTab('settings')">Conta</button>
         </div>
 
-        <!-- Aba: Badges -->
+        <!-- Aba: Badges (oculta por enquanto — FEATURES.badges) -->
+        ${F.badges ? `
         <div class="ups-tab-panel" id="upsTabBadges">
           <div class="ups-badges-grid" id="upsBadgesGrid">
             <div class="badges-empty">Carregando…</div>
           </div>
-        </div>
+        </div>` : ''}
 
         <!-- Aba: Estatísticas -->
         <div class="ups-tab-panel" id="upsTabStats" style="display:none">
@@ -555,6 +559,8 @@ export function showUserProfile() {
     if (panel) panel.style.display = 'block';
     if (tab === 'stats')   _loadStats(user);
   };
+  // Ativa a primeira aba disponível (Badges pode estar oculta)
+  window.upsSetTab(F.badges ? 'badges' : 'stats');
 
   const changeNameBtn = document.getElementById('upsChangeNameBtn');
   const changePwdBtn  = document.getElementById('upsChangePwdBtn');
@@ -616,6 +622,7 @@ export function showUserProfile() {
 // as outras — e as badges — continuam aparecendo. Antes, um único erro
 // derrubava tudo e a aba Badges ficava presa em "Carregando…".
 async function _loadUserStats(user) {
+  const F   = window.FEATURES || {};
   const el  = id => document.getElementById(id);
   const set = (id, v) => { if (el(id)) el(id).textContent = v; };
   set('upsStatVisited', '…'); set('upsStatSaved', '…'); set('upsStatRatings', '…');
@@ -626,29 +633,32 @@ async function _loadUserStats(user) {
   };
   const fmt = n => (n == null ? '—' : n);
 
-  // Visitados / Salvos / Avaliações — em paralelo, sem um derrubar o outro
+  // Visitados / Salvos — sempre; um não derruba o outro
   countCol(['been_there', user.uid, 'places']).then(n => set('upsStatVisited', fmt(n)));
   countCol(['favorites',  user.uid, 'places']).then(n => set('upsStatSaved',   fmt(n)));
-  (window.countUserRatings ? window.countUserRatings(user.uid) : Promise.resolve(null))
-    .then(n => set('upsStatRatings', fmt(n)));
 
-  // Nível (XP)
-  loadUserXp(user.uid).then(_renderLevel).catch(e => console.warn('xp:', e));
+  // Avaliações — só se a feature estiver ligada
+  if (F.ratings && window.countUserRatings) {
+    window.countUserRatings(user.uid).then(n => set('upsStatRatings', fmt(n)));
+  }
 
-  // Badges — sempre renderiza, independente do resto
-  loadUserBadges(user.uid)
-    .then(earned => renderBadges(earned, el('upsBadgesGrid')))
-    .catch(e => {
-      console.warn('badges:', e);
-      renderBadges([], el('upsBadgesGrid'));
+  // Nível (XP) — só se a feature estiver ligada
+  if (F.levelXp) {
+    loadUserXp(user.uid).then(_renderLevel).catch(e => console.warn('xp:', e));
+    window.addEventListener('xpAwarded', async () => {
+      _renderLevel(await loadUserXp(user.uid));
     });
+  }
 
-  window.addEventListener('badgeUnlocked', async () => {
-    renderBadges(await loadUserBadges(user.uid), el('upsBadgesGrid'));
-  });
-  window.addEventListener('xpAwarded', async () => {
-    _renderLevel(await loadUserXp(user.uid));
-  });
+  // Badges — só se a feature estiver ligada
+  if (F.badges) {
+    loadUserBadges(user.uid)
+      .then(earned => renderBadges(earned, el('upsBadgesGrid')))
+      .catch(e => { console.warn('badges:', e); renderBadges([], el('upsBadgesGrid')); });
+    window.addEventListener('badgeUnlocked', async () => {
+      renderBadges(await loadUserBadges(user.uid), el('upsBadgesGrid'));
+    });
+  }
 }
 
 // ── Upload de foto de perfil ───────────────────────────────────────
