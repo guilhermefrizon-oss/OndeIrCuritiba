@@ -829,12 +829,51 @@ pre {
   border: none;
   line-height: 1;
 }
+.selected-thumb img { transition: object-position .1s; }
 .selected-thumb .order-badge {
   position: absolute; bottom: 3px; left: 3px;
   background: var(--acc);
   color: var(--acc-ink); font-size: 9px; font-weight: 700;
   padding: 1px 5px; border-radius: 4px;
 }
+.selected-thumb .frame-btn {
+  position: absolute; bottom: 3px; right: 3px;
+  width: 18px; height: 18px; border-radius: 5px;
+  background: rgba(0,0,0,.72); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; padding: 0; line-height: 1;
+}
+.selected-thumb .frame-btn:hover { background: var(--acc); color: var(--acc-ink); }
+
+/* Enquadrador (framing) */
+.frame-stage {
+  position: relative; width: 260px; height: 408px;
+  margin: 0 auto; border-radius: 22px; overflow: hidden;
+  background: var(--bg4); cursor: grab; touch-action: none;
+  box-shadow: 0 10px 34px rgba(0,0,0,.45);
+  border: 1.5px solid var(--border);
+}
+.frame-stage:active { cursor: grabbing; }
+.frame-img { position: absolute; inset: 0; background-size: cover; background-repeat: no-repeat; background-position: 50% 50%; }
+.frame-thirds {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .15s;
+  background-image:
+    linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px);
+  background-size: 33.333% 33.333%;
+}
+.frame-stage:active .frame-thirds { opacity: 1; }
+.frame-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,.72) 82%, rgba(0,0,0,.92) 100%);
+}
+.frame-name {
+  position: absolute; left: 18px; right: 18px; bottom: 20px;
+  color: #fff; font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 22px; font-weight: 800; letter-spacing: -.5px;
+  pointer-events: none; text-shadow: 0 2px 12px rgba(0,0,0,.5);
+}
+.frame-hint { text-align: center; font-size: 12.5px; color: var(--text3); margin: 16px 0 2px; }
 
 /* Category cards */
 .cat-card {
@@ -1340,6 +1379,35 @@ loadPlacesFromFirestore();</pre>
   </div>
 </div>
 
+<!-- ══ Modal: Enquadrar foto ═════════════════════════════════════ -->
+<div class="modal-backdrop" id="frameModalBackdrop" onclick="closeFramingOnBackdrop(event)">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Enquadrar foto</div>
+        <div style="font-size:12px; color:var(--text3); margin-top:3px">Arraste a imagem para escolher o que aparece no card.</div>
+      </div>
+      <button class="modal-close" onclick="closeFraming()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="frame-stage" id="frameStage">
+        <div class="frame-img" id="frameImg"></div>
+        <div class="frame-thirds"></div>
+        <div class="frame-overlay"></div>
+        <div class="frame-name" id="frameName">Preview</div>
+      </div>
+      <div class="frame-hint">Assim é exatamente como a foto vai cortar no card do app.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="centerFrame()">Centralizar</button>
+      <button class="btn btn-primary" onclick="saveFraming()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Aplicar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Modal: Category ══════════════════════════════════════════ -->
 <div class="modal-backdrop" id="catModalBackdrop" onclick="closeCatModalOnBackdrop(event)">
   <div class="modal" style="max-width:480px">
@@ -1532,6 +1600,7 @@ let photoPlaceId   = null;
 let photoPlaceDocId = null;
 let availablePhotos = []; // todas do Google
 let selectedPhotos  = []; // urls selecionadas (até 5)
+let selectedPos     = {}; // url -> "x% y%" (ponto de foco do enquadramento)
 
 window.openPhotoModal = async () => {
   const pid  = document.getElementById('f_pid').value.trim();
@@ -1552,6 +1621,11 @@ window.openPhotoModal = async () => {
   // Carrega fotos já salvas no Firestore para pré-selecionar
   const place = allPlaces.find(x => x._docId === editingId);
   selectedPhotos = Array.isArray(place?.photos) ? [...place.photos] : [];
+  // Enquadramento salvo (paralelo a photos) → mapa por url
+  selectedPos = {};
+  if (Array.isArray(place?.photosPos)) {
+    selectedPhotos.forEach((url, i) => { if (place.photosPos[i]) selectedPos[url] = place.photosPos[i]; });
+  }
   renderSelectedPhotos();
 
   // Busca todas as fotos do Google
@@ -1565,7 +1639,7 @@ window.openPhotoModal = async () => {
     if (!data.photos?.length) throw new Error('Nenhuma foto encontrada para este lugar');
 
     availablePhotos = data.photos.map(ph =>
-      `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=900&maxWidthPx=700&key=${GOOGLE_API_KEY}`
+      `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=1600&maxWidthPx=1200&key=${GOOGLE_API_KEY}`
     );
 
     renderPhotoGrid();
@@ -1612,8 +1686,11 @@ function renderSelectedPhotos() {
     div.draggable = true;
     div.dataset.index = i;
     div.innerHTML = `
-      <img src="${url}">
+      <img src="${url}" style="object-position:${selectedPos[url] || '50% 50%'}">
       <div class="order-badge">${i + 1}</div>
+      <button class="frame-btn" title="Enquadrar" onclick="openFraming(${i}, event)">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/></svg>
+      </button>
       <button class="remove-btn" onclick="removePhoto(${i}, event)">✕</button>`;
 
     // Drag to reorder
@@ -1660,10 +1737,11 @@ window.savePhotos = async () => {
   const btn = document.getElementById('btnSavePhotos');
   btn.disabled = true; btn.textContent = 'Salvando…';
   try {
-    await setDoc(doc(db, 'places', photoPlaceDocId), { photos: selectedPhotos, _updatedAt: serverTimestamp() }, { merge: true });
+    const photosPos = selectedPhotos.map(u => selectedPos[u] || '50% 50%');
+    await setDoc(doc(db, 'places', photoPlaceDocId), { photos: selectedPhotos, photosPos, _updatedAt: serverTimestamp() }, { merge: true });
     // Atualiza local
     const place = allPlaces.find(x => x._docId === photoPlaceDocId);
-    if (place) place.photos = [...selectedPhotos];
+    if (place) { place.photos = [...selectedPhotos]; place.photosPos = [...photosPos]; }
     showToast(`${selectedPhotos.length} foto(s) salvas!`, 'success');
     closePhotoModal();
   } catch(e) {
@@ -1681,6 +1759,88 @@ window.closePhotoModal = () => {
 window.closePhotoModalOnBackdrop = (e) => {
   if (e.target === document.getElementById('photoModalBackdrop')) closePhotoModal();
 };
+
+// ── Enquadrador (framing) ────────────────────────────────────────
+let frameUrl = null;            // url sendo enquadrada
+let frameX = 50, frameY = 50;   // ponto de foco em %
+let frameNat = null;            // {w,h} tamanho natural da imagem
+
+window.openFraming = (i, e) => {
+  if (e) e.stopPropagation();
+  frameUrl = selectedPhotos[i];
+  if (!frameUrl) return;
+  const cur = selectedPos[frameUrl] || '50% 50%';
+  const m = cur.match(/([\d.]+)%\s+([\d.]+)%/);
+  frameX = m ? parseFloat(m[1]) : 50;
+  frameY = m ? parseFloat(m[2]) : 50;
+  frameNat = null;
+
+  const img = document.getElementById('frameImg');
+  img.style.backgroundImage = `url("${frameUrl}")`;
+  img.style.backgroundPosition = `${frameX}% ${frameY}%`;
+  document.getElementById('frameName').textContent =
+    document.getElementById('f_n').value.trim() || 'Preview';
+
+  // descobre o tamanho natural pra calcular o pan exato
+  const probe = new Image();
+  probe.onload = () => { frameNat = { w: probe.naturalWidth, h: probe.naturalHeight }; };
+  probe.src = frameUrl;
+
+  document.getElementById('frameModalBackdrop').classList.add('open');
+};
+
+function applyFramePos() {
+  frameX = Math.max(0, Math.min(100, frameX));
+  frameY = Math.max(0, Math.min(100, frameY));
+  document.getElementById('frameImg').style.backgroundPosition = `${frameX}% ${frameY}%`;
+}
+
+window.centerFrame = () => { frameX = 50; frameY = 50; applyFramePos(); };
+
+window.saveFraming = () => {
+  if (frameUrl) selectedPos[frameUrl] = `${Math.round(frameX)}% ${Math.round(frameY)}%`;
+  renderSelectedPhotos();
+  closeFraming();
+};
+window.closeFraming = () => {
+  document.getElementById('frameModalBackdrop').classList.remove('open');
+  frameUrl = null;
+};
+window.closeFramingOnBackdrop = (e) => {
+  if (e.target === document.getElementById('frameModalBackdrop')) closeFraming();
+};
+
+// Arrastar a imagem = mover o foco. O deslocamento em px vira % com base
+// no "overflow" real da imagem (parte que sobra além do quadro no cover).
+(function initFrameDrag() {
+  const stage = document.getElementById('frameStage');
+  if (!stage) return;
+  let dragging = false, lastX = 0, lastY = 0;
+
+  const start = (x, y) => { dragging = true; lastX = x; lastY = y; };
+  const move = (x, y) => {
+    if (!dragging) return;
+    const W = stage.clientWidth, H = stage.clientHeight;
+    let ovX = W, ovY = H; // fallback antes de saber o tamanho natural
+    if (frameNat) {
+      const scale = Math.max(W / frameNat.w, H / frameNat.h);
+      ovX = Math.max(1, frameNat.w * scale - W);
+      ovY = Math.max(1, frameNat.h * scale - H);
+    }
+    frameX -= (x - lastX) / ovX * 100;
+    frameY -= (y - lastY) / ovY * 100;
+    lastX = x; lastY = y;
+    applyFramePos();
+  };
+  const end = () => { dragging = false; };
+
+  stage.addEventListener('mousedown', e => { e.preventDefault(); start(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+  window.addEventListener('mouseup', end);
+  stage.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  stage.addEventListener('touchmove', e => { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+  stage.addEventListener('touchend', end);
+})();
 
 // ── Categories ──────────────────────────────────────────────────
 const DEFAULT_CATS = [

@@ -33,8 +33,10 @@ let skipped   = {};     // pulados hoje {id: true}
 let beenThere = {};     // já fui {id: {visitedAt}}
 
 let cardPhotos    = [];
+let cardPhotosPos = [];   // foco de cada foto do card (paralelo a cardPhotos)
 let cardPhotoIdx  = 0;
 let profilePhotos = [];
+let profilePhotosPos = []; // foco de cada foto do perfil (paralelo a profilePhotos)
 let profilePhotoIdx = 0;
 
 let lastAction  = null;  // {type:'skip'|'want'|'been', place, prevIdx} — para desfazer
@@ -320,6 +322,13 @@ function renderCard() {
   prefetchUpcoming(3);
 }
 
+// Ponto de foco do enquadramento salvo no admin (ex: "50% 30%").
+// Sem valor salvo → 'center' (comportamento antigo).
+function photoPos(p, i) {
+  const pos = p && Array.isArray(p.photosPos) ? p.photosPos[i] : null;
+  return pos || 'center';
+}
+
 // Define a foto de fundo de um card (usa foto salva ou busca no Google)
 function setCardBg(card, p) {
   const bg = card.querySelector('.card-bg');
@@ -327,6 +336,7 @@ function setCardBg(card, p) {
   if (Array.isArray(p.photos) && p.photos.length) {
     bg.style.backgroundImage = `url("${p.photos[0]}")`;
     bg.style.backgroundSize  = 'cover';
+    bg.style.backgroundPosition = photoPos(p, 0);
   } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
     fetchPlacePhoto(p.pid).then(url => {
       if (!url) return;
@@ -494,12 +504,13 @@ function initCardPhotos(p) {
   bindTap(topCard?.querySelector('.card-photo-tap-right'), cardPhotoNext);
 
   if (Array.isArray(p.photos) && p.photos.length) {
-    cardPhotos = p.photos; cardPhotoIdx = 0; updateCardStoryBars(); return;
+    cardPhotos = p.photos; cardPhotosPos = Array.isArray(p.photosPos) ? p.photosPos : [];
+    cardPhotoIdx = 0; updateCardStoryBars(); return;
   }
   if (!p.pid || p.pid.startsWith('ID_GOOGLE_')) return;
   fetchAllPhotos(p.pid).then(urls => {
     if (!urls.length) return;
-    cardPhotos = urls; cardPhotoIdx = 0; updateCardStoryBars();
+    cardPhotos = urls; cardPhotosPos = []; cardPhotoIdx = 0; updateCardStoryBars();
   });
 }
 
@@ -508,7 +519,9 @@ function setCardPhoto(i) {
   if (!bg || !cardPhotos.length) return;
   bg.style.opacity = '0';
   setTimeout(() => {
-    bg.style.backgroundImage = `url("${cardPhotos[i]}")`; bg.style.backgroundSize='cover'; bg.style.opacity='1';
+    bg.style.backgroundImage = `url("${cardPhotos[i]}")`; bg.style.backgroundSize='cover';
+    bg.style.backgroundPosition = cardPhotosPos[i] || 'center';
+    bg.style.opacity='1';
     const fl = bg.querySelector('.photo-loading'); if (fl) fl.style.opacity='0';
   }, 150);
 }
@@ -978,7 +991,7 @@ let _profilePlace = null;
 async function openProfile(p) {
   window._currentProfilePlaceId = p.id;
   _profilePlace = p;
-  profilePhotos=[]; profilePhotoIdx=0;
+  profilePhotos=[]; profilePhotosPos=[]; profilePhotoIdx=0;
   const screen = document.getElementById('profileScreen');
   const wasOpen = screen.style.display === 'flex';
   screen.style.display='flex'; screen.classList.remove('closing');
@@ -1069,12 +1082,13 @@ async function openProfile(p) {
   document.getElementById('storyBars').innerHTML='<div class="story-bar"><div class="story-bar-fill"></div></div>';
 
   if (Array.isArray(p.photos) && p.photos.length) {
-    profilePhotos = p.photos; profilePhotoIdx = 0;
+    profilePhotos = p.photos; profilePhotosPos = Array.isArray(p.photosPos) ? p.photosPos : [];
+    profilePhotoIdx = 0;
     updateProfileStoryBars(); setProfilePhoto(0);
   } else {
     fetchAllPhotos(p.pid).then(urls => {
       if (!urls.length) return;
-      profilePhotos=urls; profilePhotoIdx=0;
+      profilePhotos=urls; profilePhotosPos=[]; profilePhotoIdx=0;
       updateProfileStoryBars(); setProfilePhoto(0);
     });
   }
@@ -1088,7 +1102,7 @@ function setProfilePhoto(i) {
   if (!profilePhotos.length) return;
   const img = document.getElementById('profilePhotoImg');
   img.style.opacity='0';
-  setTimeout(()=>{ img.style.backgroundImage=`url("${profilePhotos[i]}")`; img.style.opacity='1'; },100);
+  setTimeout(()=>{ img.style.backgroundImage=`url("${profilePhotos[i]}")`; img.style.backgroundPosition=profilePhotosPos[i]||'center'; img.style.opacity='1'; },100);
 }
 
 function updateProfileStoryBars() {
@@ -1262,7 +1276,7 @@ function renderWantToday() {
     grid.appendChild(row);
     if (Array.isArray(p.photos) && p.photos.length) {
       const t = document.getElementById(`wthumb-${p.id}`);
-      if (t) { t.style.backgroundImage=`url("${p.photos[0]}")`; t.innerHTML=''; }
+      if (t) { t.style.backgroundImage=`url("${p.photos[0]}")`; t.style.backgroundPosition=photoPos(p,0); t.innerHTML=''; }
     }
   });
 

@@ -189,11 +189,26 @@ export const fsLoadBeenThere = async () => {
 };
 
 // ── Places & categories ────────────────────────────────────────────
+// Fotos antigas foram salvas em baixa resolução (maxWidthPx=600/700).
+// Reescreve a URL do Google pra pedir sempre em alta (1600/1200), assim
+// os cards ficam nítidos mesmo sem re-salvar no admin.
+function upgradePhotoRes(url) {
+  if (typeof url !== 'string' || !url.includes('places.googleapis.com')) return url;
+  return url
+    .replace(/maxHeightPx=\d+/, 'maxHeightPx=1600')
+    .replace(/maxWidthPx=\d+/,  'maxWidthPx=1200');
+}
+function normalizePlacePhotos(p) {
+  if (Array.isArray(p.photos)) p.photos = p.photos.map(upgradePhotoRes);
+  return p;
+}
+
 export const fsLoadPlaces = async () => {
   try {
     const viaSdk = getDocs(collection(db, 'places'))
       .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    return await _loadWithRestFallback('places', viaSdk);
+    const places = await _loadWithRestFallback('places', viaSdk);
+    return Array.isArray(places) ? places.map(normalizePlacePhotos) : places;
   } catch (e) { console.warn('fsLoadPlaces:', e); return []; }
 };
 
