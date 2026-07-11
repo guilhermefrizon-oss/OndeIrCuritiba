@@ -618,12 +618,14 @@ function onDragEnd() {
     }
     const p = place();
     animateOut(card,'right');
+    promoteBackCards();
     doWantToday(p);
     setTimeout(() => { completeSwipe(p); dragHappened=false; }, 400);
   } else if (dragCurX < -threshold) {
     dragHappened = true;
     const p = place();
     animateOut(card,'left');
+    promoteBackCards();
     doSkip(p);
     setTimeout(() => { completeSwipe(p); dragHappened=false; }, 400);
   } else {
@@ -639,6 +641,29 @@ function animateOut(card, dir) {
   card.style.transition='transform .38s cubic-bezier(.4,0,.2,1), opacity .35s';
   card.style.transform=`translateX(${x}) rotate(${rot})`;
   card.style.opacity='0';
+}
+
+// Enquanto o card do topo voa pra fora, as cartas de trás já sobem pro
+// lugar delas (com transição) — em vez de ficarem paradas e só "pularem"
+// pro lugar quando o renderCard recria tudo. Isso tira o atraso/snap.
+function promoteBackCards() {
+  const backs = [...document.querySelectorAll('.place-card')]
+    .filter(c => c.dataset.top !== '1')
+    .sort((a, b) => (parseInt(b.style.zIndex) || 0) - (parseInt(a.style.zIndex) || 0));
+  backs.forEach((card, ni) => {
+    card.style.transition = 'transform .36s cubic-bezier(.22,1,.36,1), opacity .36s ease';
+    if (ni === 0) {
+      // vira o novo topo
+      card.style.transform = 'translateY(0px) rotate(0deg) scale(1)';
+      card.style.opacity   = '1';
+      card.style.zIndex    = 20;
+    } else {
+      const rot = ni === 1 ? 4 : -4;
+      card.style.transform = `translateY(${-ni*4}px) rotate(${rot}deg) scale(${1-ni*0.035})`;
+      card.style.opacity   = `${1 - ni*0.18}`;
+      card.style.zIndex    = 10 - ni;
+    }
+  });
 }
 
 // Remove o card do baralho após o swipe (assim o baralho termina de verdade)
@@ -699,6 +724,7 @@ window.swipe = (dir, fromBtn = false) => {
     if (fromBtn) pulseBtn(document.querySelector('.b-pass .c'));
   }
   animateOut(activeCard, dir);
+  promoteBackCards();
   setTimeout(() => completeSwipe(p), 380);
 };
 
