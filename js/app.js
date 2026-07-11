@@ -828,6 +828,8 @@ function showToast(msg, longer = false) {
   clearTimeout(t._to);
   t._to = setTimeout(() => t.classList.remove('toast-in'), longer ? 2600 : 1500);
 }
+// Disponível para outros módulos (ex.: auth.js ao trocar a foto de perfil)
+window.showToast = showToast;
 
 // ── Dica de swipe (primeira visita) ────────────────────────────────
 function maybeShowSwipeHint() {

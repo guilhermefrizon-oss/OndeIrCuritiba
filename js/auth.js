@@ -7,7 +7,7 @@ import {
 import { ic } from './icons.js';
 
 import {
-  db, doc, setDoc, collection, getDocs, query
+  db, doc, getDoc, setDoc, collection, getDocs, query
 } from './firebase.js';
 import { loadUserXp, getLevelInfo } from './xp.js';
 import { loadUserBadges, renderBadges } from './badges.js';
@@ -22,12 +22,33 @@ import {
 const provider = new GoogleAuthProvider();
 window.currentUser = null;
 
+// Foto de perfil enviada pela pessoa (guardada no Firestore como data URL).
+// Tem prioridade sobre a foto do Google.
+window._customPhoto = null;
+
 onAuthStateChanged(auth, async (user) => {
   window.currentUser = user;
+  window._customPhoto = null;
   updateAvatarUI(user);
-  if (user) await _migrateFavoritesIfNeeded(user);
+  if (user) {
+    await _migrateFavoritesIfNeeded(user);
+    _loadCustomPhoto(user); // assíncrono, atualiza o avatar quando chega
+  }
   window.dispatchEvent(new CustomEvent('authChanged', { detail: user }));
 });
+
+// Foto efetiva do usuário: a que ela enviou > a do Google.
+function effectivePhoto(user) {
+  return window._customPhoto || (user && user.photoURL) || '';
+}
+
+async function _loadCustomPhoto(user) {
+  try {
+    const snap = await getDoc(doc(db, 'user_profiles', user.uid));
+    const url  = snap.exists() ? snap.data().photoDataUrl : null;
+    if (url) { window._customPhoto = url; updateAvatarUI(user); }
+  } catch (e) { console.warn('_loadCustomPhoto:', e); }
+}
 
 // Conclui o login quando voltamos de um signInWithRedirect (celular/webview).
 // onAuthStateChanged já cuida do estado; aqui só fechamos o modal e logamos erros.
@@ -55,8 +76,9 @@ function updateAvatarUI(user) {
   const avatar = document.getElementById('topAvatar');
   if (!avatar) return;
   if (user) {
-    avatar.innerHTML = user.photoURL
-      ? `<img src="${user.photoURL}" alt="${user.displayName}">`
+    const photo = effectivePhoto(user);
+    avatar.innerHTML = photo
+      ? `<img src="${photo}" alt="${user.displayName}">`
       : getInitials(user);
     avatar.title = user.displayName || user.email;
   } else {
@@ -374,7 +396,7 @@ export function showUserProfile() {
   const initials    = getInitials(user);
   const displayName = user.displayName || 'Usuário';
   const email       = user.email || '';
-  const photoURL    = user.photoURL || '';
+  const photoURL    = effectivePhoto(user);
   const isGoogle    = user.providerData?.[0]?.providerId === 'google.com';
   const memberSince = user.metadata?.creationTime
     ? new Date(user.metadata.creationTime).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
@@ -399,12 +421,15 @@ export function showUserProfile() {
 
         <!-- Header -->
         <div class="ups-header">
-          <div class="ups-avatar-wrap">
-            ${photoURL
-              ? `<img class="ups-avatar-img" src="${photoURL}" alt="${displayName}">`
-              : `<div class="ups-avatar-initials">${initials}</div>`}
-            <div class="ups-avatar-badge" title="${isGoogle ? 'Google' : 'E-mail'}">${isGoogle ? 'G' : ic('mail', 11)}</div>
-          </div>
+          <button class="ups-avatar-wrap" id="upsAvatarBtn" title="Trocar foto">
+            <div class="ups-avatar-media" id="upsAvatarMedia">
+              ${photoURL
+                ? `<img class="ups-avatar-img" src="${photoURL}" alt="${displayName}">`
+                : `<div class="ups-avatar-initials">${initials}</div>`}
+            </div>
+            <div class="ups-avatar-cam">${ic('camera', 13)}</div>
+          </button>
+          <input type="file" id="upsPhotoInput" accept="image/*" style="display:none">
           <div class="ups-user-info">
             <div class="ups-name">${displayName}</div>
             <div class="ups-email">${email}</div>
@@ -438,15 +463,14 @@ export function showUserProfile() {
           </div>
           <div class="ups-stat-divider"></div>
           <div class="ups-stat">
-            <div class="ups-stat-num" id="upsStatComments">—</div>
-            <div class="ups-stat-lbl">Comentários</div>
+            <div class="ups-stat-num" id="upsStatRatings">—</div>
+            <div class="ups-stat-lbl">Avaliações</div>
           </div>
         </div>
 
         <!-- Abas -->
         <div class="ups-tabs">
           <button class="ups-tab on" data-tab="badges"     onclick="upsSetTab('badges')">Badges</button>
-          <button class="ups-tab"     data-tab="history"   onclick="upsSetTab('history')">Histórico</button>
           <button class="ups-tab"     data-tab="stats"     onclick="upsSetTab('stats')">Estatísticas</button>
           <button class="ups-tab"     data-tab="settings"  onclick="upsSetTab('settings')">Conta</button>
         </div>
@@ -455,13 +479,6 @@ export function showUserProfile() {
         <div class="ups-tab-panel" id="upsTabBadges">
           <div class="ups-badges-grid" id="upsBadgesGrid">
             <div class="badges-empty">Carregando…</div>
-          </div>
-        </div>
-
-        <!-- Aba: Histórico -->
-        <div class="ups-tab-panel" id="upsTabHistory" style="display:none">
-          <div class="ups-history-list" id="upsHistoryList">
-            <div class="ups-loading">Carregando…</div>
           </div>
         </div>
 
@@ -524,6 +541,7 @@ export function showUserProfile() {
 
   _loadUserStats(user);
   _loadPrivacyToggle(user);
+  _bindPhotoUpload(user);
 
   document.getElementById('upsCloseBtn').onclick   = closeUserProfile;
   document.getElementById('upsSignOutBtn').onclick = async () => { closeUserProfile(); await signOutUser(); };
@@ -532,10 +550,9 @@ export function showUserProfile() {
   window.upsSetTab = (tab) => {
     document.querySelectorAll('.ups-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
     document.querySelectorAll('.ups-tab-panel').forEach(p => p.style.display = 'none');
-    const panels = { badges:'upsTabBadges', history:'upsTabHistory', stats:'upsTabStats', settings:'upsTabSettings' };
+    const panels = { badges:'upsTabBadges', stats:'upsTabStats', settings:'upsTabSettings' };
     const panel  = document.getElementById(panels[tab]);
     if (panel) panel.style.display = 'block';
-    if (tab === 'history') _loadHistory(user);
     if (tab === 'stats')   _loadStats(user);
   };
 
@@ -595,50 +612,100 @@ export function showUserProfile() {
   }
 }
 
+// Cada peça carrega de forma independente: se uma falhar (regra/rede),
+// as outras — e as badges — continuam aparecendo. Antes, um único erro
+// derrubava tudo e a aba Badges ficava presa em "Carregando…".
 async function _loadUserStats(user) {
-  const el = id => document.getElementById(id);
-  if (el('upsStatVisited'))  el('upsStatVisited').textContent  = '…';
-  if (el('upsStatSaved'))    el('upsStatSaved').textContent    = '…';
-  if (el('upsStatComments')) el('upsStatComments').textContent = '…';
+  const el  = id => document.getElementById(id);
+  const set = (id, v) => { if (el(id)) el(id).textContent = v; };
+  set('upsStatVisited', '…'); set('upsStatSaved', '…'); set('upsStatRatings', '…');
 
-  try {
-    const [visitedSnap, savedSnap, totalXp] = await Promise.all([
-      getDocs(collection(db, 'been_there', user.uid, 'places')),
-      getDocs(collection(db, 'favorites',  user.uid, 'places')),
-      loadUserXp(user.uid),
-    ]);
+  const countCol = async (path) => {
+    try { return (await getDocs(collection(db, ...path))).size; }
+    catch (e) { console.warn('countCol', path, e); return null; }
+  };
+  const fmt = n => (n == null ? '—' : n);
 
-    if (el('upsStatVisited')) el('upsStatVisited').textContent = visitedSnap.size;
-    if (el('upsStatSaved'))   el('upsStatSaved').textContent   = savedSnap.size;
+  // Visitados / Salvos / Avaliações — em paralelo, sem um derrubar o outro
+  countCol(['been_there', user.uid, 'places']).then(n => set('upsStatVisited', fmt(n)));
+  countCol(['favorites',  user.uid, 'places']).then(n => set('upsStatSaved',   fmt(n)));
+  (window.countUserRatings ? window.countUserRatings(user.uid) : Promise.resolve(null))
+    .then(n => set('upsStatRatings', fmt(n)));
+
+  // Nível (XP)
+  loadUserXp(user.uid).then(_renderLevel).catch(e => console.warn('xp:', e));
+
+  // Badges — sempre renderiza, independente do resto
+  loadUserBadges(user.uid)
+    .then(earned => renderBadges(earned, el('upsBadgesGrid')))
+    .catch(e => {
+      console.warn('badges:', e);
+      renderBadges([], el('upsBadgesGrid'));
+    });
+
+  window.addEventListener('badgeUnlocked', async () => {
+    renderBadges(await loadUserBadges(user.uid), el('upsBadgesGrid'));
+  });
+  window.addEventListener('xpAwarded', async () => {
+    _renderLevel(await loadUserXp(user.uid));
+  });
+}
+
+// ── Upload de foto de perfil ───────────────────────────────────────
+// Redimensiona pra 256px e guarda como data URL no Firestore
+// (user_profiles/{uid}.photoDataUrl). Sem Firebase Storage.
+function _bindPhotoUpload(user) {
+  const btn   = document.getElementById('upsAvatarBtn');
+  const input = document.getElementById('upsPhotoInput');
+  if (!btn || !input) return;
+
+  btn.onclick = () => input.click();
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { window.showToast?.('Selecione uma imagem.', 'error'); return; }
 
     try {
-      const { collectionGroup, where } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-      const commSnap = await getDocs(query(collectionGroup(db, 'items'), where('userId', '==', user.uid)));
-      if (el('upsStatComments')) el('upsStatComments').textContent = commSnap.size;
-    } catch {
-      if (el('upsStatComments')) el('upsStatComments').textContent = '—';
+      const dataUrl = await _resizeImage(file, 256);
+      // Atualiza a UI na hora
+      const media = document.getElementById('upsAvatarMedia');
+      if (media) media.innerHTML = `<img class="ups-avatar-img" src="${dataUrl}" alt="">`;
+      window._customPhoto = dataUrl;
+      updateAvatarUI(user);
+      // Persiste
+      await setDoc(doc(db, 'user_profiles', user.uid), { photoDataUrl: dataUrl }, { merge: true });
+      window.showToast?.('Foto atualizada!', 'success');
+    } catch (e) {
+      console.warn('_bindPhotoUpload:', e);
+      window.showToast?.('Não consegui salvar a foto.', 'error');
     }
+  };
+}
 
-    _renderLevel(totalXp);
-
-    const earnedBadges = await loadUserBadges(user.uid);
-    renderBadges(earnedBadges, document.getElementById('upsBadgesGrid'));
-
-    window.addEventListener('badgeUnlocked', async () => {
-      const updated = await loadUserBadges(user.uid);
-      renderBadges(updated, document.getElementById('upsBadgesGrid'));
-    });
-    window.addEventListener('xpAwarded', async () => {
-      const updated = await loadUserXp(user.uid);
-      _renderLevel(updated);
-    });
-
-  } catch (e) {
-    console.warn('_loadUserStats:', e);
-    ['upsStatVisited','upsStatSaved','upsStatComments'].forEach(id => {
-      if (el(id)) el(id).textContent = '—';
-    });
-  }
+// Lê a imagem, corta no centro (quadrado) e reduz pra `size`px → JPEG data URL.
+function _resizeImage(file, size) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        // corte quadrado central (cover)
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width  - s) / 2;
+        const sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 // ── Privacy toggle ─────────────────────────────────────────────────
@@ -668,48 +735,6 @@ function _setPrivacyUI(isPublic) {
   if (icon) icon.innerHTML = isPublic ? ic('globe', 13) : ic('lock', 13);
   if (lbl)  lbl.textContent  = isPublic ? 'Público' : 'Privado';
   if (wrap) wrap.classList.toggle('privacy-public', isPublic);
-}
-
-// ── History tab ────────────────────────────────────────────────────
-async function _loadHistory(user) {
-  const list = document.getElementById('upsHistoryList');
-  if (!list || list.dataset.loaded) return;
-  list.dataset.loaded = '1';
-  list.innerHTML = '<div class="ups-loading">Carregando…</div>';
-
-  try {
-    const snap    = await getDocs(collection(db, 'been_there', user.uid, 'places'));
-    const places  = snap.docs.map(d => d.data()).sort((a,b) =>
-      new Date(b.visitedAt) - new Date(a.visitedAt)
-    );
-
-    if (!places.length) {
-      list.innerHTML = '<div class="ups-empty-tab">Nenhum lugar visitado ainda.<br>Use o botão "Já fui" nos cards!</div>';
-      return;
-    }
-
-    list.innerHTML = '';
-    places.forEach(p => {
-      const date = p.visitedAt ? new Date(p.visitedAt).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' }) : '';
-      const row  = document.createElement('div');
-      row.className = 'ups-history-row';
-      row.innerHTML = `
-        <div class="ups-history-thumb bg-${p.bg||'1'}">${window.catIcon ? window.catIcon(p.c, 20, 1.7) : ''}</div>
-        <div class="ups-history-info">
-          <div class="ups-history-name">${p.n||'Lugar'}</div>
-          <div class="ups-history-meta">${p.c||''} · ${p.b||''}</div>
-          <div class="ups-history-date">${date}</div>
-        </div>`;
-      if (Array.isArray(p.photos) && p.photos.length) {
-        row.querySelector('.ups-history-thumb').style.cssText =
-          `background-image:url("${p.photos[0]}");background-size:cover;`;
-      }
-      list.appendChild(row);
-    });
-  } catch(e) {
-    list.innerHTML = '<div class="ups-empty-tab">Erro ao carregar histórico.</div>';
-    console.warn('_loadHistory:', e);
-  }
 }
 
 // ── Stats tab ──────────────────────────────────────────────────────

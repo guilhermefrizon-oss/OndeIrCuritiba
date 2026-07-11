@@ -161,13 +161,10 @@ export async function loadUserBadges(uid) {
 export function renderBadges(earnedIds, container) {
   if (!container) return;
   container.innerHTML = '';
+  earnedIds = Array.isArray(earnedIds) ? earnedIds : [];
 
-  if (!earnedIds.length) {
-    container.innerHTML = `<div class="badges-empty">Nenhuma badge ainda.<br>Explore Curitiba para conquistar!</div>`;
-    return;
-  }
-
-  // Badges conquistadas primeiro, depois as bloqueadas
+  // Sempre mostra todas: conquistadas primeiro, depois as bloqueadas
+  // ("a conquistar") — mesmo quem ainda não tem nenhuma vê o que dá pra ganhar.
   const earned  = BADGES.filter(b =>  earnedIds.includes(b.id));
   const locked  = BADGES.filter(b => !earnedIds.includes(b.id));
 

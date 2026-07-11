@@ -19,6 +19,14 @@ export async function submitRating(placeId, stars) {
       { stars, userId: user.uid, updatedAt: Date.now() }
     );
 
+    // Espelho por usuário: permite contar quantas avaliações a pessoa fez
+    // (perfil) sem precisar de índice de collectionGroup.
+    setDoc(
+      doc(db, 'ratings_by_user', user.uid, 'places', placeId),
+      { stars, ratedAt: Date.now() },
+      { merge: true }
+    ).catch(() => {});
+
     const snap  = await getDocs(collection(db, 'ratings', placeId, 'votes'));
     const votes = snap.docs.map(d => d.data().stars);
     const avg   = votes.reduce((s, v) => s + v, 0) / votes.length;
@@ -98,4 +106,16 @@ function renderStarsDisplay(avg) {
   }).join('');
 }
 
+// ── Conta quantas avaliações o usuário fez (perfil) ────────────────
+export async function countUserRatings(uid) {
+  try {
+    const snap = await getDocs(collection(db, 'ratings_by_user', uid, 'places'));
+    return snap.size;
+  } catch (e) {
+    console.warn('countUserRatings:', e);
+    return null;
+  }
+}
+
 window.renderRatingBlock = renderRatingBlock;
+window.countUserRatings  = countUserRatings;
