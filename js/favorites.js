@@ -253,8 +253,20 @@ async function geocodeAddress(address) {
 
 // ── Map style (auto dark/light from theme) ─────────────────────────
 function getMapStyle() {
+  // "Limpa" o mapa: esconde os pontos de interesse do próprio Google
+  // (estabelecimentos, museus, estádios, shoppings, hospitais…) e o
+  // transporte público. Mantém ruas, nomes de bairro e o verde dos
+  // parques — sobra só o mapa base + os nossos marcadores.
+  const clean = [
+    { featureType: 'poi',      elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit',  elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit',  elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+    { featureType: 'road',     elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  ];
+
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  if (!isDark) return [];
+  if (!isDark) return clean;
+
   return [
     { elementType: 'geometry', stylers: [{ color: '#1a1625' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1625' }] },
@@ -263,7 +275,7 @@ function getMapStyle() {
     { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9490a8' }] },
     { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#100d1a' }] },
     { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#181324' }] },
-    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    ...clean,
   ];
 }
 
