@@ -918,6 +918,29 @@ pre {
   .modal-footer { flex-wrap: wrap; }
   .modal-footer .btn { flex: 1; justify-content: center; }
 }
+
+/* ── Métricas ── */
+.metric-pill {
+  display: inline-block; min-width: 30px; text-align: center;
+  padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 13px;
+  background: var(--acc-glow); color: var(--acc);
+}
+.metric-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 22px; }
+.metric-box {
+  background: var(--bg3); border: 1.5px solid var(--border); border-radius: 14px;
+  padding: 14px 12px; text-align: center;
+}
+.metric-box .n { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+.metric-box .l { font-size: 11.5px; color: var(--text3); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.metric-chart { display: flex; align-items: flex-end; gap: 4px; height: 110px; padding: 6px 2px 0; }
+.metric-chart .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.metric-chart .bar {
+  width: 100%; max-width: 22px; background: var(--acc); border-radius: 4px 4px 0 0;
+  min-height: 2px; transition: height .2s;
+}
+.metric-chart .bar.zero { background: var(--border); }
+.metric-chart .bar-day { font-size: 9px; color: var(--text3); white-space: nowrap; }
+.metric-chart .bar-val { font-size: 10px; font-weight: 700; color: var(--text2); }
 </style>
 </head>
 <body>
@@ -961,6 +984,10 @@ pre {
     <button class="nav-item" onclick="showPage('categories')" id="nav-categories">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Categorias
+    </button>
+    <button class="nav-item" onclick="showPage('metrics')" id="nav-metrics">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Métricas
     </button>
     <button class="nav-item" onclick="showPage('rules')" id="nav-rules">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -1074,6 +1101,54 @@ pre {
       </div>
     </div>
 
+    <!-- ── Metrics Page ── -->
+    <div id="page-metrics" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Métricas</div>
+          <div class="page-subtitle" id="metricsSubtitle">Engajamento por lugar — likes, salvamentos e “já fui”.</div>
+        </div>
+        <button class="btn btn-primary" onclick="loadAllMetricCounts()" id="btnLoadCounts">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          Carregar salvos e já-fui
+        </button>
+      </div>
+
+      <div class="alert-box info" style="max-width:780px">
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        <div>Os <strong>likes</strong> têm histórico completo. <strong>Salvamentos</strong> e <strong>“já fui”</strong> passam a ser contados a partir da publicação desta versão. Se as colunas vierem zeradas, confira se você publicou as <a onclick="showPage('rules')" style="color:var(--acc3); cursor:pointer; text-decoration:underline">regras atualizadas</a> no Firebase.</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="metricsSearch" placeholder="Buscar lugar…" oninput="renderMetricsTable()">
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-loading" id="metricsLoading">
+          <div class="spinner"></div>
+          Carregando lugares…
+        </div>
+        <div id="metricsContent" style="display:none">
+          <table>
+            <thead>
+              <tr>
+                <th>Lugar</th>
+                <th>Likes</th>
+                <th>Likes 7d</th>
+                <th>Salvos</th>
+                <th>Já fui</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="metricsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Rules Page ── -->
     <div id="page-rules" style="display:none">
       <div class="page-header">
@@ -1159,6 +1234,18 @@ service cloud.firestore {
 
     // Curtidas: registro pertence ao seu dono
     match /likes/{placeId}/users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Salvos (espelho público por lugar) — métricas do admin
+    match /saves/{placeId}/users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Já fui (espelho público por lugar) — métricas do admin
+    match /visits/{placeId}/users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
@@ -1283,6 +1370,19 @@ service cloud.firestore {
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         Salvar
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Detalhe de métricas por lugar ══════════════════════ -->
+<div class="modal-backdrop" id="metricModalBackdrop" onclick="if(event.target===this)closeMetricDetail()">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <div class="modal-title" id="metricModalTitle">Métricas do lugar</div>
+      <button class="modal-close" onclick="closeMetricDetail()">✕</button>
+    </div>
+    <div class="modal-body" id="metricModalBody">
+      <div class="table-loading"><div class="spinner"></div>Carregando…</div>
     </div>
   </div>
 </div>
@@ -2352,12 +2452,173 @@ window.confirmDelete = async () => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','categories','rules'].forEach(p => {
+  ['places','categories','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
   if (page === 'rules') loadAdmins();
+  if (page === 'metrics') loadMetrics();
   closeSidebar(); // fecha a gaveta no mobile após navegar
+};
+
+// ── Métricas de engajamento ─────────────────────────────────────
+// Reaproveita `allPlaces` (já carregado pela aba Lugares). Likes já têm
+// espelho público por lugar (likes/{id}/users); salvamentos e "já fui"
+// ganharam espelho novo (saves/{id}/users, visits/{id}/users) no store.js.
+let metricCounts = {};   // placeId -> { likes7d, saves, visits }
+let metricsLoaded = false;
+
+const pidOf = (p) => p.id || p._docId;
+const escM  = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
+
+// Lê os docs de likes/{id}/users, saves/…, visits/… (cada um {…At: ISO}).
+// Retorna [] em coleção vazia e null em erro (ex.: regra não publicada).
+async function subcolDocs(col, placeId) {
+  try {
+    const snap = await getDocs(collection(db, col, placeId, 'users'));
+    return snap.docs.map(d => d.data());
+  } catch (e) { console.warn('métricas', col, placeId, e.message); return null; }
+}
+
+// Executa `fn` sobre `items` com no máx. `limit` em paralelo (não estoura
+// o Firestore com centenas de leituras simultâneas).
+async function mapLimit(items, limit, fn) {
+  let i = 0;
+  const run = async () => { while (i < items.length) { const idx = i++; await fn(items[idx], idx); } };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+}
+
+function loadMetrics() {
+  const loading = document.getElementById('metricsLoading');
+  const content = document.getElementById('metricsContent');
+  if (!allPlaces.length) {           // aba Lugares ainda carregando
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    setTimeout(() => { if (document.getElementById('page-metrics').style.display !== 'none') loadMetrics(); }, 500);
+    return;
+  }
+  loading.style.display = 'none';
+  content.style.display = 'block';
+  renderMetricsTable();
+}
+
+window.renderMetricsTable = () => {
+  const q = (document.getElementById('metricsSearch').value || '').toLowerCase().trim();
+  const rows = allPlaces
+    .filter(p => !q || (p.n || '').toLowerCase().includes(q) || (p.b || '').toLowerCase().includes(q))
+    .map(p => ({ p, likes: p._likes || 0, m: metricCounts[pidOf(p)] }))
+    .sort((a, b) => b.likes - a.likes);
+
+  const dash = '<span style="color:var(--text3)">–</span>';
+  document.getElementById('metricsTableBody').innerHTML = rows.map(({ p, likes, m }) => `
+    <tr>
+      <td><strong>${escM(p.n) || '—'}</strong><div style="color:var(--text3);font-size:12px">${escM(p.b)}</div></td>
+      <td><span class="metric-pill">${likes}</span></td>
+      <td>${m ? m.likes7d : dash}</td>
+      <td>${m ? m.saves  : dash}</td>
+      <td>${m ? m.visits : dash}</td>
+      <td><button class="btn" style="padding:6px 12px;font-size:12px" onclick="openMetricDetail('${escM(pidOf(p))}')">Ver</button></td>
+    </tr>`).join('');
+
+  document.getElementById('metricsSubtitle').textContent = metricsLoaded
+    ? 'Ordenado por likes. Colunas de salvos e “já fui” carregadas.'
+    : 'Ordenado por likes. Clique em “Carregar salvos e já-fui” para preencher as colunas.';
+};
+
+// Preenche as colunas Likes-7d / Salvos / Já-fui de TODOS os lugares.
+// É opt-in (um clique) porque faz 3 leituras por lugar — não roda sozinho.
+window.loadAllMetricCounts = async () => {
+  const btn = document.getElementById('btnLoadCounts');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  const since = Date.now() - 7 * 86400000;
+  let done = 0, permErr = false;
+
+  await mapLimit(allPlaces, 6, async (p) => {
+    const pid = pidOf(p);
+    const [likes, saves, visits] = await Promise.all([
+      subcolDocs('likes', pid), subcolDocs('saves', pid), subcolDocs('visits', pid),
+    ]);
+    if (likes === null || saves === null || visits === null) permErr = true;
+    metricCounts[pid] = {
+      likes7d: (likes || []).filter(d => new Date(d.likedAt || 0).getTime() >= since).length,
+      saves:   (saves  || []).length,
+      visits:  (visits || []).length,
+    };
+    done++;
+    btn.innerHTML = `Carregando… ${done}/${allPlaces.length}`;
+    if (done % 5 === 0) renderMetricsTable();
+  });
+
+  metricsLoaded = true;
+  btn.innerHTML = orig;
+  btn.disabled = false;
+  renderMetricsTable();
+  if (permErr) showToast('Algumas métricas falharam. Publique as regras atualizadas (aba Regras) no Firebase.', 'error');
+};
+
+// Detalhe de um lugar: likes por dia (14 dias), likes 7d, salvos, já-fui.
+window.openMetricDetail = async (placeId) => {
+  const place = allPlaces.find(p => pidOf(p) === placeId);
+  document.getElementById('metricModalTitle').textContent = place ? (place.n || 'Métricas do lugar') : 'Métricas do lugar';
+  const body = document.getElementById('metricModalBody');
+  body.innerHTML = '<div class="table-loading"><div class="spinner"></div>Carregando…</div>';
+  document.getElementById('metricModalBackdrop').classList.add('open');
+
+  const [likes, saves, visits] = await Promise.all([
+    subcolDocs('likes', placeId), subcolDocs('saves', placeId), subcolDocs('visits', placeId),
+  ]);
+
+  if (likes === null && saves === null && visits === null) {
+    body.innerHTML = `<div class="alert-box" style="color:var(--yellow)"><div>Não foi possível ler as métricas. Confira se você publicou as <a onclick="closeMetricDetail();showPage('rules')" style="color:var(--acc3);cursor:pointer;text-decoration:underline">regras atualizadas</a> no Firebase.</div></div>`;
+    return;
+  }
+
+  const likeArr = likes || [];
+  const since7 = Date.now() - 7 * 86400000;
+  const likes7d = likeArr.filter(d => new Date(d.likedAt || 0).getTime() >= since7).length;
+
+  // guarda no cache pra refletir na tabela sem recarregar tudo
+  metricCounts[placeId] = { likes7d, saves: (saves || []).length, visits: (visits || []).length };
+
+  // Barras: últimos 14 dias
+  const DAYS = 14;
+  const buckets = {};
+  for (let i = DAYS - 1; i >= 0; i--) buckets[dayKey(Date.now() - i * 86400000)] = 0;
+  likeArr.forEach(d => { const k = dayKey(d.likedAt || Date.now()); if (k in buckets) buckets[k]++; });
+  const keys = Object.keys(buckets);
+  const max = Math.max(1, ...keys.map(k => buckets[k]));
+  const bars = keys.map(k => {
+    const v = buckets[k];
+    const h = Math.round((v / max) * 92);
+    const dd = k.slice(8, 10), mm = k.slice(5, 7);
+    return `<div class="bar-col" title="${k}: ${v} like(s)">
+      <div class="bar-val">${v || ''}</div>
+      <div class="bar ${v ? '' : 'zero'}" style="height:${v ? Math.max(h, 3) : 2}px"></div>
+      <div class="bar-day">${dd}/${mm}</div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div class="metric-stats">
+      <div class="metric-box"><div class="n">${likeArr.length}</div><div class="l">Likes total</div></div>
+      <div class="metric-box"><div class="n">${likes7d}</div><div class="l">Likes 7 dias</div></div>
+      <div class="metric-box"><div class="n">${(saves || []).length}</div><div class="l">Salvos</div></div>
+    </div>
+    <div class="metric-stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="metric-box"><div class="n">${(visits || []).length}</div><div class="l">Já fui</div></div>
+      <div class="metric-box"><div class="n">${place ? (place._likes || 0) : likeArr.length}</div><div class="l">Contador do card</div></div>
+    </div>
+    <div style="font-size:12.5px;color:var(--text3);margin:4px 0 6px;font-weight:600">Likes por dia — últimos ${DAYS} dias</div>
+    <div class="metric-chart">${bars}</div>`;
+
+  renderMetricsTable();
+};
+
+window.closeMetricDetail = () => {
+  document.getElementById('metricModalBackdrop').classList.remove('open');
 };
 
 // ── Gestão de admins ────────────────────────────────────────────

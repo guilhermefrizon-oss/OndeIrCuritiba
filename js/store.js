@@ -77,11 +77,20 @@ async function _loadWithRestFallback(name, sdkPromise) {
 export const fsSave = async (place) => {
   try { await setDoc(doc(db, 'favorites', getUid(), 'places', place.id), place); }
   catch (e) { console.warn('fsSave:', e); }
+  // Espelho público por lugar → métricas do admin ("quantos salvaram").
+  // Só usuários logados: a regra exige auth e uid == dono (anônimos não
+  // persistem favoritos mesmo). Falha silenciosa pra não travar o salvar.
+  const u = window.currentUser;
+  if (u) setDoc(doc(db, 'saves', place.id, 'users', u.uid),
+                { savedAt: new Date().toISOString() })
+           .catch(e => console.warn('fsSave espelho:', e));
 };
 
 export const fsRemove = async (placeId) => {
   try { await deleteDoc(doc(db, 'favorites', getUid(), 'places', placeId)); }
   catch (e) { console.warn('fsRemove:', e); }
+  const u = window.currentUser;
+  if (u) deleteDoc(doc(db, 'saves', placeId, 'users', u.uid)).catch(() => {});
 };
 
 export const fsLoadAll = async () => {
@@ -166,12 +175,19 @@ export const fsBeenThere = async (place) => {
       ...place, visitedAt: new Date().toISOString()
     });
   } catch (e) { console.warn('fsBeenThere:', e); }
+  // Espelho público por lugar → métricas do admin ("quantos já foram").
+  const u = window.currentUser;
+  if (u) setDoc(doc(db, 'visits', place.id, 'users', u.uid),
+                { visitedAt: new Date().toISOString() })
+           .catch(e => console.warn('fsBeenThere espelho:', e));
 };
 
 export const fsRemoveBeenThere = async (placeId) => {
   const uid = getUid();
   try { await deleteDoc(doc(db, 'been_there', uid, 'places', placeId)); }
   catch (e) { console.warn('fsRemoveBeenThere:', e); }
+  const u = window.currentUser;
+  if (u) deleteDoc(doc(db, 'visits', placeId, 'users', u.uid)).catch(() => {});
 };
 
 export const fsLoadBeenThere = async () => {
@@ -273,14 +289,18 @@ export const fsDeleteAllUserData = async (uid) => {
   if (!uid) return;
   // 1) Coleta os lugares avaliados/curtidos ANTES de apagar, para remover
   //    também os espelhos públicos (voto e curtida em cada lugar).
-  let ratedPlaceIds = [], likedPlaceIds = [];
-  try { ratedPlaceIds = (await getDocs(collection(db, 'ratings_by_user', uid, 'places'))).docs.map(d => d.id); } catch {}
-  try { likedPlaceIds = (await getDocs(collection(db, 'likes_by_user',  uid, 'places'))).docs.map(d => d.id); } catch {}
+  let ratedPlaceIds = [], likedPlaceIds = [], savedPlaceIds = [], visitedPlaceIds = [];
+  try { ratedPlaceIds   = (await getDocs(collection(db, 'ratings_by_user', uid, 'places'))).docs.map(d => d.id); } catch {}
+  try { likedPlaceIds   = (await getDocs(collection(db, 'likes_by_user',  uid, 'places'))).docs.map(d => d.id); } catch {}
+  try { savedPlaceIds   = (await getDocs(collection(db, 'favorites',       uid, 'places'))).docs.map(d => d.id); } catch {}
+  try { visitedPlaceIds = (await getDocs(collection(db, 'been_there',      uid, 'places'))).docs.map(d => d.id); } catch {}
 
-  // 2) Apaga os espelhos públicos (voto/curtida por lugar).
+  // 2) Apaga os espelhos públicos (voto/curtida/salvo/visita por lugar).
   await Promise.all([
-    ...ratedPlaceIds.map(pid => deleteDoc(doc(db, 'ratings', pid, 'votes', uid)).catch(() => {})),
-    ...likedPlaceIds.map(pid => deleteDoc(doc(db, 'likes',   pid, 'users', uid)).catch(() => {})),
+    ...ratedPlaceIds.map(pid   => deleteDoc(doc(db, 'ratings', pid, 'votes', uid)).catch(() => {})),
+    ...likedPlaceIds.map(pid   => deleteDoc(doc(db, 'likes',   pid, 'users', uid)).catch(() => {})),
+    ...savedPlaceIds.map(pid   => deleteDoc(doc(db, 'saves',   pid, 'users', uid)).catch(() => {})),
+    ...visitedPlaceIds.map(pid => deleteDoc(doc(db, 'visits',  pid, 'users', uid)).catch(() => {})),
   ]);
 
   // 3) Apaga todas as coleções pessoais.
