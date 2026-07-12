@@ -941,6 +941,9 @@ pre {
 .metric-chart .bar.zero { background: var(--border); }
 .metric-chart .bar-day { font-size: 9px; color: var(--text3); white-space: nowrap; }
 .metric-chart .bar-val { font-size: 10px; font-weight: 700; color: var(--text2); }
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { color: var(--acc3); }
+.sort-ind { display: inline-block; width: 10px; font-size: 11px; opacity: .9; }
 </style>
 </head>
 <body>
@@ -1124,6 +1127,9 @@ pre {
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input class="search-input" id="metricsSearch" placeholder="Buscar lugar…" oninput="renderMetricsTable()">
         </div>
+        <select class="filter-select" id="metricsCatFilter" onchange="renderMetricsTable()">
+          <option value="">Todas as categorias</option>
+        </select>
       </div>
 
       <div class="table-wrap">
@@ -1135,11 +1141,11 @@ pre {
           <table>
             <thead>
               <tr>
-                <th>Lugar</th>
-                <th>Likes</th>
-                <th>Likes 7d</th>
-                <th>Salvos</th>
-                <th>Já fui</th>
+                <th class="sortable" onclick="sortMetrics('name')">Lugar <span class="sort-ind" data-key="name"></span></th>
+                <th class="sortable" onclick="sortMetrics('likes')">Likes <span class="sort-ind" data-key="likes"></span></th>
+                <th class="sortable" onclick="sortMetrics('likes7d')">Likes 7d <span class="sort-ind" data-key="likes7d"></span></th>
+                <th class="sortable" onclick="sortMetrics('saves')">Salvos <span class="sort-ind" data-key="saves"></span></th>
+                <th class="sortable" onclick="sortMetrics('visits')">Já fui <span class="sort-ind" data-key="visits"></span></th>
                 <th></th>
               </tr>
             </thead>
@@ -2467,8 +2473,10 @@ window.showPage = (page) => {
 // ganharam espelho novo (saves/{id}/users, visits/{id}/users) no store.js.
 let metricCounts = {};   // placeId -> { likes7d, saves, visits }
 let metricsLoaded = false;
+let metricsSort = { key: 'likes', dir: 'desc' };  // ordenação atual da tabela
 
-const pidOf = (p) => p.id || p._docId;
+const pidOf  = (p) => p.id || p._docId;
+const catsOf = (p) => Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
 const escM  = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
   ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
@@ -2501,19 +2509,62 @@ function loadMetrics() {
   }
   loading.style.display = 'none';
   content.style.display = 'block';
+  populateMetricsCatFilter();
   renderMetricsTable();                       // mostra likes na hora
   if (!metricsLoaded) loadAllMetricCounts();  // preenche salvos/já-fui/7d sozinho
 }
 
+function populateMetricsCatFilter() {
+  const sel = document.getElementById('metricsCatFilter');
+  const current = sel.value;
+  const cats = [...new Set(allPlaces.flatMap(catsOf))].sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">Todas as categorias</option>' +
+    cats.map(c => `<option value="${escM(c)}">${escM(c)}</option>`).join('');
+  sel.value = current;  // preserva seleção ao repopular
+}
+
+// Clicar num cabeçalho ordena por aquela coluna. Reclicar inverte a ordem.
+window.sortMetrics = (key) => {
+  if (metricsSort.key === key) {
+    metricsSort.dir = metricsSort.dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    // Nome começa A→Z; métricas começam do maior pro menor.
+    metricsSort = { key, dir: key === 'name' ? 'asc' : 'desc' };
+  }
+  renderMetricsTable();
+};
+
+// Valor da coluna para ordenar. Métricas ainda não carregadas contam como -1
+// (vão pro fim), pra não se misturarem com os zeros já confirmados.
+function metricVal(p, key) {
+  if (key === 'name')  return (p.n || '').toLowerCase();
+  if (key === 'likes') return p._likes || 0;
+  const m = metricCounts[pidOf(p)];
+  if (!m) return -1;
+  return m[key] || 0;
+}
+
 window.renderMetricsTable = () => {
-  const q = (document.getElementById('metricsSearch').value || '').toLowerCase().trim();
+  const q   = (document.getElementById('metricsSearch').value || '').toLowerCase().trim();
+  const cat = document.getElementById('metricsCatFilter').value;
+  const { key, dir } = metricsSort;
+  const mult = dir === 'asc' ? 1 : -1;
+
   const rows = allPlaces
     .filter(p => !q || (p.n || '').toLowerCase().includes(q) || (p.b || '').toLowerCase().includes(q))
-    .map(p => ({ p, likes: p._likes || 0, m: metricCounts[pidOf(p)] }))
-    .sort((a, b) => b.likes - a.likes);
+    .filter(p => !cat || catsOf(p).includes(cat))
+    .sort((a, b) => {
+      const va = metricVal(a, key), vb = metricVal(b, key);
+      if (va < vb) return -1 * mult;
+      if (va > vb) return  1 * mult;
+      return (a.n || '').localeCompare(b.n || '');  // desempate estável por nome
+    });
 
   const dash = '<span style="color:var(--text3)">–</span>';
-  document.getElementById('metricsTableBody').innerHTML = rows.map(({ p, likes, m }) => `
+  document.getElementById('metricsTableBody').innerHTML = rows.map(p => {
+    const likes = p._likes || 0;
+    const m = metricCounts[pidOf(p)];
+    return `
     <tr>
       <td><strong>${escM(p.n) || '—'}</strong><div style="color:var(--text3);font-size:12px">${escM(p.b)}</div></td>
       <td><span class="metric-pill">${likes}</span></td>
@@ -2521,11 +2572,18 @@ window.renderMetricsTable = () => {
       <td>${m ? m.saves  : dash}</td>
       <td>${m ? m.visits : dash}</td>
       <td><button class="btn" style="padding:6px 12px;font-size:12px" onclick="openMetricDetail('${escM(pidOf(p))}')">Ver</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
+  // Seta na coluna ativa
+  document.querySelectorAll('.sort-ind').forEach(el => {
+    el.textContent = el.dataset.key === key ? (dir === 'asc' ? '▲' : '▼') : '';
+  });
+
+  const SORT_LABEL = { name: 'nome', likes: 'likes', likes7d: 'likes (7 dias)', saves: 'salvos', visits: 'já fui' };
   document.getElementById('metricsSubtitle').textContent = metricsLoaded
-    ? 'Ordenado por likes. Números atualizados ao vivo do banco.'
-    : 'Ordenado por likes. Carregando salvos e “já fui”…';
+    ? `Ordenado por ${SORT_LABEL[key]}. Números ao vivo do banco.`
+    : 'Carregando salvos e “já fui”…';
 };
 
 // Preenche as colunas Likes-7d / Salvos / Já-fui de TODOS os lugares.
