@@ -192,11 +192,17 @@ export const fsLoadBeenThere = async () => {
 // Fotos antigas foram salvas em baixa resolução (maxWidthPx=600/700).
 // Reescreve a URL do Google pra pedir sempre em alta (1600/1200), assim
 // os cards ficam nítidos mesmo sem re-salvar no admin.
+// Chave atual do Google. Fotos antigas foram salvas com uma chave que já
+// não vale mais — reescrevemos o key= da URL para a chave atual, senão a
+// imagem quebra no app até o lugar ser re-salvo. (URLs do Storage não têm
+// 'places.googleapis.com', então passam intactas.)
+const GOOGLE_API_KEY = 'AIzaSyDIiBLGHZ_zgo-wKaHNK7qa4O-C_EZJJuY';
 function upgradePhotoRes(url) {
   if (typeof url !== 'string' || !url.includes('places.googleapis.com')) return url;
   return url
     .replace(/maxHeightPx=\d+/, 'maxHeightPx=1600')
-    .replace(/maxWidthPx=\d+/,  'maxWidthPx=1200');
+    .replace(/maxWidthPx=\d+/,  'maxWidthPx=1200')
+    .replace(/([?&])key=[^&]*/, '$1key=' + GOOGLE_API_KEY);
 }
 function normalizePlacePhotos(p) {
   if (Array.isArray(p.photos)) p.photos = p.photos.map(upgradePhotoRes);
