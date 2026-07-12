@@ -1,5 +1,5 @@
 // ── photos.js ─────────────────────────────────────────────────────
-const GOOGLE_API_KEY = 'AIzaSyDiLhxU3veHWvx3fvA6kk6TluFFHYWHEzs';
+const GOOGLE_API_KEY = 'AIzaSyDIiBLGHZ_zgo-wKaHNK7qa4O-C_EZJJuY';
 const cache1 = {}; // single photo
 const cache2 = {}; // all photos
 
