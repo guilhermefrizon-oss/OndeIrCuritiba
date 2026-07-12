@@ -20,10 +20,20 @@ import {
   deleteUser,
   reauthenticateWithPopup,
   reauthenticateWithCredential,
-  EmailAuthProvider
+  EmailAuthProvider,
+  OAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const provider = new GoogleAuthProvider();
+
+// Sign in with Apple. Exigido pela Apple (diretriz 4.8) quando há login
+// social. Para funcionar, é preciso: (1) ter conta no Apple Developer
+// Program e criar um Services ID + chave; (2) habilitar o provedor "Apple"
+// no Firebase (Authentication → Sign-in method). Até lá, o botão fica atrás
+// da flag FEATURES.appleSignIn (desligada), então não aparece quebrado.
+const appleProvider = new OAuthProvider('apple.com');
+appleProvider.addScope('email');
+appleProvider.addScope('name');
 window.currentUser = null;
 
 // Foto de perfil enviada pela pessoa (guardada no Firestore como data URL).
@@ -130,6 +140,33 @@ export async function signInWithGoogle() {
   }
 }
 
+export async function signInWithApple() {
+  const errEl = document.getElementById('loginError');
+  if (errEl) errEl.style.display = 'none';
+  try {
+    await signInWithPopup(auth, appleProvider);
+    closeAuthModal();
+  } catch (e) {
+    console.warn('Login Apple falhou:', e.code, e.message);
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    // Mesmo e-mail já cadastrado por outro método (Google/senha).
+    if (e.code === 'auth/account-exists-with-different-credential') {
+      if (errEl) showErr(errEl, 'Este e-mail já tem conta por outro método. Entre com Google ou e-mail/senha.');
+      return;
+    }
+    // Popup indisponível → tenta redirect.
+    if (POPUP_UNSUPPORTED.includes(e.code)) {
+      try { await signInWithRedirect(auth, appleProvider); return; }
+      catch (e2) {
+        console.warn('Redirect Apple falhou:', e2.code, e2.message);
+        if (errEl) showErr(errEl, 'Não foi possível entrar com a Apple aqui. Use o e-mail e senha abaixo.');
+        return;
+      }
+    }
+    if (errEl) showErr(errEl, _friendlyError(e.code));
+  }
+}
+
 export async function signUpWithEmail(name, email, password) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   if (name) await updateProfile(cred.user, { displayName: name });
@@ -158,9 +195,13 @@ export async function signOutUser() {
 // explícita. Trata "requires-recent-login" reautenticando conforme o
 // tipo de conta (Google via popup, e-mail/senha via credencial).
 async function _reauth(user) {
-  const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
-  if (isGoogle) {
+  const providers = user.providerData.map(p => p.providerId);
+  if (providers.includes('google.com')) {
     await reauthenticateWithPopup(user, provider);
+    return;
+  }
+  if (providers.includes('apple.com')) {
+    await reauthenticateWithPopup(user, appleProvider);
     return;
   }
   const pwd = prompt('Para confirmar a exclusão, digite sua senha:');
@@ -251,6 +292,14 @@ export function showAuthModal(reason = 'default') {
           Continuar com Google
         </button>
 
+        ${window.FEATURES?.appleSignIn ? `
+        <button class="auth-apple-btn" id="authAppleBtn">
+          <svg width="18" height="18" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
+            <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+          </svg>
+          Continuar com a Apple
+        </button>` : ''}
+
         <div class="auth-divider"><span>ou</span></div>
 
         <div class="auth-field-wrap">
@@ -286,6 +335,14 @@ export function showAuthModal(reason = 'default') {
           </svg>
           Registrar com Google
         </button>
+
+        ${window.FEATURES?.appleSignIn ? `
+        <button class="auth-apple-btn" id="authAppleBtn2">
+          <svg width="18" height="18" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
+            <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+          </svg>
+          Registrar com a Apple
+        </button>` : ''}
 
         <div class="auth-divider"><span>ou</span></div>
 
@@ -338,6 +395,8 @@ export function showAuthModal(reason = 'default') {
 function _bindAuthModal() {
   document.getElementById('authGoogleBtn').onclick  = signInWithGoogle;
   document.getElementById('authGoogleBtn2')?.addEventListener('click', signInWithGoogle);
+  document.getElementById('authAppleBtn')?.addEventListener('click', signInWithApple);
+  document.getElementById('authAppleBtn2')?.addEventListener('click', signInWithApple);
   document.getElementById('goRegisterBtn').onclick  = () => switchAuthView('Register');
   document.getElementById('goLoginBtn').onclick     = () => switchAuthView('Login');
   document.getElementById('goForgotBtn').onclick    = () => switchAuthView('Forgot');
@@ -927,6 +986,7 @@ export function handleAvatarClick() {
 }
 
 window.signInWithGoogle  = signInWithGoogle;
+window.signInWithApple   = signInWithApple;
 window.signOutUser       = signOutUser;
 window.showAuthModal     = showAuthModal;
 window.closeAuthModal    = closeAuthModal;
