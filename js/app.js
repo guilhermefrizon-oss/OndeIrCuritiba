@@ -1360,6 +1360,7 @@ function renderMapView() {
 
   view.innerHTML = `
     <div class="map-legend">
+      <span><i style="background:#1a73e8"></i>Você</span>
       <span><i style="background:#ef4444"></i>Quero ir</span>
       <span><i style="background:#f59e0b"></i>Salvos</span>
       <span><i style="background:#14140F"></i>Demais</span>
