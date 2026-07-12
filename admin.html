@@ -1463,6 +1463,8 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, Timestamp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { ic, catIcon } from "./js/icons.js";
 
 const firebaseConfig = {
@@ -1476,6 +1478,7 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
+const storage = getStorage(app);
 
 // ── State ───────────────────────────────────────────────────────
 let allPlaces = [];
@@ -1683,17 +1686,42 @@ window.removePhoto = (idx, e) => {
   renderPhotoGrid();
 };
 
+// Baixa a foto do Google 1x e hospeda no Firebase Storage, devolvendo a URL
+// do NOSSO storage. Assim o app exibe os cards sem chamar (nem pagar) a API
+// do Google a cada visualização. URLs que já são do nosso Storage passam
+// direto (idempotente — re-salvar não re-baixa).
+async function hostPhoto(url, docId, index) {
+  // Já hospedada por nós (ou qualquer origem que não seja a API do Google) → mantém.
+  if (!url.includes('places.googleapis.com')) return url;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`download foto: ${res.status}`);
+  const blob = await res.blob();
+  const type = blob.type || 'image/jpeg';
+  const ext  = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+  const path = `places/${docId}/${index}_${Date.now()}.${ext}`;
+  const sref = storageRef(storage, path);
+  await uploadBytes(sref, blob, { contentType: type });
+  return await getDownloadURL(sref);
+}
+
 window.savePhotos = async () => {
   if (!photoPlaceDocId) return;
   const btn = document.getElementById('btnSavePhotos');
   btn.disabled = true; btn.textContent = 'Salvando…';
   try {
+    // Hospeda cada foto no nosso Storage (as que ainda são URLs do Google).
+    const hosted = [];
+    for (let i = 0; i < selectedPhotos.length; i++) {
+      btn.textContent = `Enviando foto ${i + 1}/${selectedPhotos.length}…`;
+      hosted.push(await hostPhoto(selectedPhotos[i], photoPlaceDocId, i));
+    }
+    // photosPos é paralelo a selectedPhotos; o foco é chaveado pela url original.
     const photosPos = selectedPhotos.map(u => selectedPos[u] || '50% 50%');
-    await setDoc(doc(db, 'places', photoPlaceDocId), { photos: selectedPhotos, photosPos, _updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, 'places', photoPlaceDocId), { photos: hosted, photosPos, _updatedAt: serverTimestamp() }, { merge: true });
     // Atualiza local
     const place = allPlaces.find(x => x._docId === photoPlaceDocId);
-    if (place) { place.photos = [...selectedPhotos]; place.photosPos = [...photosPos]; }
-    showToast(`${selectedPhotos.length} foto(s) salvas!`, 'success');
+    if (place) { place.photos = [...hosted]; place.photosPos = [...photosPos]; }
+    showToast(`${hosted.length} foto(s) salvas!`, 'success');
     closePhotoModal();
   } catch(e) {
     showToast('Erro ao salvar: ' + e.message, 'error');
