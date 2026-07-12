@@ -258,7 +258,46 @@ export const fsRemoveLike = async (placeId) => {
   } catch (e) { console.warn('fsRemoveLike:', e); }
 };
 
+// ── Exclusão de conta (LGPD / exigência das lojas) ─────────────────
+// Apaga TODOS os dados pessoais do usuário no Firestore. Cada bloco é
+// isolado (try/catch) pra que uma falha não impeça o resto — o objetivo é
+// remover o máximo possível de forma resiliente.
+async function _deleteAllDocsIn(...path) {
+  try {
+    const snap = await getDocs(collection(db, ...path));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref).catch(() => {})));
+  } catch (e) { console.warn('_deleteAllDocsIn', path.join('/'), e); }
+}
+
+export const fsDeleteAllUserData = async (uid) => {
+  if (!uid) return;
+  // 1) Coleta os lugares avaliados/curtidos ANTES de apagar, para remover
+  //    também os espelhos públicos (voto e curtida em cada lugar).
+  let ratedPlaceIds = [], likedPlaceIds = [];
+  try { ratedPlaceIds = (await getDocs(collection(db, 'ratings_by_user', uid, 'places'))).docs.map(d => d.id); } catch {}
+  try { likedPlaceIds = (await getDocs(collection(db, 'likes_by_user',  uid, 'places'))).docs.map(d => d.id); } catch {}
+
+  // 2) Apaga os espelhos públicos (voto/curtida por lugar).
+  await Promise.all([
+    ...ratedPlaceIds.map(pid => deleteDoc(doc(db, 'ratings', pid, 'votes', uid)).catch(() => {})),
+    ...likedPlaceIds.map(pid => deleteDoc(doc(db, 'likes',   pid, 'users', uid)).catch(() => {})),
+  ]);
+
+  // 3) Apaga todas as coleções pessoais.
+  await _deleteAllDocsIn('favorites',       uid, 'places');
+  await _deleteAllDocsIn('want_today',      uid, 'places');
+  await _deleteAllDocsIn('skipped',         uid, 'places');
+  await _deleteAllDocsIn('been_there',      uid, 'places');
+  await _deleteAllDocsIn('ratings_by_user', uid, 'places');
+  await _deleteAllDocsIn('likes_by_user',   uid, 'places');
+  await _deleteAllDocsIn('xp_events',       uid, 'events');
+
+  // 4) Apaga o perfil (foto, badges, XP, privacidade).
+  try { await deleteDoc(doc(db, 'user_profiles', uid)); } catch (e) { console.warn('delete user_profiles:', e); }
+};
+
 // Expose globally
+window.fsDeleteAllUserData = fsDeleteAllUserData;
 window.fsSave           = fsSave;
 window.fsRemove         = fsRemove;
 window.fsLoadAll        = fsLoadAll;

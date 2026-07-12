@@ -16,7 +16,11 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  deleteUser,
+  reauthenticateWithPopup,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const provider = new GoogleAuthProvider();
@@ -146,6 +150,67 @@ export async function resetPassword(email) {
 export async function signOutUser() {
   try { await signOut(auth); }
   catch (e) { console.warn('Logout falhou:', e); }
+}
+
+// ── Exclusão de conta (exigência de Apple/Google e da LGPD) ─────────
+// Apaga todos os dados do usuário no Firestore e remove a conta de
+// autenticação. Como é destrutivo e irreversível, pede confirmação
+// explícita. Trata "requires-recent-login" reautenticando conforme o
+// tipo de conta (Google via popup, e-mail/senha via credencial).
+async function _reauth(user) {
+  const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
+  if (isGoogle) {
+    await reauthenticateWithPopup(user, provider);
+    return;
+  }
+  const pwd = prompt('Para confirmar a exclusão, digite sua senha:');
+  if (!pwd) throw new Error('cancelado');
+  const cred = EmailAuthProvider.credential(user.email, pwd);
+  await reauthenticateWithCredential(user, cred);
+}
+
+export async function deleteAccount(user) {
+  user = user || auth.currentUser;
+  if (!user) return;
+
+  const ok = confirm(
+    'Excluir sua conta?\n\n' +
+    'Isso apaga PERMANENTEMENTE seu perfil, favoritos, lugares salvos, ' +
+    '"quero ir", visitados, avaliações e todo o seu histórico. ' +
+    'Esta ação não pode ser desfeita.'
+  );
+  if (!ok) return;
+
+  const doDelete = async () => {
+    // 1) Apaga os dados no Firestore (exposto por store.js).
+    if (window.fsDeleteAllUserData) await window.fsDeleteAllUserData(user.uid);
+    // 2) Remove a conta de autenticação.
+    await deleteUser(user);
+    // 3) Limpa o ID anônimo local e recarrega.
+    try { localStorage.removeItem('cwb_uid'); } catch {}
+  };
+
+  try {
+    await doDelete();
+  } catch (e) {
+    if (e && e.code === 'auth/requires-recent-login') {
+      // Sessão antiga → reautentica e tenta de novo.
+      try {
+        await _reauth(user);
+        await doDelete();
+      } catch (e2) {
+        if (e2 && e2.message === 'cancelado') return;
+        alert('Não foi possível excluir a conta: ' + (e2?.message || e2));
+        return;
+      }
+    } else {
+      alert('Não foi possível excluir a conta: ' + (e?.message || e));
+      return;
+    }
+  }
+
+  alert('Sua conta e todos os seus dados foram excluídos.');
+  location.reload();
 }
 
 // ── Auth Modal ─────────────────────────────────────────────────────
@@ -507,9 +572,19 @@ export function showUserProfile() {
               <span class="ups-action-label">Alterar senha</span>
               <span class="ups-action-chevron">›</span>
             </button>` : ''}
-            <button class="ups-action-row ups-action-danger" id="upsSignOutBtn">
+            <button class="ups-action-row" id="upsSignOutBtn">
               <span class="ups-action-icon">${ic('log-out', 16)}</span>
               <span class="ups-action-label">Sair da conta</span>
+              <span class="ups-action-chevron">›</span>
+            </button>
+            <a class="ups-action-row" href="privacidade.html" target="_blank" rel="noopener">
+              <span class="ups-action-icon">${ic('lock', 16)}</span>
+              <span class="ups-action-label">Política de privacidade</span>
+              <span class="ups-action-chevron">›</span>
+            </a>
+            <button class="ups-action-row ups-action-danger" id="upsDeleteAccountBtn">
+              <span class="ups-action-icon">${ic('trash', 16)}</span>
+              <span class="ups-action-label">Excluir conta</span>
               <span class="ups-action-chevron">›</span>
             </button>
           </div>
@@ -549,6 +624,7 @@ export function showUserProfile() {
 
   document.getElementById('upsCloseBtn').onclick   = closeUserProfile;
   document.getElementById('upsSignOutBtn').onclick = async () => { closeUserProfile(); await signOutUser(); };
+  document.getElementById('upsDeleteAccountBtn').onclick = () => deleteAccount(user);
 
   // Tab switcher
   window.upsSetTab = (tab) => {
