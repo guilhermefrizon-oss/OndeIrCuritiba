@@ -60,8 +60,16 @@ function effectivePhoto(user) {
 async function _loadCustomPhoto(user) {
   try {
     const snap = await getDoc(doc(db, 'user_profiles', user.uid));
-    const url  = snap.exists() ? snap.data().photoDataUrl : null;
-    if (url) { window._customPhoto = url; updateAvatarUI(user); }
+    const data = snap.exists() ? snap.data() : null;
+    if (data?.photoDataUrl) { window._customPhoto = data.photoDataUrl; updateAvatarUI(user); }
+    // Sincroniza os interesses (o baralho lê do localStorage) e, se a pessoa
+    // ainda não começou a navegar, re-personaliza o feed na hora.
+    const interests = Array.isArray(data?.interests) ? data.interests : [];
+    try {
+      const prev = localStorage.getItem('cwb_interests');
+      const next = JSON.stringify(interests);
+      if (prev !== next) { localStorage.setItem('cwb_interests', next); window._reshuffleDeck?.(); }
+    } catch {}
   } catch (e) { console.warn('_loadCustomPhoto:', e); }
 }
 
@@ -189,6 +197,8 @@ export async function resetPassword(email) {
 }
 
 export async function signOutUser() {
+  try { localStorage.removeItem('cwb_interests'); } catch {}
+  window._reshuffleDeck?.(true);
   try { await signOut(auth); }
   catch (e) { console.warn('Logout falhou:', e); }
 }
@@ -231,8 +241,8 @@ export async function deleteAccount(user) {
     if (window.fsDeleteAllUserData) await window.fsDeleteAllUserData(user.uid);
     // 2) Remove a conta de autenticação.
     await deleteUser(user);
-    // 3) Limpa o ID anônimo local e recarrega.
-    try { localStorage.removeItem('cwb_uid'); } catch {}
+    // 3) Limpa o ID anônimo e os interesses locais, e recarrega.
+    try { localStorage.removeItem('cwb_uid'); localStorage.removeItem('cwb_interests'); } catch {}
   };
 
   try {
@@ -617,6 +627,9 @@ export async function showProfileEditor(user, opts = {}) {
     try {
       await setDoc(doc(db, 'user_profiles', user.uid),
         { birthday, bairro, interests: [...selected] }, { merge: true });
+      // Guarda os interesses localmente e re-personaliza o baralho na hora.
+      try { localStorage.setItem('cwb_interests', JSON.stringify([...selected])); } catch {}
+      window._reshuffleDeck?.(true);
       close();
       // Se a tela de perfil estiver aberta, atualiza os dados exibidos.
       if (document.getElementById('userProfileScreen')?.querySelector('.ups-fullscreen')) {
@@ -644,6 +657,8 @@ async function _loadProfileExtras(user) {
   if (age !== null) bits.push(`${age} anos`);
   if (d.bairro) bits.push(d.bairro);
   const interests = Array.isArray(d.interests) ? d.interests : [];
+  // Mantém os interesses no localStorage sincronizados (o baralho lê daí).
+  try { localStorage.setItem('cwb_interests', JSON.stringify(interests)); } catch {}
 
   if (!bits.length && !interests.length) {
     box.innerHTML = `<button class="ups-complete-btn" id="upsCompleteBtn">${ic('user', 15)} Complete seu perfil</button>`;

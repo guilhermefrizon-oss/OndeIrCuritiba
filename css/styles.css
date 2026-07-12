@@ -160,11 +160,9 @@ body {
 .place-card {
   position: absolute; width: 100%; height: 100%;
   border-radius: var(--r); overflow: hidden; cursor: grab;
-  border: 1.5px solid rgba(0,0,0,.06);
   transform-origin: 50% 115%; will-change: transform;
   box-shadow: var(--shadow-card);
 }
-[data-theme="dark"] .place-card { border-color: rgba(255,255,255,.06); }
 .place-card:active { cursor: grabbing; }
 
 .card-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity .2s; }

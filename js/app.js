@@ -60,16 +60,27 @@ function shuffle(arr) {
   return a;
 }
 
-function sortByLikesThenShuffle(places) {
-  const sorted = [...places].sort((a,b)=>(b._likes||0)-(a._likes||0));
-  const groups = [];
-  let g = [];
-  for (const p of sorted) {
-    if (!g.length || g[0]._likes === p._likes) g.push(p);
-    else { groups.push(g); g=[p]; }
+// Interesses do usuário (categorias favoritas), guardados no login/edição.
+// Lidos do localStorage → disponíveis de forma síncrona ao montar o baralho.
+function getUserInterests() {
+  try { return JSON.parse(localStorage.getItem('cwb_interests') || '[]'); }
+  catch { return []; }
+}
+
+// Ordem do baralho: SEMPRE embaralhada (ordem diferente a cada abertura).
+// Se a pessoa tem interesses, os lugares dessas categorias vêm primeiro
+// (também embaralhados entre si) — sem esconder os demais. Sem interesses,
+// é só aleatório.
+function orderDeck(places) {
+  const shuffled = shuffle(places);
+  const interests = getUserInterests();
+  if (!interests.length) return shuffled;
+  const match = [], rest = [];
+  for (const p of shuffled) {
+    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    (cats.some(c => interests.includes(c)) ? match : rest).push(p);
   }
-  if (g.length) groups.push(g);
-  return groups.flatMap(grp => shuffle(grp));
+  return [...match, ...rest];
 }
 
 // ── Init ───────────────────────────────────────────────────────────
@@ -129,7 +140,7 @@ async function init() {
     cats.forEach(c => { CE[c.name] = c.emoji || ''; });
   }
 
-  if (places.length) P = sortByLikesThenShuffle(places);
+  if (places.length) P = orderDeck(places);
 
   filtered = [...P];
   initSearch(P);
@@ -1351,6 +1362,19 @@ window._isSaved     = (id) => !!saved.find(s => s.id === id);
 // de abrir o editor, então já refletem os dados carregados do Firestore.
 window._getCategories = () => CATS.filter(c => c !== 'Todos');
 window._getBairros = () => [...new Set(P.map(p => p.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+// Re-embaralha o baralho aplicando os interesses atuais. Sem force, só
+// age se a pessoa ainda não começou a deslizar (idx===0), pra não
+// atrapalhar quem já está navegando. Com force (ex.: salvou o perfil),
+// reinicia o baralho do topo de qualquer forma.
+window._reshuffleDeck = (force) => {
+  if (!P.length) return;
+  if (!force && idx > 0) return;
+  P = orderDeck(P);
+  applyUserFilters();
+  renderCard();
+  renderProgress();
+};
 
 function renderMapView() {
   const view = document.getElementById('mapView');
