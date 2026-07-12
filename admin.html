@@ -1576,9 +1576,13 @@ window.openPhotoModal = async () => {
   document.getElementById('photoGridError').style.display = 'none';
   document.getElementById('photoModalBackdrop').classList.add('open');
 
-  // Carrega fotos já salvas no Firestore para pré-selecionar
+  // Carrega fotos já salvas no Firestore para pré-selecionar.
+  // Reescreve a chave antiga (embutida na URL) para a atual, senão as
+  // miniaturas das seleções antigas quebram. URLs do Storage passam intactas.
   const place = allPlaces.find(x => x._docId === editingId);
-  selectedPhotos = Array.isArray(place?.photos) ? [...place.photos] : [];
+  const normalizeKey = (url) => (typeof url === 'string' && url.includes('places.googleapis.com'))
+    ? url.replace(/([?&])key=[^&]*/, '$1key=' + GOOGLE_API_KEY) : url;
+  selectedPhotos = Array.isArray(place?.photos) ? place.photos.map(normalizeKey) : [];
   // Enquadramento salvo (paralelo a photos) → mapa por url
   selectedPos = {};
   if (Array.isArray(place?.photosPos)) {
