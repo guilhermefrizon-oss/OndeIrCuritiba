@@ -58,3 +58,27 @@ git push origin main
 ```
 
 Settings → Pages → Branch: main → / (root) → Save
+
+## Permissões nativas (App Store / Google Play)
+
+O app usa a **localização** para mostrar os lugares próximos no mapa. Na web,
+o navegador cuida do prompt de permissão automaticamente. No app nativo
+(Capacitor), é obrigatório declarar o motivo do uso, senão as lojas reprovam.
+Textos prontos para quando montarmos o Capacitor:
+
+**iOS — `ios/App/App/Info.plist`:**
+
+```xml
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>O Day Match Curitiba usa sua localização para mostrar no mapa os lugares mais próximos de você.</string>
+```
+
+**Android — `android/app/src/main/AndroidManifest.xml`:**
+
+```xml
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+```
+
+A localização é usada **apenas em primeiro plano** (quando o mapa está aberto);
+não há rastreamento em segundo plano.

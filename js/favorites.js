@@ -288,7 +288,11 @@ let mainMapBuild    = 0; // token de geração: descarta callbacks de builds ant
 export function renderFavMap(places, mapEl, onOpenProfile) {
   if (!mapEl) return;
   // Se o elemento mudou (view re-renderizada), descarta a instância antiga
-  if (mainMapEl !== mapEl) { mainMapInstance = null; mainMapMarkers = []; mainMapEl = mapEl; }
+  // (o marcador/círculo do usuário pertenciam a ela → também zeram).
+  if (mainMapEl !== mapEl) {
+    mainMapInstance = null; mainMapMarkers = []; mainMapEl = mapEl;
+    userMarker = null; userAccuracy = null;
+  }
 
   if (!window.google?.maps) {
     if (!document.getElementById('gmapsScript')) {
@@ -310,6 +314,71 @@ export function renderFavMap(places, mapEl, onOpenProfile) {
   buildMainMap(places, mapEl, onOpenProfile);
 }
 
+// ── Localização do usuário no mapa ─────────────────────────────────
+let userMarker   = null;   // ponto azul "você está aqui" (por instância)
+let userAccuracy = null;   // círculo de precisão (por instância)
+let lastUserLoc  = null;   // última localização conhecida (cache p/ re-renders)
+let geoRequested = false;  // já pedimos o GPS uma vez nesta sessão de página?
+
+// Desenha (ou atualiza) o ponto azul + o círculo de precisão na instância
+// atual. Não pede permissão nem recentraliza — só pinta o que já sabemos.
+function drawUserMarker(c, accuracy) {
+  if (!mainMapInstance || !c) return;
+  if (userMarker) userMarker.setPosition(c);
+  else userMarker = new window.google.maps.Marker({
+    position: c, map: mainMapInstance, title: 'Você está aqui',
+    zIndex: 9999, clickable: false,
+    icon: {
+      path: window.google.maps.SymbolPath.CIRCLE,
+      scale: 8, fillColor: '#1a73e8', fillOpacity: 1,
+      strokeColor: '#fff', strokeWeight: 3,
+    },
+  });
+  const acc = accuracy || 0;
+  if (userAccuracy) { userAccuracy.setCenter(c); userAccuracy.setRadius(acc); }
+  else userAccuracy = new window.google.maps.Circle({
+    map: mainMapInstance, center: c, radius: acc, clickable: false,
+    fillColor: '#1a73e8', fillOpacity: 0.12, strokeColor: '#1a73e8',
+    strokeOpacity: 0.25, strokeWeight: 1,
+  });
+}
+
+// Pede a localização do navegador e mostra no mapa. Silencioso se a pessoa
+// negar ou o dispositivo não suportar — o mapa continua funcionando normal.
+// center=true recentraliza no usuário (pra ver os lugares próximos).
+function locateUser(center) {
+  if (!mainMapInstance || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      if (!mainMapInstance) return;
+      const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      lastUserLoc = c;
+      drawUserMarker(c, pos.coords.accuracy);
+      if (center) { mainMapInstance.setCenter(c); mainMapInstance.setZoom(14); }
+    },
+    () => { /* negado/indisponível → segue sem localização, sem erro */ },
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+  );
+}
+
+// Botão flutuante "minha localização" (controle nativo do mapa).
+function addLocateControl() {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.title = 'Minha localização';
+  btn.setAttribute('aria-label', 'Centralizar na minha localização');
+  btn.style.cssText =
+    'width:40px;height:40px;margin:10px;border:none;border-radius:10px;' +
+    'background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;' +
+    'display:flex;align-items:center;justify-content:center;';
+  btn.innerHTML =
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#14140F" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+  btn.onclick = () => locateUser(true);
+  mainMapInstance.controls[window.google.maps.ControlPosition.RIGHT_BOTTOM].push(btn);
+}
+
 function buildMainMap(places, mapEl, onOpenProfile) {
   if (!mapEl || !window.google?.maps) return;
 
@@ -322,6 +391,21 @@ function buildMainMap(places, mapEl, onOpenProfile) {
       zoomControl: true,
       gestureHandling: 'greedy',
     });
+    addLocateControl();
+  }
+
+  // Localização da pessoa: se já sabemos (cache), repinta e centraliza na
+  // hora — cada re-render cria um mapa novo, então recentralizamos nela pra
+  // continuar mostrando os lugares próximos. Se ainda não pedimos nesta
+  // sessão, pedimos uma vez (o navegador mostra o prompt). Negou → o mapa
+  // segue em Curitiba, sem erro.
+  if (lastUserLoc) {
+    drawUserMarker(lastUserLoc);
+    mainMapInstance.setCenter(lastUserLoc);
+    mainMapInstance.setZoom(14);
+  } else if (!geoRequested) {
+    geoRequested = true;
+    locateUser(true);
   }
 
   mainMapMarkers.forEach(m => m.setMap(null));
@@ -368,7 +452,9 @@ function buildMainMap(places, mapEl, onOpenProfile) {
     mainMapMarkers.push(marker);
     bounds.extend(coords);
     boundsCount++;
-    if (boundsCount > 1) mainMapInstance.fitBounds(bounds, 48);
+    // Só reenquadra em todos os lugares quando NÃO temos a localização da
+    // pessoa. Com localização, mantemos o mapa centrado nela (lugares próximos).
+    if (!lastUserLoc && boundsCount > 1) mainMapInstance.fitBounds(bounds, 48);
   };
 
   window._mapOpenProfile = (id) => {
