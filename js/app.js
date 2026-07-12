@@ -8,7 +8,7 @@ import {
 } from './store.js';
 import { awardXp } from './xp.js';
 import { checkAndAwardBadges } from './badges.js';
-import { fetchPlacePhoto, fetchAllPhotos } from './photos.js';
+import { fetchAllPhotos } from './photos.js';
 import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
@@ -268,8 +268,10 @@ function applyUserFilters() {
     const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
     return cats.includes(cat);
   });
+  // "Já fui" (beenThere) NÃO exclui mais do baralho — o lugar continua
+  // aparecendo. Só "pulados hoje" e "quero ir hoje" saem do feed.
   filtered = base.filter(p =>
-    !skipped[p.id] && !beenThere[p.id] && !wantToday.find(w => w.id === p.id)
+    !skipped[p.id] && !wantToday.find(w => w.id === p.id)
     && (!openNowOnly || parseOpenNow(p.h) === true)
   );
   idx = 0;
@@ -345,9 +347,11 @@ function setCardBg(card, p) {
     bg.style.backgroundSize  = 'cover';
     bg.style.backgroundPosition = photoPos(p, 0);
   } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
-    fetchPlacePhoto(p.pid).then(url => {
-      if (!url) return;
-      bg.style.backgroundImage = `url("${url}")`;
+    // Usa fetchAllPhotos (mesmo cache do story do card) → 1 chamada por
+    // lugar, compartilhada entre o fundo, o story e o pré-carregamento.
+    fetchAllPhotos(p.pid).then(urls => {
+      if (!urls.length) return;
+      bg.style.backgroundImage = `url("${urls[0]}")`;
       bg.style.backgroundSize  = 'cover';
     });
   }
@@ -373,10 +377,9 @@ function prefetchUpcoming(count = 3) {
     if (Array.isArray(p.photos) && p.photos.length) {
       p.photos.slice(0, 3).forEach(preloadImage); // 1ª + próximas do card
     } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
-      // Nas 2 cartas mais próximas, já baixa TODAS as fotos (2ª/3ª inclusas);
-      // nas mais distantes, só a 1ª pra não pesar. fetchAllPhotos tem cache.
-      if (i <= 2) fetchAllPhotos(p.pid).then(urls => urls.slice(0, 3).forEach(preloadImage));
-      else fetchPlacePhoto(p.pid).then(preloadImage);
+      // Mesmo fetchAllPhotos (com cache) usado no card → não gera chamada
+      // extra: só adianta a que aconteceria quando a carta chegar ao topo.
+      fetchAllPhotos(p.pid).then(urls => urls.slice(0, 3).forEach(preloadImage));
     }
   }
 }
@@ -834,8 +837,7 @@ function doBeenThere(p) {
   // Concede XP e verifica badges por visita (badges só se a feature estiver on)
   awardXp('visited', { placeId: p.id, placeName: p.n, category: p.c, bairro: p.b });
   if (window.FEATURES?.badges) checkAndAwardBadges();
-  // Remove do feed imediatamente
-  filtered = filtered.filter(f => f.id !== p.id);
+  // Marcar "Já fui" NÃO tira o card do baralho — ele continua aparecendo.
 }
 
 function updateBadge() {
