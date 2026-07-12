@@ -3,7 +3,7 @@ import { fetchPlacePhoto } from './photos.js';
 import { ic, catIcon } from './icons.js';
 import { fsRemove } from './store.js';
 
-const GOOGLE_API_KEY = 'AIzaSyDiLhxU3veHWvx3fvA6kk6TluFFHYWHEzs';
+const GOOGLE_API_KEY = 'AIzaSyDIiBLGHZ_zgo-wKaHNK7qa4O-C_EZJJuY';
 
 let mapInstance   = null;
 let mapMarkers    = [];
