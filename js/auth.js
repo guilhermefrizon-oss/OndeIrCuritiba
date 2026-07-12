@@ -4,6 +4,7 @@ import {
   signInWithPopup, signInWithRedirect, getRedirectResult,
   signOut, onAuthStateChanged
 } from './firebase.js';
+import { getAdditionalUserInfo } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { ic } from './icons.js';
 
 import {
@@ -121,8 +122,9 @@ export async function signInWithGoogle() {
   const errEl = document.getElementById('loginError');
   if (errEl) errEl.style.display = 'none';
   try {
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
     closeAuthModal();
+    if (getAdditionalUserInfo(result)?.isNewUser) showProfileEditor(result.user, { onboarding: true });
   } catch (e) {
     console.warn('Login popup falhou:', e.code, e.message);
     // Usuário fechou/cancelou o popup: não faz nada (não força redirect).
@@ -144,8 +146,9 @@ export async function signInWithApple() {
   const errEl = document.getElementById('loginError');
   if (errEl) errEl.style.display = 'none';
   try {
-    await signInWithPopup(auth, appleProvider);
+    const result = await signInWithPopup(auth, appleProvider);
     closeAuthModal();
+    if (getAdditionalUserInfo(result)?.isNewUser) showProfileEditor(result.user, { onboarding: true });
   } catch (e) {
     console.warn('Login Apple falhou:', e.code, e.message);
     if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
@@ -171,6 +174,7 @@ export async function signUpWithEmail(name, email, password) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   if (name) await updateProfile(cred.user, { displayName: name });
   closeAuthModal();
+  showProfileEditor(cred.user, { onboarding: true });
   return cred.user;
 }
 
@@ -503,6 +507,155 @@ export function closeAuthModal() {
   else doCloseAuthModal();
 }
 
+// ── Editor de perfil (nascimento, bairro, interesses) ──────────────
+// Usado no passo pós-cadastro (onboarding) e no botão "Editar perfil".
+// Os dados vão para user_profiles/{uid}, que as regras já deixam o dono
+// ler e escrever.
+export function calcAge(birthday) {
+  if (!birthday) return null;
+  const b = new Date(birthday);
+  if (isNaN(b)) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return (age >= 0 && age < 130) ? age : null;
+}
+
+export async function showProfileEditor(user, opts = {}) {
+  user = user || window.currentUser;
+  if (!user) return;
+  const onboarding = !!opts.onboarding;
+
+  // Dados existentes
+  let cur = {};
+  try {
+    const snap = await getDoc(doc(db, 'user_profiles', user.uid));
+    if (snap.exists()) cur = snap.data();
+  } catch {}
+
+  const cats    = (window._getCategories?.() || []);
+  const bairros = (window._getBairros?.() || []);
+  const selected = new Set(Array.isArray(cur.interests) ? cur.interests : []);
+
+  let bd = document.getElementById('profEditBackdrop');
+  if (!bd) {
+    bd = document.createElement('div');
+    bd.className = 'auth-modal-backdrop';
+    bd.id = 'profEditBackdrop';
+    (document.querySelector('.phone') || document.body).appendChild(bd);
+  }
+
+  bd.innerHTML = `
+    <div class="auth-modal" style="max-height:90vh;overflow-y:auto">
+      <div class="auth-view">
+        <div class="auth-modal-icon">${ic('user', 30, 1.7)}</div>
+        <div class="auth-modal-title">${onboarding ? 'Complete seu perfil' : 'Editar perfil'}</div>
+        <div class="auth-modal-sub">${onboarding
+          ? 'Conta um pouco sobre você (pode pular e preencher depois).'
+          : 'Atualize suas informações.'}</div>
+
+        <label class="prof-field-label" for="profBirth">Data de nascimento</label>
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="profBirth" type="date" max="${new Date().toISOString().slice(0,10)}"
+            value="${cur.birthday || ''}">
+        </div>
+
+        <label class="prof-field-label" for="profBairro">Bairro</label>
+        <div class="auth-field-wrap">
+          <input class="auth-field" id="profBairro" type="text" list="profBairrosList"
+            placeholder="Ex: Batel" value="${(cur.bairro || '').replace(/"/g, '&quot;')}">
+          <datalist id="profBairrosList">
+            ${bairros.map(b => `<option value="${b.replace(/"/g, '&quot;')}"></option>`).join('')}
+          </datalist>
+        </div>
+
+        <label class="prof-field-label">Interesses</label>
+        <div class="prof-chips" id="profChips">
+          ${cats.map(c => `<button type="button" class="prof-chip${selected.has(c) ? ' on' : ''}" data-cat="${c.replace(/"/g, '&quot;')}">${c}</button>`).join('')
+            || '<span class="auth-modal-sub" style="margin:0">Nenhuma categoria disponível.</span>'}
+        </div>
+
+        <div id="profEditError" class="auth-error" style="display:none"></div>
+        <button class="auth-submit-btn" id="profSaveBtn">Salvar</button>
+        <button class="auth-cancel-btn" id="profSkipBtn">${onboarding ? 'Pular por agora' : 'Cancelar'}</button>
+      </div>
+    </div>`;
+
+  bd.style.display = 'flex';
+  if (window.registerOverlay) window.registerOverlay('profEdit', () => { bd.style.display = 'none'; });
+
+  const close = () => {
+    if (window._overlayHas && window._overlayHas('profEdit')) window.dismissOverlay('profEdit');
+    else bd.style.display = 'none';
+  };
+
+  // Toggle dos chips de interesse
+  bd.querySelectorAll('.prof-chip').forEach(chip => {
+    chip.onclick = () => {
+      const c = chip.dataset.cat;
+      if (selected.has(c)) { selected.delete(c); chip.classList.remove('on'); }
+      else { selected.add(c); chip.classList.add('on'); }
+    };
+  });
+
+  document.getElementById('profSkipBtn').onclick = close;
+
+  document.getElementById('profSaveBtn').onclick = async () => {
+    const errEl   = document.getElementById('profEditError');
+    const birthday = document.getElementById('profBirth').value || '';
+    const bairro   = document.getElementById('profBairro').value.trim();
+    // Valida idade mínima (13+), exigência das lojas — só se preencheu a data.
+    if (birthday) {
+      const age = calcAge(birthday);
+      if (age !== null && age < 13) {
+        showErr(errEl, 'É preciso ter pelo menos 13 anos para usar o app.');
+        return;
+      }
+    }
+    setLoading('profSaveBtn', true);
+    try {
+      await setDoc(doc(db, 'user_profiles', user.uid),
+        { birthday, bairro, interests: [...selected] }, { merge: true });
+      close();
+      // Se a tela de perfil estiver aberta, atualiza os dados exibidos.
+      if (document.getElementById('userProfileScreen')?.querySelector('.ups-fullscreen')) {
+        _loadProfileExtras(user);
+      }
+    } catch (e) {
+      showErr(errEl, 'Não foi possível salvar. Tente de novo.');
+    } finally {
+      setLoading('profSaveBtn', false);
+    }
+  };
+}
+
+// Preenche a seção de dados do perfil (idade, bairro, interesses) na tela.
+async function _loadProfileExtras(user) {
+  const box = document.getElementById('upsExtras');
+  if (!box) return;
+  let d = {};
+  try {
+    const snap = await getDoc(doc(db, 'user_profiles', user.uid));
+    if (snap.exists()) d = snap.data();
+  } catch {}
+  const age = calcAge(d.birthday);
+  const bits = [];
+  if (age !== null) bits.push(`${age} anos`);
+  if (d.bairro) bits.push(d.bairro);
+  const interests = Array.isArray(d.interests) ? d.interests : [];
+
+  if (!bits.length && !interests.length) {
+    box.innerHTML = `<button class="ups-complete-btn" id="upsCompleteBtn">${ic('user', 15)} Complete seu perfil</button>`;
+  } else {
+    box.innerHTML = `
+      ${bits.length ? `<div class="ups-extra-line">${bits.join(' · ')}</div>` : ''}
+      ${interests.length ? `<div class="ups-extra-chips">${interests.map(i => `<span class="ups-extra-chip">${i}</span>`).join('')}</div>` : ''}`;
+  }
+  const cb = document.getElementById('upsCompleteBtn');
+  if (cb) cb.onclick = () => showProfileEditor(user, { onboarding: true });
+}
+
 // ── User Profile Screen ────────────────────────────────────────────
 export function showUserProfile() {
   const user = window.currentUser;
@@ -562,6 +715,9 @@ export function showUserProfile() {
           </div>
         </div>
 
+        <!-- Dados do perfil (idade, bairro, interesses) -->
+        <div class="ups-extras" id="upsExtras"></div>
+
         <!-- Nível (oculto por enquanto — FEATURES.levelXp) -->
         ${F.levelXp ? `
         <div class="ups-level-bar" id="upsLevelBar">
@@ -620,6 +776,11 @@ export function showUserProfile() {
         <!-- Aba: Conta -->
         <div class="ups-tab-panel" id="upsTabSettings" style="display:none">
           <div class="ups-actions">
+            <button class="ups-action-row" id="upsEditProfileBtn">
+              <span class="ups-action-icon">${ic('user', 16)}</span>
+              <span class="ups-action-label">Editar perfil</span>
+              <span class="ups-action-chevron">›</span>
+            </button>
             ${!isGoogle ? `
             <button class="ups-action-row" id="upsChangeNameBtn">
               <span class="ups-action-icon">${ic('edit', 16)}</span>
@@ -680,8 +841,10 @@ export function showUserProfile() {
   _loadUserStats(user);
   _loadPrivacyToggle(user);
   _bindPhotoUpload(user);
+  _loadProfileExtras(user);
 
   document.getElementById('upsCloseBtn').onclick   = closeUserProfile;
+  document.getElementById('upsEditProfileBtn').onclick = () => showProfileEditor(user, { onboarding: false });
   document.getElementById('upsSignOutBtn').onclick = async () => { closeUserProfile(); await signOutUser(); };
   document.getElementById('upsDeleteAccountBtn').onclick = () => deleteAccount(user);
 
@@ -987,6 +1150,7 @@ export function handleAvatarClick() {
 
 window.signInWithGoogle  = signInWithGoogle;
 window.signInWithApple   = signInWithApple;
+window.showProfileEditor = showProfileEditor;
 window.signOutUser       = signOutUser;
 window.showAuthModal     = showAuthModal;
 window.closeAuthModal    = closeAuthModal;

@@ -1347,6 +1347,11 @@ function renderWantToday() {
 window._isWantToday = (id) => !!wantToday.find(w => w.id === id);
 window._isSaved     = (id) => !!saved.find(s => s.id === id);
 
+// Listas para o editor de perfil (interesses e bairro). Avaliadas na hora
+// de abrir o editor, então já refletem os dados carregados do Firestore.
+window._getCategories = () => CATS.filter(c => c !== 'Todos');
+window._getBairros = () => [...new Set(P.map(p => p.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
 function renderMapView() {
   const view = document.getElementById('mapView');
   if (!view) return;
