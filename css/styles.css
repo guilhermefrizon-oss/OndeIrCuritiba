@@ -168,13 +168,15 @@ body {
 .card-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity .2s; }
 .card-overlay {
   position: absolute; inset: 0;
+  /* Degradê concentrado na base: topo mais limpo (aparece mais foto) e
+     escuro o suficiente embaixo pra manter nome/endereço/infos legíveis. */
   background: linear-gradient(180deg,
     rgba(0,0,0,0) 0%,
-    rgba(0,0,0,.10) 30%,
-    rgba(0,0,0,.42) 48%,
-    rgba(0,0,0,.72) 64%,
-    rgba(0,0,0,.90) 80%,
-    rgba(0,0,0,.94) 100%);
+    rgba(0,0,0,0) 45%,
+    rgba(0,0,0,.30) 62%,
+    rgba(0,0,0,.66) 76%,
+    rgba(0,0,0,.88) 90%,
+    rgba(0,0,0,.92) 100%);
 }
 
 /* Fallback gradients — sempre P&B; o ângulo muda por categoria pra
