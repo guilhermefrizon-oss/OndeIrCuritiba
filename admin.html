@@ -1111,10 +1111,16 @@ th.sortable:hover { color: var(--acc3); }
           <div class="page-title">Métricas</div>
           <div class="page-subtitle" id="metricsSubtitle">Engajamento por lugar — likes, salvamentos e “já fui”.</div>
         </div>
-        <button class="btn btn-primary" onclick="loadAllMetricCounts()" id="btnLoadCounts">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Atualizar
-        </button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn" onclick="recalibrateLikeCounters()" id="btnRecalibrate" title="Reescreve o contador de likes dos cards com a contagem real">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+            Recalibrar contadores
+          </button>
+          <button class="btn btn-primary" onclick="loadAllMetricCounts()" id="btnLoadCounts">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <div class="alert-box info" style="max-width:780px">
@@ -2620,6 +2626,43 @@ window.loadAllMetricCounts = async () => {
   btn.disabled = false;
   renderMetricsTable();
   if (permErr) showToast('Algumas métricas falharam. Publique as regras atualizadas (aba Regras) no Firebase.', 'error');
+};
+
+// Reescreve places/{id}._likes com a contagem real de registros de like.
+// Corrige o número do coração nos cards do app quando o contador dessincroniza.
+// Só escreve onde há diferença (economiza escritas) e não toca nos likes em si.
+window.recalibrateLikeCounters = async () => {
+  if (!confirm('Recalibrar os contadores de likes de todos os lugares?\n\nIsso reescreve o número do coração nos cards do app com a contagem real. Não apaga nem altera os likes — só o contador.')) return;
+  const btn = document.getElementById('btnRecalibrate');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  let done = 0, fixed = 0, permErr = false;
+
+  await mapLimit(allPlaces, 6, async (p) => {
+    const pid = pidOf(p);
+    const likes = await subcolDocs('likes', pid);
+    if (likes === null) { permErr = true; done++; return; }
+    const real = likes.length;
+    if ((p._likes || 0) !== real) {
+      try {
+        await setDoc(doc(db, 'places', pid), { _likes: real }, { merge: true });
+        p._likes = real;                                    // reflete localmente
+        if (metricCounts[pid]) metricCounts[pid].likesTotal = real;
+        fixed++;
+      } catch (e) { console.warn('recalibrar', pid, e.message); permErr = true; }
+    }
+    done++;
+    btn.innerHTML = `Recalibrando… ${done}/${allPlaces.length}`;
+  });
+
+  btn.innerHTML = orig;
+  btn.disabled = false;
+  renderMetricsTable();
+  showToast(
+    permErr ? `Recalibrado com avisos — ${fixed} ajustado(s). Confira as regras/permissões.`
+            : (fixed ? `Pronto! ${fixed} contador(es) corrigido(s).` : 'Tudo já estava certo — nada a corrigir.'),
+    permErr ? 'error' : 'success'
+  );
 };
 
 // Detalhe de um lugar: likes por dia (14 dias), likes 7d, salvos, já-fui.
