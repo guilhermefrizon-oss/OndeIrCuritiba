@@ -1325,6 +1325,10 @@ service cloud.firestore {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closePhotoModal()">Cancelar</button>
+      <button class="btn btn-secondary" id="btnZipPhotos" onclick="downloadPhotosZip()" title="Baixa as fotos selecionadas num .zip organizado por lugar (backup local)">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar ZIP
+      </button>
       <button class="btn btn-primary" id="btnSavePhotos" onclick="savePhotos()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         Salvar fotos
@@ -1731,6 +1735,89 @@ window.savePhotos = async () => {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar fotos';
+  }
+};
+
+// ── Backup local: baixa as fotos num .zip organizado por lugar ─────
+// Gerador de ZIP mínimo (método "store", sem compressão — JPEG/PNG já
+// vêm compactados). Sem bibliotecas externas: 100% JS puro no navegador.
+const _crcTable = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = _crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function makeZip(files) {
+  const enc = new TextEncoder();
+  const u16 = n => [n & 0xFF, (n >>> 8) & 0xFF];
+  const u32 = n => [n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF];
+  const chunks = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const nb  = enc.encode(f.name);
+    const crc = crc32(f.data), size = f.data.length;
+    const local = new Uint8Array([
+      ...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
+      ...u32(crc), ...u32(size), ...u32(size), ...u16(nb.length), ...u16(0), ...nb
+    ]);
+    chunks.push(local, f.data);
+    central.push(new Uint8Array([
+      ...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
+      ...u32(crc), ...u32(size), ...u32(size), ...u16(nb.length), ...u16(0), ...u16(0),
+      ...u16(0), ...u16(0), ...u32(0), ...u32(offset), ...nb
+    ]));
+    offset += local.length + size;
+  }
+  const cStart = offset;
+  let cSize = 0;
+  for (const c of central) { chunks.push(c); cSize += c.length; }
+  chunks.push(new Uint8Array([
+    ...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(central.length), ...u16(central.length),
+    ...u32(cSize), ...u32(cStart), ...u16(0)
+  ]));
+  return new Blob(chunks, { type: 'application/zip' });
+}
+function slugify(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'lugar';
+}
+
+window.downloadPhotosZip = async () => {
+  if (!selectedPhotos.length) { showToast('Selecione ao menos uma foto', 'error'); return; }
+  const btn = document.getElementById('btnZipPhotos');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  const slug = slugify(document.getElementById('f_n').value.trim());
+  try {
+    const files = [];
+    for (let i = 0; i < selectedPhotos.length; i++) {
+      btn.textContent = `Baixando ${i + 1}/${selectedPhotos.length}…`;
+      const res = await fetch(selectedPhotos[i]);
+      if (!res.ok) throw new Error(`foto ${i + 1}: ${res.status}`);
+      const data = new Uint8Array(await res.arrayBuffer());
+      const type = res.headers.get('content-type') || 'image/jpeg';
+      const ext  = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+      files.push({ name: `${slug}/${i + 1}.${ext}`, data });
+    }
+    const url = URL.createObjectURL(makeZip(files));
+    const a = document.createElement('a');
+    a.href = url; a.download = `${slug}.zip`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    showToast(`ZIP de ${files.length} foto(s) baixado!`, 'success');
+  } catch(e) {
+    showToast('Erro ao baixar ZIP: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
   }
 };
 
