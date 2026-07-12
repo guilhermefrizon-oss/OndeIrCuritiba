@@ -1057,6 +1057,7 @@ body {
   font-family: inherit; font-size: 15px; font-weight: 500;
   color: var(--text); cursor: pointer; width: 100%;
   text-align: left; transition: background .15s, transform .1s;
+  text-decoration: none; box-sizing: border-box;
 }
 .ups-action-row:hover  { background: var(--bg4); }
 .ups-action-row:active { transform: scale(.98); }
