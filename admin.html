@@ -2537,9 +2537,10 @@ window.sortMetrics = (key) => {
 // Valor da coluna para ordenar. Métricas ainda não carregadas contam como -1
 // (vão pro fim), pra não se misturarem com os zeros já confirmados.
 function metricVal(p, key) {
-  if (key === 'name')  return (p.n || '').toLowerCase();
-  if (key === 'likes') return p._likes || 0;
+  if (key === 'name') return (p.n || '').toLowerCase();
   const m = metricCounts[pidOf(p)];
+  // Likes: usa o total real (docs) quando já carregado; senão o contador.
+  if (key === 'likes') return m ? m.likesTotal : (p._likes || 0);
   if (!m) return -1;
   return m[key] || 0;
 }
@@ -2562,8 +2563,8 @@ window.renderMetricsTable = () => {
 
   const dash = '<span style="color:var(--text3)">–</span>';
   document.getElementById('metricsTableBody').innerHTML = rows.map(p => {
-    const likes = p._likes || 0;
     const m = metricCounts[pidOf(p)];
+    const likes = m ? m.likesTotal : (p._likes || 0);  // total real (docs) quando carregado
     return `
     <tr>
       <td><strong>${escM(p.n) || '—'}</strong><div style="color:var(--text3);font-size:12px">${escM(p.b)}</div></td>
@@ -2602,6 +2603,9 @@ window.loadAllMetricCounts = async () => {
     ]);
     if (likes === null || saves === null || visits === null) permErr = true;
     metricCounts[pid] = {
+      // Total real = nº de registros de like (fonte da verdade). O contador
+      // _likes do lugar pode estar dessincronizado; aqui contamos os docs.
+      likesTotal: (likes || []).length,
       likes7d: (likes || []).filter(d => new Date(d.likedAt || 0).getTime() >= since).length,
       saves:   (saves  || []).length,
       visits:  (visits || []).length,
