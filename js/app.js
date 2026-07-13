@@ -12,6 +12,7 @@ import { fetchAllPhotos, fetchPlacePhoto } from './photos.js';
 import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { initQuiz, openQuiz } from './quiz.js';
+import { isOpenNow, isOpenDuring, getPlaceHours, PERIODS, WEEK_ORDER, DOW_KEYS, DAY_LABEL } from './hours.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
 import { ic, catIcon } from './icons.js';
@@ -233,7 +234,7 @@ function parseOpenNow(hoursStr) {
 }
 
 function openBadgeHTML(p) {
-  const open = parseOpenNow(p.h);
+  const open = isOpenNow(p);
   if (open === null) return '';
   return open
     ? '<span class="open-badge open">● Aberto agora</span>'
@@ -255,15 +256,113 @@ function buildCategoryRow() {
 
 // ── Filtro "Abertos agora" ─────────────────────────────────────────
 let openNowOnly = false;
+let planFilter  = null; // { dowIdx, period } — filtro "Aberto em tal dia/período"
 
 window.toggleOpenNow = () => {
   openNowOnly = !openNowOnly;
-  const btn = document.getElementById('openNowBtn');
-  if (btn) btn.classList.toggle('on', openNowOnly);
+  if (openNowOnly) planFilter = null; // "agora" e "aberto em…" são exclusivos
+  syncFilterPills();
   applyUserFilters();
   renderCard(); renderProgress();
   const mapView = document.getElementById('mapView');
   if (mapView && mapView.style.display !== 'none') renderMapView();
+};
+
+// Atualiza o visual dos dois pills (agora / aberto em…)
+function syncFilterPills() {
+  const on = document.getElementById('openNowBtn');
+  if (on) on.classList.toggle('on', openNowOnly);
+  const pb = document.getElementById('planBtn');
+  const lbl = document.getElementById('planBtnLabel');
+  if (pb) pb.classList.toggle('on', !!planFilter);
+  if (lbl) lbl.textContent = planFilter
+    ? `${DAY_LABEL[DOW_KEYS[planFilter.dowIdx]]} · ${planFilter.period.label}`
+    : 'Aberto em…';
+}
+
+// Um lugar passa no filtro de planejamento? (desconhecido = passa, pra não sumir)
+function passesPlan(p) {
+  if (!planFilter) return true;
+  const h = getPlaceHours(p);
+  if (!h) return true; // sem horário estruturado/parseável → não esconde
+  return isOpenDuring(h, planFilter.dowIdx, planFilter.period.start, planFilter.period.end) === true;
+}
+
+// ── Sheet "Aberto em…" (dia + período) ─────────────────────────────
+function _applyPlanChanges() {
+  syncFilterPills();
+  applyUserFilters(); renderCard(); renderProgress();
+  const mapView = document.getElementById('mapView');
+  if (mapView && mapView.style.display !== 'none') renderMapView();
+}
+
+function closePlanSheet() {
+  const bd = document.getElementById('planSheetBackdrop');
+  if (bd) bd.style.display = 'none';
+  if (window.dismissOverlay) window.dismissOverlay('planSheet');
+}
+
+window.clearPlanFilter = () => {
+  planFilter = null;
+  _applyPlanChanges();
+  closePlanSheet();
+};
+
+window.openPlanSheet = () => {
+  const now    = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const curPer = (PERIODS.find(pr => nowMin >= pr.start && nowMin < pr.end) || PERIODS[2]).key;
+  const draft  = planFilter
+    ? { dowIdx: planFilter.dowIdx, periodKey: planFilter.period.key }
+    : { dowIdx: now.getDay(), periodKey: curPer };
+
+  let bd = document.getElementById('planSheetBackdrop');
+  if (!bd) {
+    bd = document.createElement('div');
+    bd.id = 'planSheetBackdrop';
+    bd.className = 'plan-sheet-backdrop';
+    document.querySelector('.phone').appendChild(bd);
+  }
+  bd.onclick = (e) => { if (e.target === bd) closePlanSheet(); };
+
+  const dayChips = WEEK_ORDER.map(k =>
+    `<button class="plan-chip" data-day="${DOW_KEYS.indexOf(k)}">${DAY_LABEL[k]}</button>`).join('');
+  const perChips = PERIODS.map(pr =>
+    `<button class="plan-chip" data-per="${pr.key}">${pr.label}</button>`).join('');
+
+  bd.innerHTML = `
+    <div class="plan-sheet">
+      <div class="plan-sheet-handle"></div>
+      <div class="plan-sheet-title">Aberto quando?</div>
+      <div class="plan-sheet-sub">Veja o que abre num dia e horário — tipo sábado à noite.</div>
+      <div class="plan-sheet-lbl">Dia</div>
+      <div class="plan-chips" id="planDays">${dayChips}</div>
+      <div class="plan-sheet-lbl">Período</div>
+      <div class="plan-chips" id="planPers">${perChips}</div>
+      <div class="plan-sheet-actions">
+        ${planFilter ? '<button class="plan-clear" id="planClear">Limpar filtro</button>' : ''}
+        <button class="plan-apply" id="planApply">Aplicar</button>
+      </div>
+    </div>`;
+  bd.style.display = 'flex';
+  window.registerOverlay('planSheet', () => { bd.style.display = 'none'; });
+
+  const paint = () => {
+    bd.querySelectorAll('#planDays .plan-chip').forEach(c => c.classList.toggle('on', +c.dataset.day === draft.dowIdx));
+    bd.querySelectorAll('#planPers .plan-chip').forEach(c => c.classList.toggle('on', c.dataset.per === draft.periodKey));
+  };
+  bd.querySelectorAll('#planDays .plan-chip').forEach(c => c.onclick = () => { draft.dowIdx = +c.dataset.day; paint(); });
+  bd.querySelectorAll('#planPers .plan-chip').forEach(c => c.onclick = () => { draft.periodKey = c.dataset.per; paint(); });
+  paint();
+
+  document.getElementById('planApply').onclick = () => {
+    planFilter  = { dowIdx: draft.dowIdx, period: PERIODS.find(pr => pr.key === draft.periodKey) };
+    openNowOnly = false;
+    _applyPlanChanges();
+    closePlanSheet();
+  };
+  const clr = document.getElementById('planClear');
+  if (clr) clr.onclick = () => window.clearPlanFilter();
 };
 
 export function setCat(c) {
@@ -285,7 +384,8 @@ function applyUserFilters() {
   // aparecendo. Só "pulados hoje" e "quero ir hoje" saem do feed.
   filtered = base.filter(p =>
     !skipped[p.id] && !wantToday.find(w => w.id === p.id)
-    && (!openNowOnly || parseOpenNow(p.h) === true)
+    && (!openNowOnly || isOpenNow(p) === true)
+    && passesPlan(p)
   );
   idx = 0;
 }
@@ -421,7 +521,13 @@ function renderDeckEmpty(stack) {
   const el = document.createElement('div');
   el.className = 'deck-empty';
 
-  if (openNowOnly && baseCount) {
+  if (planFilter && baseCount) {
+    el.innerHTML = `
+      <div class="deck-empty-ico">${ic('clock', 40, 1.5)}</div>
+      <div class="deck-empty-title">Nada aberto ${DAY_LABEL[DOW_KEYS[planFilter.dowIdx]]} · ${planFilter.period.label}</div>
+      <div class="deck-empty-sub">Nenhum lugar abre nesse dia e horário<br>com esses filtros.</div>
+      <button class="deck-empty-btn" onclick="window.clearPlanFilter()">Limpar filtro de horário</button>`;
+  } else if (openNowOnly && baseCount) {
     el.innerHTML = `
       <div class="deck-empty-ico">${ic('clock', 40, 1.5)}</div>
       <div class="deck-empty-title">Nada aberto agora</div>
@@ -1495,14 +1601,16 @@ function renderMapView() {
     return cats.includes(cat);
   });
 
-  // Respeita o filtro "Abertos agora" também no mapa
-  if (openNowOnly) list = list.filter(p => parseOpenNow(p.h) === true);
+  // Respeita os filtros de horário também no mapa
+  if (openNowOnly) list = list.filter(p => isOpenNow(p) === true);
+  list = list.filter(passesPlan);
 
   const mapEl = document.getElementById('mainMap');
-  if (openNowOnly && !list.length) {
+  if ((openNowOnly || planFilter) && !list.length) {
+    const quando = planFilter ? `${DAY_LABEL[DOW_KEYS[planFilter.dowIdx]]} · ${planFilter.period.label}` : 'neste horário';
     mapEl.innerHTML = `<div class="empty" style="height:100%"><div class="empty-ico">${ic('clock', 40, 1.5)}</div>
-      <div class="empty-title">Nada aberto agora</div>
-      <div class="empty-sub">Nenhum lugar aberto neste horário${cat !== 'Todos' ? '<br>nesta categoria' : ''}.</div></div>`;
+      <div class="empty-title">Nada aberto</div>
+      <div class="empty-sub">Nenhum lugar aberto ${quando}${cat !== 'Todos' ? '<br>nesta categoria' : ''}.</div></div>`;
     return;
   }
 

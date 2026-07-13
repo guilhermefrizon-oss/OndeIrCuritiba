@@ -671,6 +671,25 @@ td {
   margin-top: 12px; font-size: 13px; color: var(--text2);
 }
 
+/* Editor de horário por dia */
+.hours-editor { display: flex; flex-direction: column; gap: 6px; }
+.hours-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px 10px; border-radius: 10px; background: var(--bg3);
+  border: 1.5px solid var(--bg4);
+}
+.hours-day { width: 34px; font-weight: 700; font-size: 13px; color: var(--text); flex-shrink: 0; }
+.hours-closed {
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  font-size: 12px; color: var(--text3); flex-shrink: 0;
+}
+.hours-times { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.hours-times input[type="time"] {
+  padding: 6px 8px; border-radius: 8px; border: 1.5px solid var(--bg4);
+  background: var(--bg2); color: var(--text); font-family: inherit; font-size: 13px;
+}
+.hours-sep { font-size: 12px; color: var(--text3); }
+
 /* Toast */
 .toast-container { position: fixed; bottom: 28px; right: 28px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
 .toast {
@@ -1488,8 +1507,9 @@ service cloud.firestore {
           <input class="form-input" id="f_ig" placeholder="@perfil">
         </div>
         <div class="form-group full">
-          <label class="form-label">Horário de funcionamento</label>
-          <input class="form-input" id="f_h" placeholder="ex: Seg-Dom 12h-23h">
+          <label class="form-label">Horário de funcionamento <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— por dia da semana</span></label>
+          <div id="f_hours" class="hours-editor"></div>
+          <div class="form-hint" id="f_hours_preview"></div>
         </div>
         <div class="form-group">
           <label class="form-label">Google Place ID</label>
@@ -1786,6 +1806,7 @@ import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, serv
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { ic, catIcon } from "./js/icons.js";
+import { hoursToText, parseHoursText, defaultHours, WEEK_ORDER, DAY_LABEL } from "./js/hours.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCz1Ti_twBmtDxGOc9cGiXHBNbFTOdvYAg",
@@ -2779,7 +2800,7 @@ window.openEditModal = (docId) => {
   document.getElementById('f_a').value  = p.a  || '';
   document.getElementById('f_b').value  = p.b  || '';
   document.getElementById('f_ig').value = p.ig || '';
-  document.getElementById('f_h').value  = p.h  || '';
+  renderHoursEditor(p.hours || parseHoursText(p.h) || defaultHours());
   document.getElementById('f_pid').value= p.pid|| '';
   document.getElementById('f_bg').value = p.bg || '';
   document.getElementById('f_e').value  = p.e  || '';
@@ -2793,14 +2814,76 @@ window.openEditModal = (docId) => {
 };
 
 function clearForm() {
-  ['f_n','f_a','f_b','f_ig','f_h','f_pid','f_e'].forEach(id => {
+  ['f_n','f_a','f_b','f_ig','f_pid','f_e'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_p').value = '$$';
   document.getElementById('f_bg').value = 'cafe';
+  renderHoursEditor(defaultHours());
   document.querySelectorAll('.cat-toggle').forEach(el => el.classList.remove('on'));
   document.querySelectorAll('.emoji-opt').forEach(el => el.classList.remove('selected'));
 }
+
+// ── Editor de horário por dia ──────────────────────────────────────
+function renderHoursEditor(hours) {
+  const wrap = document.getElementById('f_hours');
+  if (!wrap) return;
+  wrap.innerHTML = WEEK_ORDER.map(k => {
+    const e = hours[k] || { closed: true };
+    const closed = !!e.closed;
+    return `
+      <div class="hours-row" data-day="${k}">
+        <div class="hours-day">${DAY_LABEL[k]}</div>
+        <label class="hours-closed"><input type="checkbox" class="h-closed" ${closed?'checked':''} onchange="onHoursClosedToggle(this)"> fechado</label>
+        <div class="hours-times" style="${closed?'opacity:.35;pointer-events:none':''}">
+          <input type="time" class="h-open"  value="${e.open  || '12:00'}" onchange="updateHoursPreview()">
+          <span class="hours-sep">até</span>
+          <input type="time" class="h-close" value="${e.close || '23:00'}" onchange="updateHoursPreview()">
+        </div>
+      </div>`;
+  }).join('') +
+    `<button type="button" class="btn btn-secondary btn-sm" onclick="copyMondayHours()" style="margin-top:10px">
+       ${ic('copy',13)} Copiar Seg para todos
+     </button>`;
+  updateHoursPreview();
+}
+
+function readHoursEditor() {
+  const h = {};
+  document.querySelectorAll('#f_hours .hours-row').forEach(row => {
+    const day = row.dataset.day;
+    if (row.querySelector('.h-closed').checked) {
+      h[day] = { closed: true };
+    } else {
+      h[day] = {
+        closed: false,
+        open:  row.querySelector('.h-open').value  || '00:00',
+        close: row.querySelector('.h-close').value || '00:00',
+      };
+    }
+  });
+  return h;
+}
+
+window.onHoursClosedToggle = (cb) => {
+  const times = cb.closest('.hours-row').querySelector('.hours-times');
+  const closed = cb.checked;
+  times.style.opacity = closed ? '.35' : '';
+  times.style.pointerEvents = closed ? 'none' : '';
+  updateHoursPreview();
+};
+
+window.copyMondayHours = () => {
+  const h = readHoursEditor();
+  const seg = h.seg || { closed:false, open:'12:00', close:'23:00' };
+  WEEK_ORDER.forEach(k => { h[k] = { ...seg }; });
+  renderHoursEditor(h);
+};
+
+window.updateHoursPreview = () => {
+  const el = document.getElementById('f_hours_preview');
+  if (el) el.textContent = 'No app aparece: ' + (hoursToText(readHoursEditor()) || '—');
+};
 
 window.closeModal = () => {
   document.getElementById('modalBackdrop').classList.remove('open');
@@ -2827,6 +2910,7 @@ window.savePlace = async () => {
   btn.disabled = true;
   btn.textContent = 'Salvando…';
 
+  const hoursObj = readHoursEditor();
   const data = {
     n,
     cats: selectedCats,
@@ -2835,7 +2919,8 @@ window.savePlace = async () => {
     a:   document.getElementById('f_a').value.trim(),
     b:   document.getElementById('f_b').value.trim(),
     ig:  document.getElementById('f_ig').value.trim(),
-    h:   document.getElementById('f_h').value.trim(),
+    hours: hoursObj,                 // horário estruturado por dia
+    h:   hoursToText(hoursObj),      // texto de exibição derivado
     pid: document.getElementById('f_pid').value.trim(),
     bg:  document.getElementById('f_bg').value,
     e:   document.getElementById('f_e').value.trim(),
