@@ -16,18 +16,25 @@ export function toggleTheme() {
   apply(n);
 }
 
-// ── Altura real do viewport (corrige barra de endereço mobile) ─────
-// dvh funciona em browsers modernos, mas em Android Chrome e iOS Safari
-// antigos a barra de navegação/gestos não é descontada corretamente.
-// Calculamos a altura real via JS e expômos como --app-height.
+// ── Altura do viewport (só fallback p/ browsers sem dvh) ───────────
+// O CSS já usa 100dvh, que os browsers modernos ajustam suavemente quando
+// a barra de endereço do mobile some/aparece.
+//
+// A versão antiga recalculava a altura via JS ouvindo o `visualViewport`,
+// que no Android muda de pixel em pixel durante o rolar da barra de
+// endereço. Isso criava um loop resize→altura→resize e a tela PISCAVA.
+// Agora o JS só entra quando o browser NÃO suporta dvh, e sem ouvir o
+// visualViewport (a fonte do tremor).
 function setAppHeight() {
-  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  document.documentElement.style.setProperty('--app-height', h + 'px');
+  document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
 }
-setAppHeight();
-window.addEventListener('resize', setAppHeight);
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', setAppHeight);
+const supportsDvh = !!(window.CSS && CSS.supports && CSS.supports('height', '100dvh'));
+if (!supportsDvh) {
+  setAppHeight();
+  let _t;
+  const onResize = () => { clearTimeout(_t); _t = setTimeout(setAppHeight, 150); };
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
 }
 
 // Aplica imediatamente (antes do DOMContentLoaded)
