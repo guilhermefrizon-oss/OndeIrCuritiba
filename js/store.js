@@ -14,12 +14,28 @@ function getUid() {
   })();
 }
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10); // "2026-04-18"
+// Dia no fuso LOCAL do aparelho (não UTC). Curitiba é UTC-3, então usar
+// toISOString() fazia o "dia" virar às 21h (meia-noite UTC) em vez da
+// meia-noite local: lugares marcados entre 21h e meia-noite ganhavam a
+// data UTC do dia seguinte e sobreviviam um dia a mais na lista "quero ir
+// hoje" / "pulados". Aqui o dia é sempre o calendário local.
+function localDayStr(d = new Date()) {
+  const y   = d.getFullYear();
+  const m   = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`; // "2026-04-18" no horário local
 }
 
+function todayStr() {
+  return localDayStr();
+}
+
+// isoStr é um instante UTC salvo (new Date().toISOString()). Convertendo
+// para Date e lendo o dia local, "mesmo dia" passa a significar o mesmo
+// dia no fuso do usuário — que é o que "zera à meia-noite" promete.
 function isSameDay(isoStr) {
-  return isoStr?.slice(0, 10) === todayStr();
+  if (!isoStr) return false;
+  return localDayStr(new Date(isoStr)) === todayStr();
 }
 
 function daysPassed(isoStr) {
