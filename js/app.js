@@ -859,6 +859,8 @@ window.swipe = (dir, fromBtn = false) => {
 
 window.savePlace = () => {
   if (!filtered.length) return;
+  // Salvar guarda no perfil do usuário → exige login (navegar segue livre).
+  if (!window.currentUser) { window.showAuthModal && window.showAuthModal('like'); return; }
   const p = place();
   const alreadySaved = !!saved.find(s => s.id === p.id);
   if (!alreadySaved) doSave(p);
