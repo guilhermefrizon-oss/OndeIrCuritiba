@@ -21,6 +21,7 @@ verdade — não pode parecer "só um site" (Apple 4.2).
 - [ ] **Privacy “nutrition labels”** — declarar coleta (conta Google, localização) no App Store Connect + política de privacidade linkada (`privacidade.html`).
 - [x] **Textos de permissão** — localização já tem texto pronto (ver README). Qualquer permissão nova precisa de justificativa.
 - [ ] **Não parecer webview** (4.2) — usar recursos nativos (push, localização), sem cara de navegador, tratar offline.
+- [ ] **Universal Links (deep link de compartilhar)** — o botão de compartilhar já gera link `?lugar=ID` que abre o lugar (funciona na web). No app nativo, pra esse link abrir **direto no app** (não no navegador), precisa configurar **Universal Links** no wrapper Capacitor: associated domains (`applinks:SEU-DOMINIO`) + arquivo `apple-app-site-association` no site + rota no app. Depende de domínio próprio + conta Apple Developer.
 
 ## Google Play — pendências equivalentes
 
@@ -28,6 +29,7 @@ verdade — não pode parecer "só um site" (Apple 4.2).
 - [ ] **Exclusão de conta** — link in-app **e** por web (Google exige os dois).
 - [ ] **Política de privacidade** linkada na ficha.
 - [ ] **Target API level** atual + permissões declaradas no manifesto.
+- [ ] **App Links (deep link de compartilhar)** — equivalente ao Universal Links: `assetlinks.json` no site + `intent-filter` com `autoVerify` no `AndroidManifest`, pra o link `?lugar=ID` abrir direto no app. Depende de domínio próprio.
 
 ## Assets e ficha (as duas lojas)
 
