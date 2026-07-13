@@ -1109,21 +1109,32 @@ async function openProfile(p) {
       .then(() => showToast('Endereço copiado!'));
   };
 
-  // ── Botão "Já fui" (movido dos cards pra cá) ────────────────────
-  let beenBtn = document.getElementById('profileBeenBtn');
-  if (!beenBtn) {
-    beenBtn = document.createElement('button');
-    beenBtn.id = 'profileBeenBtn';
-    beenBtn.className = 'profile-been-btn';
-    beenBtn.onclick = () => window.markBeenThereProfile();
-    qEl.insertAdjacentElement('afterend', beenBtn);
+  // ── Ações (mesmo estilo dos cards): Já fui · Não hoje · Quero ir · Salvar ──
+  let actEl = document.getElementById('profileActions');
+  if (!actEl) {
+    actEl = document.createElement('div');
+    actEl.id = 'profileActions';
+    actEl.className = 'profile-abtns';
+    actEl.innerHTML = `
+      <button class="abtn b-been" id="pab-been" onclick="window.profileBeen()">
+        <div class="c"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="lbl" id="pab-been-lbl">Já fui aqui</div>
+      </button>
+      <button class="abtn b-pass" id="pab-skip" onclick="window.profileSkip()">
+        <div class="c"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+        <div class="lbl">Não hoje</div>
+      </button>
+      <button class="abtn b-like" id="pab-want" onclick="window.profileWant()">
+        <div class="c"><svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+        <div class="lbl">Quero ir!</div>
+      </button>
+      <button class="abtn b-save" id="pab-save" onclick="window.profileSaveToggle()">
+        <div class="c"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="lbl" id="pab-save-lbl">Salvar</div>
+      </button>`;
+    qEl.insertAdjacentElement('afterend', actEl);
   }
-  const alreadyBeen = !!beenThere[p.id];
-  beenBtn.classList.toggle('done', alreadyBeen);
-  beenBtn.disabled = alreadyBeen;
-  beenBtn.innerHTML = alreadyBeen
-    ? `${ic('check', 17)} Você já foi aqui`
-    : `${ic('map-pin', 17)} Já fui aqui`;
+  updateProfileActionStates(p);
 
   const addrEsc = p.a.replace(/'/g,"\\'");
   document.getElementById('profileInfoGrid').innerHTML=`
@@ -1171,6 +1182,68 @@ async function openProfile(p) {
   document.getElementById('storyTapRight').onclick = storyNext;
   document.getElementById('profileClose').onclick  = () => window.dismissOverlay('profile');
 }
+
+// ── Ações do perfil (Já fui · Não hoje · Quero ir · Salvar) ────────
+// Refletem o estado atual do lugar nos 4 botões e sincronizam o baralho.
+function updateProfileActionStates(p) {
+  const set = (id, on) => document.getElementById(id)?.classList.toggle('on', on);
+  const been = !!beenThere[p.id];
+  const save = !!saved.find(s => s.id === p.id);
+  set('pab-been', been);
+  set('pab-skip', !!skipped[p.id]);
+  set('pab-want', !!wantToday.find(w => w.id === p.id));
+  set('pab-save', save);
+  const bl = document.getElementById('pab-been-lbl'); if (bl) bl.textContent = been ? 'Você já foi' : 'Já fui aqui';
+  const sl = document.getElementById('pab-save-lbl'); if (sl) sl.textContent = save ? 'Salvo'       : 'Salvar';
+}
+
+function _requireLoginProfile() {
+  if (!window.currentUser) { window.showAuthModal && window.showAuthModal('like'); return false; }
+  return true;
+}
+
+// Refresca o baralho por baixo (skip/want/been mudam o que aparece lá)
+function _syncDeckAfterProfileAction() {
+  applyUserFilters(); renderCard(); renderProgress();
+  const mapView = document.getElementById('mapView');
+  if (mapView && mapView.style.display !== 'none') renderMapView();
+}
+
+window.profileBeen = () => {
+  const p = _profilePlace; if (!p || !_requireLoginProfile()) return;
+  if (!beenThere[p.id]) { doBeenThere(p); showToast('Marcado como visitado!'); }
+  updateProfileActionStates(p);
+  _syncDeckAfterProfileAction();
+};
+
+window.profileSkip = () => {
+  const p = _profilePlace; if (!p || !_requireLoginProfile()) return;
+  if (!skipped[p.id]) doSkip(p);
+  // Pular e "quero ir" não convivem: remove do rolê de hoje se estava lá.
+  if (wantToday.find(w => w.id === p.id)) {
+    wantToday = wantToday.filter(w => w.id !== p.id);
+    fsRemoveWantToday(p.id); fsRemoveLike(p.id); updateWantBadge();
+  }
+  showToast('Pulado — volta amanhã');
+  updateProfileActionStates(p);
+  _syncDeckAfterProfileAction();
+};
+
+window.profileWant = () => {
+  const p = _profilePlace; if (!p || !_requireLoginProfile()) return;
+  if (!wantToday.find(w => w.id === p.id)) { doWantToday(p); updateWantBadge(); showToast('Salvo no rolê de hoje!'); }
+  // Se estava pulado, libera pra poder entrar no rolê.
+  if (skipped[p.id]) { delete skipped[p.id]; fsUnskip(p.id); }
+  updateProfileActionStates(p);
+  _syncDeckAfterProfileAction();
+};
+
+window.profileSaveToggle = () => {
+  const p = _profilePlace; if (!p || !_requireLoginProfile()) return;
+  if (saved.find(s => s.id === p.id)) { removeFav(p.id); showToast('Removido dos salvos'); }
+  else { doSave(p); showToast('Salvo para depois!'); }
+  updateProfileActionStates(p);
+};
 
 function setProfilePhoto(i) {
   if (!profilePhotos.length) return;

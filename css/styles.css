@@ -794,6 +794,25 @@ body {
   border-color: var(--green); color: var(--green);
   background: rgba(52,211,153,.10); cursor: default;
 }
+
+/* Ações do perfil no estilo dos cards (Já fui · Não hoje · Quero ir · Salvar) */
+.profile-abtns {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 8px; margin-bottom: 18px;
+}
+.profile-abtns .abtn { flex: 1; gap: 6px; }
+.profile-abtns .abtn .c {
+  width: 100%; max-width: 62px; aspect-ratio: 1; height: auto; margin: 0 auto;
+}
+.profile-abtns .abtn .lbl { font-size: 9.5px; letter-spacing: .4px; }
+/* Estado ativo: círculo preenchido com a cor da ação */
+.profile-abtns .abtn.on .c   { color: #fff; }
+.profile-abtns .b-been.on .c { background: #f59e0b; border-color: #f59e0b; }
+.profile-abtns .b-pass.on .c { background: #f87171; border-color: #f87171; }
+.profile-abtns .b-like.on .c { background: var(--green); border-color: var(--green); }
+.profile-abtns .b-save.on .c { background: var(--p400); border-color: var(--p400); }
+.profile-abtns .b-been.on .lbl { color: #f59e0b; }
+.profile-abtns .b-save.on .lbl { color: var(--p400); }
 .pqa {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   background: var(--bg2); border: 1.5px solid var(--bg4);
