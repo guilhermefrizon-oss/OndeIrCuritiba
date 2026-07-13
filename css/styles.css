@@ -798,7 +798,7 @@ body {
 /* Ações do perfil no estilo dos cards (Já fui · Não hoje · Quero ir · Salvar) */
 .profile-abtns {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 8px; margin-bottom: 18px;
+  gap: 8px; margin: 18px 0 8px;
 }
 .profile-abtns .abtn { flex: 1; gap: 6px; }
 .profile-abtns .abtn .c {

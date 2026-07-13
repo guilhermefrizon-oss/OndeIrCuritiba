@@ -1132,7 +1132,9 @@ async function openProfile(p) {
         <div class="c"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
         <div class="lbl" id="pab-save-lbl">Salvar</div>
       </button>`;
-    qEl.insertAdjacentElement('afterend', actEl);
+    // Fica embaixo de tudo, depois dos cards de info (endereço/bairro/horário).
+    const infoGrid = document.getElementById('profileInfoGrid');
+    (infoGrid || qEl).insertAdjacentElement('afterend', actEl);
   }
   updateProfileActionStates(p);
 
