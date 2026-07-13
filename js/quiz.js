@@ -178,7 +178,7 @@ export function openQuiz(onOpenProfile) {
       </div>
       <div class="quiz-inner" id="quizInner"></div>`;
     document.querySelector('.phone').appendChild(overlay);
-    document.getElementById('quizClose').onclick = () => window.dismissOverlay('quiz');
+    document.getElementById('quizClose').onclick = closeQuizNow;
     document.getElementById('quizBack').onclick  = goBack;
   }
 
@@ -196,6 +196,14 @@ function doCloseQuiz() {
   if (!overlay) return;
   overlay.classList.remove('open');
   setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 280);
+}
+
+// Fecha o quiz de forma garantida (síncrona) e reconcilia o histórico.
+// Não depende do popstate pra esconder — em PWA/navegador embutido o
+// history.back() nem sempre dispara o popstate, e a tela ficava presa.
+function closeQuizNow() {
+  doCloseQuiz();
+  if (window.dismissOverlay) window.dismissOverlay('quiz');
 }
 
 function startQuiz() {
@@ -262,7 +270,7 @@ function renderStep() {
 }
 
 function goBack() {
-  if (step <= 0) { window.dismissOverlay('quiz'); return; }
+  if (step <= 0) { closeQuizNow(); return; }
   step--;
   renderStep();
 }
@@ -349,7 +357,7 @@ function paintResult() {
 
   // Abrir o perfil completo ao tocar no card
   document.getElementById('quizHero').onclick = () => {
-    window.dismissOverlay('quiz');
+    closeQuizNow();
     onOpenProfileCb && onOpenProfileCb(p);
   };
 
@@ -397,7 +405,7 @@ function renderMoreList(container, excludeId) {
         <span class="quiz-more-meta">${p.c || ''}${p.b ? ' · ' + p.b : ''}</span>
       </span>
       <span class="quiz-more-price">${p.p || ''}</span>`;
-    row.onclick = () => { window.dismissOverlay('quiz'); onOpenProfileCb && onOpenProfileCb(p); };
+    row.onclick = () => { closeQuizNow(); onOpenProfileCb && onOpenProfileCb(p); };
     container.appendChild(row);
     const url0 = Array.isArray(p.photos) && p.photos.length ? p.photos[0] : null;
     if (url0) { const t = row.querySelector('.quiz-more-thumb'); t.style.backgroundImage = `url("${url0}")`; t.innerHTML = ''; }
