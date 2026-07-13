@@ -1225,8 +1225,9 @@ window.profileSkip = () => {
     fsRemoveWantToday(p.id); fsRemoveLike(p.id); updateWantBadge();
   }
   showToast('Pulado — volta amanhã');
-  updateProfileActionStates(p);
   _syncDeckAfterProfileAction();
+  // "Não hoje" é um descarte: fecha o perfil (como o card saindo da tela).
+  window.dismissOverlay('profile');
 };
 
 window.profileWant = () => {
