@@ -9,6 +9,7 @@
 
 import { fetchPlacePhoto } from './photos.js';
 import { catIcon, ic } from './icons.js';
+import { db, doc, getDoc } from './firebase.js';
 
 let allPlaces = [];
 let onOpenProfileCb = null;
@@ -20,9 +21,30 @@ let ranked    = [];         // lugares ordenados por match (após responder)
 let resultIdx = 0;          // qual do ranking está sendo mostrado
 let lastCtx   = null;       // contexto do ranking (pref de cats/preço/aberto)
 
+// Perguntas em uso: começam com o padrão (QUIZ, definido abaixo) e são
+// substituídas pela config do admin (Firestore) quando houver.
+let QUESTIONS = null;
+
 export function initQuiz(placesRef) {
   allPlaces = placesRef;
+  loadQuizConfig(); // busca config do admin em background; fallback = QUIZ
 }
+
+// Carrega as perguntas do Firestore (app_config/quiz). Se não houver nada
+// salvo ou der erro, mantém o padrão embutido — o quiz nunca fica vazio.
+async function loadQuizConfig() {
+  try {
+    const snap = await getDoc(doc(db, 'app_config', 'quiz'));
+    if (snap.exists()) {
+      const qs = snap.data().questions;
+      if (Array.isArray(qs) && qs.length) QUESTIONS = qs;
+    }
+  } catch (e) {
+    console.warn('loadQuizConfig:', e);
+  }
+}
+
+function questions() { return (Array.isArray(QUESTIONS) && QUESTIONS.length) ? QUESTIONS : QUIZ; }
 
 // ── Definição das perguntas ────────────────────────────────────────
 // Cada opção carrega o "boost" que ela aplica no ranking:
@@ -239,15 +261,16 @@ window.addEventListener('authChanged', (e) => {
 
 // ── Perguntas ───────────────────────────────────────────────────────
 function renderStep() {
-  if (step >= QUIZ.length) { renderResult(); return; }
-  const q = QUIZ[step];
-  setProgress(step / QUIZ.length);
+  const QS = questions();
+  if (step >= QS.length) { renderResult(); return; }
+  const q = QS[step];
+  setProgress(step / QS.length);
   toggleHeadNav(true);
 
   const inner = document.getElementById('quizInner');
   inner.innerHTML = `
     <div class="quiz-q" id="quizQ">
-      <div class="quiz-q-step">Pergunta ${step + 1} de ${QUIZ.length}</div>
+      <div class="quiz-q-step">Pergunta ${step + 1} de ${QS.length}</div>
       <div class="quiz-q-title">${q.title}</div>
       <div class="quiz-q-sub">${q.sub}</div>
       <div class="quiz-opts ${q.options.length <= 2 ? 'two' : ''}">
