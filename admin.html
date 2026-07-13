@@ -1137,10 +1137,16 @@ th.sortable:hover { color: var(--acc3); }
           <div class="page-title">Lugares</div>
           <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
         </div>
-        <button class="btn btn-primary" onclick="openAddModal()">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Novo Lugar
-        </button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn" onclick="migrateHours()" id="btnMigrateHours" title="Preenche a grade de horário por dia dos lugares antigos a partir do texto — sem sobrescrever quem já tem">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+            Converter horários
+          </button>
+          <button class="btn btn-primary" onclick="openAddModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Lugar
+          </button>
+        </div>
       </div>
 
       <div class="stats-bar" id="statsBar">
@@ -2883,6 +2889,42 @@ window.copyMondayHours = () => {
 window.updateHoursPreview = () => {
   const el = document.getElementById('f_hours_preview');
   if (el) el.textContent = 'No app aparece: ' + (hoursToText(readHoursEditor()) || '—');
+};
+
+// Conversão em massa: preenche `hours` (grade por dia) dos lugares antigos a
+// partir do texto `h`. Não toca em quem já tem `hours`, nem em texto que não
+// dá pra interpretar. Idempotente — rodar de novo é seguro.
+window.migrateHours = async () => {
+  if (!allPlaces.length) { showToast('Nenhum lugar carregado ainda', 'error'); return; }
+  const pend       = allPlaces.filter(p => !p.hours && parseHoursText(p.h));
+  const jaTem      = allPlaces.filter(p => p.hours).length;
+  const semTexto   = allPlaces.filter(p => !p.hours && !parseHoursText(p.h)).length;
+
+  if (!pend.length) {
+    showToast(`Nada a converter — ${jaTem} já têm horário por dia` + (semTexto ? `, ${semTexto} sem texto reconhecível` : ''), 'success');
+    return;
+  }
+  const msg = `Converter ${pend.length} lugar(es) do texto para a grade por dia?\n\n`
+    + `• Não altera os ${jaTem} que já têm horário por dia.\n`
+    + (semTexto ? `• ${semTexto} sem texto reconhecível ficam pra editar à mão.\n` : '')
+    + `\nDá pra revisar/ajustar cada um depois.`;
+  if (!confirm(msg)) return;
+
+  const btn = document.getElementById('btnMigrateHours');
+  const orig = btn.innerHTML;
+  btn.disabled = true; btn.textContent = 'Convertendo…';
+  let ok = 0, err = 0;
+  for (const p of pend) {
+    try {
+      const hours = parseHoursText(p.h);
+      await setDoc(doc(db, 'places', p._docId),
+        { hours, h: hoursToText(hours), _updatedAt: serverTimestamp() }, { merge: true });
+      ok++;
+    } catch (e) { err++; console.warn('migrateHours:', p.n, e); }
+  }
+  btn.disabled = false; btn.innerHTML = orig;
+  showToast(`${ok} convertido(s)${err ? `, ${err} com erro` : ''}. Revise se precisar.`, err ? 'error' : 'success');
+  await loadPlaces();
 };
 
 window.closeModal = () => {
