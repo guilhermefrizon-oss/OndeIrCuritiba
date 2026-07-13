@@ -1,0 +1,107 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────
+// Firestore Security Rules — OndeIr Curitiba
+//
+// ESTA é a barreira de segurança real do app (o painel admin no navegador
+// é só interface). REVISE e TESTE no "Rules Playground" do console do
+// Firebase antes de publicar (Firestore → Regras → Publicar).
+//
+// Princípios:
+//   • Conteúdo (places, categories, app_config): leitura pública, escrita
+//     só de admin — EXCETO o contador _likes do lugar, que o app incrementa
+//     por usuário logado (regra por campo abaixo).
+//   • Admin = existe um doc em /admins com id == e-mail do usuário logado.
+//   • Dados de cada usuário: só o próprio dono lê/escreve.
+//   • Contadores sociais/comentários: leitura pública; cada um escreve o seu.
+//   • Tudo o que não estiver liberado explicitamente é NEGADO.
+// ─────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    // Admin: o e-mail do usuário logado é o id de um doc em /admins.
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+    // A atualização mexe SOMENTE nos campos listados?
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ── Conteúdo do app ──────────────────────────────────────────────
+    // Lugares: leitura pública. Escrita de conteúdo só admin; mas um usuário
+    // logado pode atualizar APENAS o contador _likes (curtir/descurtir).
+    match /places/{id} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+                    || (signedIn() && onlyChanges(['_likes']));
+    }
+
+    match /categories/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /app_config/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    // ── Admins ───────────────────────────────────────────────────────
+    // Cada um lê o próprio doc (o painel usa isso pra saber se é admin);
+    // admin lê todos. Só admin adiciona/remove admins.
+    match /admins/{email} {
+      allow read:  if signedIn() && (request.auth.token.email == email || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // ── Dados privados por usuário (só o dono) ───────────────────────
+    match /favorites/{uid}/places/{pid}       { allow read, write: if isOwner(uid); }
+    match /want_today/{uid}/places/{pid}      { allow read, write: if isOwner(uid); }
+    match /skipped/{uid}/places/{pid}         { allow read, write: if isOwner(uid); }
+    match /been_there/{uid}/places/{pid}      { allow read, write: if isOwner(uid); }
+    match /xp_events/{uid}/events/{eid}       { allow read, write: if isOwner(uid); }
+    match /likes_by_user/{uid}/places/{pid}   { allow read, write: if isOwner(uid); }
+    match /ratings_by_user/{uid}/places/{pid} { allow read, write: if isOwner(uid); }
+
+    // Perfil: leitura por qualquer logado (nome/avatar em comentários);
+    // escrita só o dono.
+    match /user_profiles/{uid} {
+      allow read:  if signedIn();
+      allow write: if isOwner(uid);
+    }
+
+    // ── Contadores sociais por lugar (id do doc = uid do usuário) ─────
+    match /likes/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }
+    match /saves/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }
+    match /visits/{placeId}/users/{uid}  { allow read: if true; allow write: if isOwner(uid); }
+    match /ratings/{placeId}/votes/{uid} { allow read: if true; allow write: if isOwner(uid); }
+
+    // Resumo de nota (avg/count) do lugar: o app calcula no cliente e grava
+    // no doc pai. Leitura pública; escrita por qualquer logado (limitação de
+    // um app client-side — o cálculo não é confiável, só o total de votos é).
+    match /ratings/{placeId} {
+      allow read:  if true;
+      allow write: if signedIn() && onlyChanges(['avg', 'count']);
+    }
+
+    // Docs "pai" de contadores que o app NÃO escreve diretamente:
+    // leitura pública, escrita bloqueada.
+    match /likes/{placeId}   { allow read: if true; allow write: if false; }
+    match /saves/{placeId}   { allow read: if true; allow write: if false; }
+    match /visits/{placeId}  { allow read: if true; allow write: if false; }
+    match /comments/{placeId}{ allow read: if true; allow write: if false; }
+
+    // ── Comentários ──────────────────────────────────────────────────
+    // Leitura pública; cria só o próprio autor; edita/apaga o autor ou admin.
+    match /comments/{placeId}/items/{id} {
+      allow read:   if true;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // ── Padrão: nega o que não foi liberado acima ────────────────────
+    match /{document=**} { allow read, write: if false; }
+  }
+}
