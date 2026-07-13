@@ -11,6 +11,7 @@ import { checkAndAwardBadges } from './badges.js';
 import { fetchAllPhotos } from './photos.js';
 import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
+import { initQuiz, openQuiz } from './quiz.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
 import { ic, catIcon } from './icons.js';
@@ -144,6 +145,7 @@ async function init() {
 
   filtered = [...P];
   initSearch(P);
+  initQuiz(P);
 
   buildCategoryRow();
   renderCard();
@@ -960,10 +962,10 @@ window.showTab = (t) => {
   Object.entries(views).forEach(([k, el]) => {
     if (el) el.style.display = k === t ? 'flex' : 'none';
   });
-  ['navDiscover','navWant','navFavorites','navMap','navSearch'].forEach(id =>
+  ['navDiscover','navWant','navFavorites','navMap','navQuiz'].forEach(id =>
     document.getElementById(id)?.classList.remove('on')
   );
-  const navMap = { discover:'navDiscover2', want:'navWant', favorites:'navFavorites', map:'navMap', search:'navSearch' };
+  const navMap = { discover:'navDiscover2', want:'navWant', favorites:'navFavorites', map:'navMap' };
   document.getElementById(navMap[t])?.classList.add('on');
 
   if (t === 'want')      renderWantToday();
@@ -1005,6 +1007,13 @@ function removeBeen(id) {
 
 // ── Search ─────────────────────────────────────────────────────────
 window.openSearchOverlay = () => openSearch(openProfile);
+
+// ── Quiz "Me ajude a escolher" ─────────────────────────────────────
+window.openQuizOverlay = () => openQuiz(openProfile);
+// Helpers usados pelo quiz.js (salvar/checar/toast) reaproveitando o app
+window.dmSavePlace = (p) => doSave(p);
+window.dmIsSaved   = (id) => !!saved.find(s => s.id === id);
+window.dmToast     = (msg, longer) => showToast(msg, longer);
 
 // ── Profile screen ─────────────────────────────────────────────────
 function priceHTML(p) {
