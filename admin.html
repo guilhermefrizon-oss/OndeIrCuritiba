@@ -650,6 +650,27 @@ td {
 .emoji-opt:hover { background: var(--bg5); }
 .emoji-opt.selected { border-color: var(--acc); background: var(--acc-glow); }
 
+/* Quiz — chips na lista e editor de respostas */
+.quiz-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 8px;
+  background: var(--bg4); font-size: 12.5px; font-weight: 600; color: var(--text);
+}
+.quiz-chip-tag { color: var(--text3); font-weight: 500; }
+.quiz-opt-edit {
+  border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 12px; background: var(--bg3);
+}
+.quiz-opt-edit-top { display: flex; gap: 8px; align-items: center; }
+.quiz-opt-favlbl {
+  font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--text3); margin: 12px 0 6px;
+}
+.quiz-opt-extra {
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+  margin-top: 12px; font-size: 13px; color: var(--text2);
+}
+
 /* Toast */
 .toast-container { position: fixed; bottom: 28px; right: 28px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
 .toast {
@@ -1060,6 +1081,10 @@ th.sortable:hover { color: var(--acc3); }
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Categorias
     </button>
+    <button class="nav-item" onclick="showPage('quiz')" id="nav-quiz">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Quiz
+    </button>
     <button class="nav-item" onclick="showPage('metrics')" id="nav-metrics">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Métricas
@@ -1173,6 +1198,35 @@ th.sortable:hover { color: var(--acc3); }
         <div class="table-loading" style="grid-column:1/-1">
           <div class="spinner"></div>Carregando…
         </div>
+      </div>
+    </div>
+
+    <!-- ── Quiz Page ── -->
+    <div id="page-quiz" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Quiz — Me ajude a escolher</div>
+          <div class="page-subtitle">Perguntas que o app usa pra sugerir 1 lugar. As mudanças valem no próximo abrir do app.</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn" onclick="restoreDefaultQuiz()" title="Volta às 5 perguntas originais">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg>
+            Restaurar padrão
+          </button>
+          <button class="btn btn-primary" onclick="openQuizQuestionModal(null)">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova pergunta
+          </button>
+        </div>
+      </div>
+
+      <div class="alert-box info" style="max-width:760px">
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        <div>Cada resposta pode <strong>favorecer categorias</strong> (ex.: “Date” puxa Romântico), definir um <strong>preço alvo</strong> e/ou filtrar <strong>só abertos agora</strong>. O app soma esses pesos e sugere o lugar com maior combinação.</div>
+      </div>
+
+      <div id="quizList" style="display:flex; flex-direction:column; gap:14px; max-width:760px">
+        <div class="table-loading"><div class="spinner"></div>Carregando…</div>
       </div>
     </div>
 
@@ -1662,6 +1716,43 @@ service cloud.firestore {
   </div>
 </div>
 
+<!-- ══ Modal: Quiz Question ═════════════════════════════════════ -->
+<div class="modal-backdrop" id="quizModalBackdrop" onclick="if(event.target===this)closeQuizModal()">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <div class="modal-title" id="quizModalTitle">Nova pergunta</div>
+      <button class="modal-close" onclick="closeQuizModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group">
+          <label class="form-label">Pergunta *</label>
+          <input class="form-input" id="fq_title" placeholder="ex: Com quem você vai?">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subtítulo</label>
+          <input class="form-input" id="fq_sub" placeholder="ex: Pra gente acertar o clima">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Respostas <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— 2 a 4 opções</span></label>
+          <div id="fq_options" style="display:flex;flex-direction:column;gap:14px"></div>
+          <button class="btn btn-secondary btn-sm" id="btnAddQuizOpt" onclick="addQuizOption()" style="align-self:flex-start;margin-top:10px">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar resposta
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeQuizModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btnSaveQuiz" onclick="saveQuizQuestion()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar pergunta
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Modal: Confirm Delete ════════════════════════════════════ -->
 <div class="modal-backdrop" id="confirmBackdrop" onclick="closeConfirmOnBackdrop(event)">
   <div class="modal" style="max-width:420px">
@@ -1690,7 +1781,7 @@ service cloud.firestore {
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, Timestamp }
+import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where, Timestamp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
@@ -2291,6 +2382,235 @@ window.deleteCat = async (id, name) => {
   }
 };
 
+// ── Quiz "Me ajude a escolher" ──────────────────────────────────
+// Config guardada em app_config/quiz { questions: [...] }. Espelha o
+// padrão embutido em js/quiz.js — se nada estiver salvo, usa este.
+const DEFAULT_QUIZ = [
+  { key:'role', title:'Qual é o rolê hoje?', sub:'O que você tá a fim de fazer', options:[
+    { emoji:'🍽️', label:'Comer bem',    cats:['Alta gastronomia','Vegano','Baratinho'], price:null, openNow:false },
+    { emoji:'☕', label:'Café da tarde', cats:['Café da tarde'], price:null, openNow:false },
+    { emoji:'🍺', label:'Beber algo',    cats:['Barzinho'], price:null, openNow:false },
+    { emoji:'🕺', label:'Balada',        cats:['Balada'], price:null, openNow:false },
+  ]},
+  { key:'quem', title:'Com quem você vai?', sub:'Pra gente acertar o clima', options:[
+    { emoji:'🧍', label:'Sozinho', cats:['Instagramável','Café da tarde'], price:null, openNow:false },
+    { emoji:'❤️', label:'Date',    cats:['Romântico'], price:null, openNow:false },
+    { emoji:'🎉', label:'Amigos',  cats:['Barzinho','Balada','Céu aberto'], price:null, openNow:false },
+    { emoji:'🐾', label:'Família', cats:['Pet friendly','Céu aberto'], price:null, openNow:false },
+  ]},
+  { key:'grana', title:'Quanto quer gastar?', sub:'Sem julgamento 😌', options:[
+    { emoji:'🪙', label:'Baratinho', cats:['Baratinho'], price:'$', openNow:false },
+    { emoji:'💳', label:'Tanto faz', cats:[], price:null, openNow:false },
+    { emoji:'💎', label:'Caprichar', cats:['Alta gastronomia'], price:'$$$', openNow:false },
+  ]},
+  { key:'vibe', title:'Que vibe você quer?', sub:'O cenário do rolê', options:[
+    { emoji:'🕯️', label:'Aconchegante',  cats:['Romântico','Café da tarde'], price:null, openNow:false },
+    { emoji:'📸', label:'Instagramável', cats:['Instagramável'], price:null, openNow:false },
+    { emoji:'🌳', label:'Ao ar livre',   cats:['Céu aberto'], price:null, openNow:false },
+    { emoji:'🤷', label:'Tanto faz',     cats:[], price:null, openNow:false },
+  ]},
+  { key:'quando', title:'É pra agora?', sub:'Pra mostrar só o que faz sentido', options:[
+    { emoji:'⚡', label:'Bora agora',    cats:[], price:null, openNow:true },
+    { emoji:'🗓️', label:'Tô planejando', cats:[], price:null, openNow:false },
+  ]},
+];
+
+let quizQuestions = [];
+let editingQuizIdx = null;   // índice em edição (null = nova)
+let editingQuiz    = null;   // cópia de trabalho da pergunta
+
+const _clone = (o) => JSON.parse(JSON.stringify(o));
+const _escQ  = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadQuizConfig() {
+  const wrap = document.getElementById('quizList');
+  if (!allCategoriesList.length) { try { await loadCategories(); } catch(e){} }
+  try {
+    const snap = await getDoc(doc(db, 'app_config', 'quiz'));
+    if (snap.exists() && Array.isArray(snap.data().questions) && snap.data().questions.length) {
+      quizQuestions = snap.data().questions;
+    } else {
+      quizQuestions = _clone(DEFAULT_QUIZ);
+    }
+  } catch(e) {
+    console.warn('loadQuizConfig:', e);
+    quizQuestions = _clone(DEFAULT_QUIZ);
+  }
+  renderQuizList();
+}
+
+function renderQuizList() {
+  const wrap = document.getElementById('quizList');
+  if (!wrap) return;
+  if (!quizQuestions.length) {
+    wrap.innerHTML = '<div class="empty-state"><div>Nenhuma pergunta. Clique em “Nova pergunta”.</div></div>';
+    return;
+  }
+  wrap.innerHTML = quizQuestions.map((q, i) => `
+    <div class="cat-card" style="max-width:none; align-items:stretch; text-align:left">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start">
+        <div>
+          <div style="font-weight:700; font-size:15px">${i+1}. ${_escQ(q.title)}</div>
+          ${q.sub ? `<div style="color:var(--text3); font-size:12.5px; margin-top:2px">${_escQ(q.sub)}</div>` : ''}
+        </div>
+        <div style="display:flex; gap:4px; flex-shrink:0">
+          <button class="btn btn-secondary btn-sm" title="Subir" onclick="moveQuizQuestion(${i},-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn btn-secondary btn-sm" title="Descer" onclick="moveQuizQuestion(${i},1)" ${i===quizQuestions.length-1?'disabled':''}>↓</button>
+        </div>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px">
+        ${(q.options||[]).map(o => {
+          const tags = [];
+          if (o.cats && o.cats.length) tags.push(o.cats.join(', '));
+          if (o.price)   tags.push('preço ' + o.price);
+          if (o.openNow) tags.push('só abertos');
+          return `<span class="quiz-chip">${o.emoji||''} ${_escQ(o.label)}${tags.length?`<span class="quiz-chip-tag"> · ${_escQ(tags.join(' · '))}</span>`:''}</span>`;
+        }).join('')}
+      </div>
+      <div class="cat-card-actions" style="margin-top:12px">
+        <button class="btn btn-secondary btn-sm" onclick="openQuizQuestionModal(${i})">${ic('edit',13)} Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="removeQuizQuestion(${i})">${ic('trash',14)}</button>
+      </div>
+    </div>`).join('');
+}
+
+window.moveQuizQuestion = async (i, dir) => {
+  const j = i + dir;
+  if (j < 0 || j >= quizQuestions.length) return;
+  [quizQuestions[i], quizQuestions[j]] = [quizQuestions[j], quizQuestions[i]];
+  renderQuizList();
+  await persistQuiz();
+};
+
+window.removeQuizQuestion = async (i) => {
+  if (!confirm(`Excluir a pergunta "${quizQuestions[i]?.title}"?`)) return;
+  quizQuestions.splice(i, 1);
+  renderQuizList();
+  await persistQuiz();
+};
+
+window.restoreDefaultQuiz = async () => {
+  if (!confirm('Restaurar as 5 perguntas originais? Isso substitui as perguntas atuais.')) return;
+  quizQuestions = _clone(DEFAULT_QUIZ);
+  renderQuizList();
+  await persistQuiz();
+};
+
+// ── Modal de edição ──
+window.openQuizQuestionModal = (idx) => {
+  editingQuizIdx = idx;
+  editingQuiz = idx == null
+    ? { title:'', sub:'', options:[ _blankOpt(), _blankOpt() ] }
+    : _clone(quizQuestions[idx]);
+  document.getElementById('quizModalTitle').textContent = idx == null ? 'Nova pergunta' : 'Editar pergunta';
+  document.getElementById('fq_title').value = editingQuiz.title || '';
+  document.getElementById('fq_sub').value   = editingQuiz.sub   || '';
+  renderQuizOptions();
+  document.getElementById('quizModalBackdrop').classList.add('open');
+};
+
+function _blankOpt() { return { emoji:'', label:'', cats:[], price:null, openNow:false }; }
+
+window.closeQuizModal = () => document.getElementById('quizModalBackdrop').classList.remove('open');
+
+function renderQuizOptions() {
+  const wrap = document.getElementById('fq_options');
+  const cats = allCategoriesList;
+  wrap.innerHTML = editingQuiz.options.map((o, i) => `
+    <div class="quiz-opt-edit" data-i="${i}">
+      <div class="quiz-opt-edit-top">
+        <input class="form-input qopt-emoji" data-i="${i}" value="${_escQ(o.emoji||'')}" maxlength="4" placeholder="emoji" style="width:64px; font-size:20px; text-align:center">
+        <input class="form-input qopt-label" data-i="${i}" value="${_escQ(o.label||'')}" placeholder="Texto da resposta" style="flex:1">
+        <button class="btn btn-danger btn-sm" onclick="removeQuizOption(${i})" title="Remover resposta">${ic('trash',13)}</button>
+      </div>
+      <div class="quiz-opt-favlbl">Favorece as categorias:</div>
+      <div class="cat-toggle-grid">
+        ${cats.map(c => `<button type="button" class="cat-toggle ${(o.cats||[]).includes(c.name)?'on':''}" onclick="toggleQuizOptCat(${i}, this.dataset.cat)" data-cat="${_escQ(c.name)}">${c.emoji||''} ${_escQ(c.name)}</button>`).join('') || '<span style="color:var(--text3);font-size:12px">Nenhuma categoria cadastrada.</span>'}
+      </div>
+      <div class="quiz-opt-extra">
+        <label>Preço alvo:
+          <select class="form-select qopt-price" data-i="${i}" style="width:auto; display:inline-block; padding:6px 10px">
+            <option value="">— qualquer</option>
+            <option value="$"   ${o.price==='$'  ?'selected':''}>$ barato</option>
+            <option value="$$$" ${o.price==='$$$'?'selected':''}>$$$ caprichar</option>
+          </select>
+        </label>
+        <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer">
+          <input type="checkbox" class="qopt-open" data-i="${i}" ${o.openNow?'checked':''}> Só abertos agora
+        </label>
+      </div>
+    </div>`).join('');
+}
+
+// Lê os inputs de texto/preço/checkbox de volta pro modelo antes de re-renderizar
+function syncQuizOptionInputs() {
+  document.querySelectorAll('#fq_options .quiz-opt-edit').forEach(row => {
+    const i = +row.dataset.i;
+    const o = editingQuiz.options[i];
+    if (!o) return;
+    o.emoji   = row.querySelector('.qopt-emoji').value.trim();
+    o.label   = row.querySelector('.qopt-label').value.trim();
+    o.price   = row.querySelector('.qopt-price').value || null;
+    o.openNow = row.querySelector('.qopt-open').checked || false;
+  });
+}
+
+window.toggleQuizOptCat = (i, name) => {
+  syncQuizOptionInputs();
+  const o = editingQuiz.options[i];
+  o.cats = o.cats || [];
+  const k = o.cats.indexOf(name);
+  if (k >= 0) o.cats.splice(k, 1); else o.cats.push(name);
+  renderQuizOptions();
+};
+
+window.addQuizOption = () => {
+  syncQuizOptionInputs();
+  if (editingQuiz.options.length >= 4) { showToast('Máximo de 4 respostas por pergunta', 'error'); return; }
+  editingQuiz.options.push(_blankOpt());
+  renderQuizOptions();
+};
+
+window.removeQuizOption = (i) => {
+  syncQuizOptionInputs();
+  editingQuiz.options.splice(i, 1);
+  renderQuizOptions();
+};
+
+window.saveQuizQuestion = async () => {
+  syncQuizOptionInputs();
+  const title = document.getElementById('fq_title').value.trim();
+  if (!title) { showToast('A pergunta é obrigatória', 'error'); return; }
+  const opts = editingQuiz.options.filter(o => o.label);
+  if (opts.length < 2) { showToast('Mínimo de 2 respostas com texto', 'error'); return; }
+
+  editingQuiz.title   = title;
+  editingQuiz.sub     = document.getElementById('fq_sub').value.trim();
+  editingQuiz.options = opts;
+  if (!editingQuiz.key) editingQuiz.key = 'q_' + Date.now();
+
+  if (editingQuizIdx == null) quizQuestions.push(editingQuiz);
+  else quizQuestions[editingQuizIdx] = editingQuiz;
+
+  const btn = document.getElementById('btnSaveQuiz');
+  btn.disabled = true;
+  await persistQuiz();
+  btn.disabled = false;
+  closeQuizModal();
+  renderQuizList();
+};
+
+async function persistQuiz() {
+  try {
+    await setDoc(doc(db, 'app_config', 'quiz'),
+      { questions: quizQuestions, _updatedAt: serverTimestamp() }, { merge: true });
+    showToast('Quiz salvo!', 'success');
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'error');
+  }
+}
+
 // ── Load Places ─────────────────────────────────────────────────
 async function loadPlaces() {
   document.getElementById('tableLoading').style.display = 'block';
@@ -2577,12 +2897,13 @@ window.confirmDelete = async () => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','categories','metrics','rules'].forEach(p => {
+  ['places','categories','quiz','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
   if (page === 'rules') loadAdmins();
   if (page === 'metrics') loadMetrics();
+  if (page === 'quiz') loadQuizConfig();
   closeSidebar(); // fecha a gaveta no mobile após navegar
 };
 
