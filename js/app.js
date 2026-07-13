@@ -172,6 +172,9 @@ async function init() {
 
   // Dica de swipe na primeira visita
   maybeShowSwipeHint();
+
+  // Se veio de um link compartilhado (?lugar=ID), abre o lugar direto.
+  openSharedPlace();
 }
 
 // ── Geolocalização (distância nos cards) ──────────────────────────
@@ -1291,6 +1294,35 @@ async function openProfile(p) {
   document.getElementById('storyTapLeft').onclick  = storyPrev;
   document.getElementById('storyTapRight').onclick = storyNext;
   document.getElementById('profileClose').onclick  = () => window.dismissOverlay('profile');
+  const shareBtn = document.getElementById('profileShare');
+  if (shareBtn) shareBtn.onclick = () => sharePlace(p);
+}
+
+// Compartilhar um lugar: usa o menu nativo do celular (Web Share) com um link
+// que abre o app já nesse lugar; se não houver, copia o link.
+function sharePlace(p) {
+  const base = location.origin + location.pathname;
+  const url  = `${base}?lugar=${encodeURIComponent(p.id)}`;
+  const text = `Bora nesse? ${p.n}${p.b ? ' — ' + p.b : ''}`;
+  if (navigator.share) {
+    navigator.share({ title: p.n, text, url }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(`${text} ${url}`)
+      .then(() => showToast('Link copiado!'))
+      .catch(() => showToast('Não consegui copiar o link'));
+  }
+}
+
+// Abre direto o lugar do link compartilhado (?lugar=ID), se houver.
+function openSharedPlace() {
+  try {
+    const id = new URLSearchParams(location.search).get('lugar');
+    if (!id) return;
+    const p = P.find(x => x.id === id);
+    if (p) openProfile(p);
+    // Limpa o parâmetro pra não reabrir ao navegar/atualizar.
+    history.replaceState(null, '', location.origin + location.pathname);
+  } catch (e) { /* ignora */ }
 }
 
 // ── Ações do perfil (Já fui · Não hoje · Quero ir · Salvar) ────────
