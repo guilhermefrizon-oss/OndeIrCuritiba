@@ -807,22 +807,19 @@ export function showUserProfile() {
               <span class="ups-action-label">Alterar senha</span>
               <span class="ups-action-chevron">›</span>
             </button>` : ''}
-            <button class="ups-action-row" id="upsSignOutBtn">
-              <span class="ups-action-icon">${ic('log-out', 16)}</span>
-              <span class="ups-action-label">Sair da conta</span>
-              <span class="ups-action-chevron">›</span>
-            </button>
             <a class="ups-action-row" href="privacidade.html" target="_blank" rel="noopener">
               <span class="ups-action-icon">${ic('lock', 16)}</span>
               <span class="ups-action-label">Política de privacidade</span>
               <span class="ups-action-chevron">›</span>
             </a>
-            <button class="ups-action-row ups-action-danger" id="upsDeleteAccountBtn">
-              <span class="ups-action-icon">${ic('trash', 16)}</span>
-              <span class="ups-action-label">Excluir conta</span>
+            <button class="ups-action-row" id="upsSignOutBtn">
+              <span class="ups-action-icon">${ic('log-out', 16)}</span>
+              <span class="ups-action-label">Sair da conta</span>
               <span class="ups-action-chevron">›</span>
             </button>
           </div>
+
+          <button class="ups-delete-mini" id="upsDeleteAccountBtn">Excluir conta</button>
 
           <div id="upsEditName" class="ups-edit-panel" style="display:none">
             <div class="ups-section-title" style="margin-top:12px">Alterar nome</div>

@@ -281,5 +281,14 @@
 <script type="module" src="js/ratings.js"></script>
 <script type="module" src="js/app.js"></script>
 
+<!-- ── Service Worker (abre mais rápido / offline; rede primeiro) ── -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+</script>
+
 </body>
 </html>
