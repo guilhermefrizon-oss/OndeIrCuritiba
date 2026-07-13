@@ -18,6 +18,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
   deleteUser,
   reauthenticateWithPopup,
   reauthenticateWithCredential,
@@ -181,9 +182,24 @@ export async function signInWithApple() {
 export async function signUpWithEmail(name, email, password) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   if (name) await updateProfile(cred.user, { displayName: name });
+  // Envia o e-mail de confirmação (não bloqueia o uso; é um lembrete).
+  try { await sendEmailVerification(cred.user); } catch (e) { console.warn('sendEmailVerification:', e); }
   closeAuthModal();
   showProfileEditor(cred.user, { onboarding: true });
+  window.dmToast && window.dmToast(`Enviamos um link de confirmação para ${email}. Confira sua caixa de entrada.`, true);
   return cred.user;
+}
+
+// Reenvia o e-mail de verificação (usado no perfil quando não confirmado).
+export async function resendVerification(user) {
+  user = user || auth.currentUser;
+  if (!user) return;
+  try {
+    await sendEmailVerification(user);
+    window.dmToast && window.dmToast('Link reenviado! Confira sua caixa de entrada (e o spam).', true);
+  } catch (e) {
+    window.dmToast && window.dmToast('Não consegui reenviar agora. Tente em instantes.');
+  }
 }
 
 export async function signInWithEmail(email, password) {
@@ -280,10 +296,10 @@ export function showAuthModal(reason = 'default') {
   }
 
   const reasons = {
-    like:    { icon: ic('heart', 30, 1.7), title: 'Curtir lugares',    sub: 'Entre para salvar e curtir lugares que você ama.' },
-    save:    { icon: ic('bookmark', 30, 1.7), title: 'Salvar lugares',    sub: 'Crie sua lista pessoal de lugares favoritos.' },
-    comment: { icon: ic('message-circle', 30, 1.7), title: 'Deixar um comentário', sub: 'Compartilhe sua experiência com outros usuários.' },
-    default: { icon: ic('sparkles', 30, 1.7), title: 'Entre na sua conta', sub: 'Acesse todos os recursos do Day Match.' },
+    like:    { icon: ic('heart', 30, 1.7),          title: 'Guarde seus lugares',    sub: 'Crie sua conta pra salvar onde você quer ir e não perder nenhum rolê. É grátis e rápido.' },
+    save:    { icon: ic('bookmark', 30, 1.7),       title: 'Salve pra depois',       sub: 'Sua lista de lugares fica no seu perfil, disponível em qualquer aparelho. É grátis.' },
+    comment: { icon: ic('message-circle', 30, 1.7), title: 'Deixe um comentário',    sub: 'Compartilhe sua experiência com quem também tá decidindo onde ir.' },
+    default: { icon: ic('sparkles', 30, 1.7),       title: 'Entre na sua conta',     sub: 'Salve lugares, monte seu rolê de hoje e continue de onde parou.' },
   };
   const r = reasons[reason] || reasons.default;
 
@@ -726,6 +742,7 @@ export function showUserProfile() {
           <div class="ups-user-info">
             <div class="ups-name">${displayName}</div>
             <div class="ups-email">${email}</div>
+            ${!user.emailVerified ? `<button class="ups-verify" id="upsVerifyBtn">${ic('mail', 12)} E-mail não confirmado — reenviar</button>` : ''}
             ${memberSince ? `<div class="ups-since">Membro desde ${memberSince}</div>` : ''}
           </div>
         </div>
@@ -859,6 +876,7 @@ export function showUserProfile() {
   document.getElementById('upsEditProfileBtn').onclick = () => showProfileEditor(user, { onboarding: false });
   document.getElementById('upsSignOutBtn').onclick = async () => { closeUserProfile(); await signOutUser(); };
   document.getElementById('upsDeleteAccountBtn').onclick = () => deleteAccount(user);
+  document.getElementById('upsVerifyBtn')?.addEventListener('click', () => resendVerification(user));
 
   // Tab switcher
   window.upsSetTab = (tab) => {
