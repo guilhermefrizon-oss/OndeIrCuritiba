@@ -15,7 +15,7 @@ verdade — não pode parecer "só um site" (Apple 4.2).
 ## App Store (Apple) — as regras que mais pegam
 
 - [x] **Navegar sem login** (5.1.1) — descobrir/swipar “Não hoje” é livre; só **Salvar** e **Quero ir** pedem conta. ✅ feito
-- [~] **Sign in with Apple** (4.8) — como oferecemos login Google, a Apple **exige** login Apple equivalente. Código pronto (flag ligada). **Pendente:** configurar o provedor Apple no Firebase (Services ID + chave + verificação de domínio) — precisa da conta Apple Developer.
+- [~] **Sign in with Apple** (4.8) — como oferecemos login Google, a Apple **exige** login Apple equivalente. Código pronto e o botão aparece **só em dispositivos Apple** (iOS/iPadOS/macOS); no Android/Windows fica oculto (Google já cobre). **Pendente:** configurar o provedor Apple no Firebase (Services ID + chave + verificação de domínio) — precisa da conta Apple Developer.
 - [x] **Excluir conta dentro do app** (5.1.1(v)) — função `deleteAccount` existe. Garantir que fique fácil de achar no perfil. ✅ existe
 - [ ] **Moderação de conteúdo do usuário** (1.2) — comentários/avaliações estão **desligados**. Se ligar, exige **denunciar**, **bloquear usuário** e **filtro** de conteúdo.
 - [ ] **Privacy “nutrition labels”** — declarar coleta (conta Google, localização) no App Store Connect + política de privacidade linkada (`privacidade.html`).

@@ -259,7 +259,16 @@
     ratings:  false,  // avaliação por estrelas (nota) + contador "Avaliações"
     badges:   false,  // aba de badges no perfil
     levelXp:  false,  // barra de nível (Novato) + XP no perfil
-    appleSignIn: true, // botão "Continuar com a Apple" (obrigatório p/ App Store; requer provedor Apple configurado no Firebase p/ funcionar)
+    // "Continuar com a Apple" só em dispositivos Apple (iOS/iPadOS/macOS).
+    // No Android/Windows o botão nem aparece — o login Google já cobre, e evita
+    // mostrar Apple onde não faz sentido. Obrigatório no app iOS (App Store 4.8);
+    // requer o provedor Apple configurado no Firebase pra funcionar de fato.
+    appleSignIn: (function () {
+      var ua = navigator.userAgent || '', p = navigator.platform || '';
+      var iOS = /iPad|iPhone|iPod/.test(ua) || (p === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var mac = /Macintosh|Mac OS X/.test(ua);
+      return iOS || mac;
+    })(),
   };
 </script>
 
