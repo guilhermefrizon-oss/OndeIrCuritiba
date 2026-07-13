@@ -10,6 +10,7 @@
 import { fetchPlacePhoto } from './photos.js';
 import { catIcon, ic } from './icons.js';
 import { db, doc, getDoc } from './firebase.js';
+import { isOpenNow } from './hours.js';
 
 let allPlaces = [];
 let onOpenProfileCb = null;
@@ -106,29 +107,6 @@ const QUIZ = [
   },
 ];
 
-// ── Aberto agora — mesma lógica do app (parse de "Seg-Dom 09h-20h") ─
-const DAY_IDX = { dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6, 'sáb': 6 };
-function parseOpenNow(hoursStr) {
-  if (!hoursStr) return null;
-  const s = hoursStr.toLowerCase();
-  const dayMatch  = s.match(/(dom|seg|ter|qua|qui|sex|sab|sáb)\s*[-–a]\s*(dom|seg|ter|qua|qui|sex|sab|sáb)/);
-  const timeMatch = s.match(/(\d{1,2})(?:[h:](\d{2})?)?\s*[-–às]+\s*(\d{1,2})(?:[h:](\d{2})?)?/);
-  if (!timeMatch) return null;
-  const now = new Date();
-  const today = now.getDay();
-  if (dayMatch) {
-    const d1 = DAY_IDX[dayMatch[1]], d2 = DAY_IDX[dayMatch[2]];
-    const inRange = d1 <= d2 ? (today >= d1 && today <= d2) : (today >= d1 || today <= d2);
-    if (!inRange) return false;
-  }
-  const openMin  = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2] || '0', 10);
-  let   closeMin = parseInt(timeMatch[3], 10) * 60 + parseInt(timeMatch[4] || '0', 10);
-  const nowMin   = now.getHours() * 60 + now.getMinutes();
-  if (closeMin === 0) closeMin = 24 * 60;
-  if (closeMin < openMin) return nowMin >= openMin || nowMin < closeMin;
-  return nowMin >= openMin && nowMin < closeMin;
-}
-
 function placeCats(p) {
   return Array.isArray(p.cats) && p.cats.length ? p.cats : (p.c ? [p.c] : []);
 }
@@ -143,7 +121,7 @@ function rankPlaces() {
   let pool = allPlaces.slice();
   let relaxedOpen = false;
   if (wantOpen) {
-    const open = pool.filter(p => parseOpenNow(p.h) === true);
+    const open = pool.filter(p => isOpenNow(p) === true);
     if (open.length) pool = open; else relaxedOpen = true; // nada aberto → não deixa a tela vazia
   }
 
@@ -175,7 +153,7 @@ function reasonsFor(p) {
     if (hit && !seen.has(a.label)) { seen.add(a.label); chips.push(a.label); }
   });
   if (lastCtx?.pricePref && p.p === lastCtx.pricePref) chips.push(p.p);
-  if (lastCtx?.wantOpen && parseOpenNow(p.h) === true) chips.push('Aberto agora');
+  if (lastCtx?.wantOpen && isOpenNow(p) === true) chips.push('Aberto agora');
   if (!chips.length) chips.push('Escolha da casa');
   return chips.slice(0, 4);
 }

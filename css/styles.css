@@ -1568,3 +1568,43 @@ body {
 .quiz-more-name { font-size: 14.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .quiz-more-meta { font-size: 12px; color: var(--text3); }
 .quiz-more-price { font-size: 13px; font-weight: 700; color: var(--text3); flex-shrink: 0; }
+
+/* ── Filtros de horário: pills + sheet "Aberto em…" ─────────────────── */
+.cats-pills { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.cats-pills::-webkit-scrollbar { display: none; }
+
+.plan-sheet-backdrop {
+  position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.45);
+  backdrop-filter: blur(4px); display: none; align-items: flex-end; justify-content: center;
+  animation: fadeIn .2s ease both;
+}
+.plan-sheet {
+  background: var(--bg2); border-radius: 24px 24px 0 0; padding: 16px 20px 32px;
+  width: 100%; max-width: 430px; border-top: 1.5px solid var(--bg4);
+  box-shadow: 0 -8px 40px rgba(0,0,0,.12);
+}
+.plan-sheet-handle { width: 36px; height: 4px; background: var(--bg4); border-radius: 2px; margin: 0 auto 16px; }
+.plan-sheet-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: var(--text); text-align: center; }
+.plan-sheet-sub   { font-size: 13px; color: var(--text2); text-align: center; margin: 4px 0 18px; }
+.plan-sheet-lbl   { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin: 0 0 8px; }
+.plan-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.plan-chip {
+  padding: 9px 14px; border-radius: 100px; cursor: pointer;
+  background: var(--bg3); border: 1.5px solid var(--bg4); color: var(--text2);
+  font-family: inherit; font-size: 13px; font-weight: 700; transition: all .15s;
+}
+.plan-chip:hover { background: var(--bg4); }
+.plan-chip.on { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); }
+.plan-sheet-actions { display: flex; gap: 10px; margin-top: 6px; }
+.plan-apply {
+  flex: 1; padding: 15px; border-radius: 16px; cursor: pointer; border: none;
+  background: var(--acc); color: var(--acc-ink);
+  font-family: inherit; font-size: 15px; font-weight: 700; box-shadow: var(--shadow-card);
+  transition: transform .12s;
+}
+.plan-apply:active { transform: scale(.98); }
+.plan-clear {
+  padding: 15px 18px; border-radius: 16px; cursor: pointer;
+  background: none; border: 1.5px solid var(--bg4); color: var(--text2);
+  font-family: inherit; font-size: 14px; font-weight: 700;
+}
