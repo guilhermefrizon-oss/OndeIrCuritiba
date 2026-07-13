@@ -8,7 +8,7 @@ import {
 } from './store.js';
 import { awardXp } from './xp.js';
 import { checkAndAwardBadges } from './badges.js';
-import { fetchAllPhotos } from './photos.js';
+import { fetchAllPhotos, fetchPlacePhoto } from './photos.js';
 import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { initQuiz, openQuiz } from './quiz.js';
@@ -1348,9 +1348,18 @@ function renderWantToday() {
         </svg>
       </button>`;
     grid.appendChild(row);
+    // Foto: usa a hospedada (p.photos) se houver; senão busca no Google pelo
+    // pid — igual às abas Salvos e Busca. Sem esse fallback, lugares que só
+    // têm pid (sem foto salva) caíam no ícone da categoria.
     if (Array.isArray(p.photos) && p.photos.length) {
       const t = document.getElementById(`wthumb-${p.id}`);
       if (t) { t.style.backgroundImage=`url("${p.photos[0]}")`; t.style.backgroundPosition=photoPos(p,0); t.innerHTML=''; }
+    } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+      fetchPlacePhoto(p.pid).then(url => {
+        if (!url) return;
+        const t = document.getElementById(`wthumb-${p.id}`);
+        if (t) { t.style.backgroundImage=`url("${url}")`; t.innerHTML=''; }
+      });
     }
   });
 
