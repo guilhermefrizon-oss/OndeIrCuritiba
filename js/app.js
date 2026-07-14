@@ -1496,7 +1496,10 @@ function getGreeting() {
 }
 
 function showWelcomeScreen() {
-  if (sessionStorage.getItem('cwb_welcomed')) return;
+  // Aparece no máx. 1x por dia; a cada dia sorteia 5 categorias novas.
+  const today = new Date().toDateString();
+  if (localStorage.getItem('cwb_welcomed_day') === today) return;
+  localStorage.setItem('cwb_welcomed_day', today);
   document.getElementById('welcomeGreeting').innerHTML = getGreeting();
   document.getElementById('welcomeScreen').style.display = 'flex';
 
@@ -1520,7 +1523,7 @@ function showWelcomeScreen() {
 }
 
 window.closeWelcome = (category) => {
-  sessionStorage.setItem('cwb_welcomed','1');
+  // O dia já é marcado ao exibir (showWelcomeScreen); aqui só fecha a tela.
   const screen = document.getElementById('welcomeScreen');
   screen.style.transition='opacity .3s';
   screen.style.opacity='0';
