@@ -8,7 +8,39 @@
 // são interceptadas — vão direto pra rede, como sempre.
 
 const CACHE = 'daymatch-v1';
+const PHOTO_CACHE = 'daymatch-photos-v1';   // fotos dos lugares (Google)
+const PHOTO_MAX = 150;                        // teto de fotos guardadas
 const CORE = ['./', './index.html', './css/styles.css', './site.webmanifest', './icon-192.png'];
+
+// É uma foto de lugar do Google? (endpoint de mídia da Places API ou o
+// servidor de imagens pra onde ele redireciona).
+function isPhoto(url) {
+  return url.hostname.endsWith('googleusercontent.com')
+      || url.hostname.endsWith('ggpht.com')
+      || (url.hostname === 'places.googleapis.com' && url.pathname.includes('/media'));
+}
+
+// Cache-first: se já baixou a foto antes, devolve na hora (sem rede).
+// Senão baixa, guarda uma cópia e apara o cache pra não crescer sem limite.
+async function cacheFirstPhoto(req) {
+  const cache = await caches.open(PHOTO_CACHE);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  try {
+    const res = await fetch(req);
+    if (res && (res.ok || res.type === 'opaque')) {
+      cache.put(req, res.clone()).then(() => trimCache(cache, PHOTO_MAX)).catch(() => {});
+    }
+    return res;
+  } catch (e) {
+    return hit || Response.error();
+  }
+}
+
+async function trimCache(cache, max) {
+  const keys = await cache.keys();
+  for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
+}
 
 self.addEventListener('install', (event) => {
   self.skipWaiting(); // ativa a versão nova sem esperar
@@ -18,7 +50,8 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    const keep = [CACHE, PHOTO_CACHE];
+    await Promise.all(keys.filter((k) => !keep.includes(k)).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -29,6 +62,10 @@ self.addEventListener('fetch', (event) => {
 
   let url;
   try { url = new URL(req.url); } catch (e) { return; }
+
+  // Fotos dos lugares: cache-first (2ª visita abre na hora, sem esperar rede).
+  if (isPhoto(url)) { event.respondWith(cacheFirstPhoto(req)); return; }
+
   if (url.origin !== self.location.origin) return; // cross-origin → browser cuida (Firebase/Google)
 
   event.respondWith((async () => {

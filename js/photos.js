@@ -14,7 +14,7 @@ export async function fetchPlacePhoto(placeId) {
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.photos?.length) return null;
-    const url = `https://places.googleapis.com/v1/${data.photos[0].name}/media?maxHeightPx=1600&maxWidthPx=1200&key=${GOOGLE_API_KEY}`;
+    const url = `https://places.googleapis.com/v1/${data.photos[0].name}/media?maxHeightPx=1000&maxWidthPx=800&key=${GOOGLE_API_KEY}`;
     cache1[placeId] = url;
     return url;
   } catch { return null; }
@@ -32,7 +32,7 @@ export async function fetchAllPhotos(placeId) {
     const data = await res.json();
     if (!data.photos) return [];
     const urls = data.photos.slice(0,8).map(ph =>
-      `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=1600&maxWidthPx=1200&key=${GOOGLE_API_KEY}`
+      `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=1000&maxWidthPx=800&key=${GOOGLE_API_KEY}`
     );
     cache2[placeId] = urls;
     return urls;

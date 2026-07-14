@@ -456,9 +456,12 @@ function renderCard() {
   const top = filtered[idx%filtered.length];
   initCardPhotos(top);
 
-  // Pré-baixa as fotos das PRÓXIMAS cartas pro cache do navegador,
-  // pra troca não ter atraso ao arrastar.
-  prefetchUpcoming(3);
+  // Pré-baixa as fotos das PRÓXIMAS cartas pro cache do navegador, pra troca
+  // não ter atraso ao arrastar. Adiado (ocioso) pra não competir banda com a
+  // foto do card da frente — essa aparece primeiro.
+  const prefetch = () => prefetchUpcoming(3);
+  if ('requestIdleCallback' in window) requestIdleCallback(prefetch, { timeout: 1500 });
+  else setTimeout(prefetch, 600);
 }
 
 // Ponto de foco do enquadramento salvo no admin (ex: "50% 30%").
