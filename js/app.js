@@ -1046,7 +1046,7 @@ function maybeShowSwipeHint() {
   const hint = document.createElement('div');
   hint.className = 'swipe-hint';
   hint.innerHTML = `
-    <div class="swipe-hint-label swipe-hint-nope">${ic('x', 13, 2.5)} Não hoje</div>
+    <div class="swipe-hint-label swipe-hint-nope">${ic('x', 13, 2.5)} Pular</div>
     <div class="swipe-hint-hand">${ic('move-horizontal', 52, 2)}</div>
     <div class="swipe-hint-label swipe-hint-like">Quero ir! ${ic('heart', 13, 2.5)}</div>
     <div class="swipe-hint-text">Deslize o card para os lados</div>`;
@@ -1252,7 +1252,7 @@ async function openProfile(p) {
       .then(() => showToast('Endereço copiado!'));
   };
 
-  // ── Ações (mesmo estilo dos cards): Já fui · Não hoje · Quero ir · Salvar ──
+  // ── Ações (mesmo estilo dos cards): Já fui · Pular · Quero ir · Salvar ──
   let actEl = document.getElementById('profileActions');
   if (!actEl) {
     actEl = document.createElement('div');
@@ -1265,7 +1265,7 @@ async function openProfile(p) {
       </button>
       <button class="abtn b-pass" id="pab-skip" onclick="window.profileSkip()">
         <div class="c"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
-        <div class="lbl">Não hoje</div>
+        <div class="lbl">Pular</div>
       </button>
       <button class="abtn b-like" id="pab-want" onclick="window.profileWant()">
         <div class="c"><svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
@@ -1357,7 +1357,7 @@ function openSharedPlace() {
   } catch (e) { /* ignora */ }
 }
 
-// ── Ações do perfil (Já fui · Não hoje · Quero ir · Salvar) ────────
+// ── Ações do perfil (Já fui · Pular · Quero ir · Salvar) ────────
 // Refletem o estado atual do lugar nos 4 botões e sincronizam o baralho.
 function updateProfileActionStates(p) {
   const set = (id, on) => document.getElementById(id)?.classList.toggle('on', on);
@@ -1400,7 +1400,7 @@ window.profileSkip = () => {
   }
   showToast('Pulado — volta amanhã');
   _syncDeckAfterProfileAction();
-  // "Não hoje" é um descarte: fecha o perfil (como o card saindo da tela).
+  // "Pular" é um descarte: fecha o perfil (como o card saindo da tela).
   window.dismissOverlay('profile');
 };
 
