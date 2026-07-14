@@ -153,6 +153,13 @@ async function init() {
   renderProgress();
   showWelcomeScreen();
 
+  // "Abertos agora" entra com o texto e, depois de um tempinho, recolhe pra
+  // bolinha — a menos que a pessoa já tenha ligado o filtro nesse meio-tempo.
+  setTimeout(() => {
+    const b = document.getElementById('openNowBtn');
+    if (b && !openNowOnly) b.classList.add('tucked');
+  }, 2000);
+
   const [allSaved, allWant, allSkipped, allBeen] = await Promise.all([
     fsLoadAll(), fsLoadWantToday(), fsLoadSkipped(), fsLoadBeenThere()
   ]);
@@ -271,16 +278,20 @@ window.toggleOpenNow = () => {
   if (mapView && mapView.style.display !== 'none') renderMapView();
 };
 
-// Atualiza o visual dos dois pills (agora / aberto em…)
+// Atualiza o visual dos dois pills (agora / outro dia-horário)
 function syncFilterPills() {
   const on = document.getElementById('openNowBtn');
-  if (on) on.classList.toggle('on', openNowOnly);
+  if (on) {
+    on.classList.toggle('on', openNowOnly);
+    // Recolhe pra bolinha quando desligado; reabre (mostra o texto) quando ativo.
+    on.classList.toggle('tucked', !openNowOnly);
+  }
   const pb = document.getElementById('planBtn');
   const lbl = document.getElementById('planBtnLabel');
   if (pb) pb.classList.toggle('on', !!planFilter);
   if (lbl) lbl.textContent = planFilter
     ? `${DAY_LABEL[DOW_KEYS[planFilter.dowIdx]]} · ${planFilter.period.label}`
-    : 'Aberto em…';
+    : 'Outro dia/horário';
 }
 
 // Um lugar passa no filtro de planejamento? (desconhecido = passa, pra não sumir)
