@@ -49,9 +49,28 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     await _migrateFavoritesIfNeeded(user);
     _loadCustomPhoto(user); // assíncrono, atualiza o avatar quando chega
+    _recordUserMeta(user);  // registra o acesso p/ as métricas do admin
   }
   window.dispatchEvent(new CustomEvent('authChanged', { detail: user }));
 });
+
+// Registra um docinho por usuário em users_meta/{uid} só para as métricas
+// do admin: quando a conta foi criada (createdAt, vindo do próprio Firebase
+// Auth — backfill correto de quem já existia) e a última vez que abriu o app
+// (lastSeen). Não guarda nada sensível além de nome/e-mail que o app já usa.
+async function _recordUserMeta(user) {
+  try {
+    await setDoc(doc(db, 'users_meta', user.uid), {
+      email:     user.email || '',
+      name:      user.displayName || '',
+      provider:  user.providerData?.[0]?.providerId || 'password',
+      createdAt: user.metadata?.creationTime
+                   ? new Date(user.metadata.creationTime).toISOString()
+                   : new Date().toISOString(),
+      lastSeen:  new Date().toISOString(),
+    }, { merge: true });
+  } catch (e) { console.warn('_recordUserMeta:', e); }
+}
 
 // Foto efetiva do usuário: a que ela enviou > a do Google.
 function effectivePhoto(user) {

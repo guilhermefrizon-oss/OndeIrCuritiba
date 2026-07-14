@@ -71,6 +71,13 @@ service cloud.firestore {
       allow write: if isOwner(uid);
     }
 
+    // Presença por usuário (createdAt/lastSeen) — alimenta as métricas de
+    // usuários do admin. Cada um só escreve o seu; só admin lê a coleção toda.
+    match /users_meta/{uid} {
+      allow read:  if isAdmin();
+      allow create, update: if isOwner(uid);
+    }
+
     // ── Contadores sociais por lugar (id do doc = uid do usuário) ─────
     match /likes/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }
     match /saves/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }

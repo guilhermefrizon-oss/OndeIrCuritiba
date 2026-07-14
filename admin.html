@@ -1024,6 +1024,8 @@ th.sortable:hover { color: var(--acc3); }
 
 /* KPIs */
 .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+.kpi-row.four { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin: 4px 0 12px; }
 .kpi { background: var(--bg3); border: 1.5px solid var(--border); border-radius: 16px; padding: 18px 20px; position: relative; overflow: hidden; }
 .kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c); }
 .kpi-n { font-size: 30px; font-weight: 800; color: var(--text); line-height: 1; }
@@ -1309,7 +1311,26 @@ th.sortable:hover { color: var(--acc3); }
         </div>
       </div>
 
+      <!-- Usuários -->
+      <div class="section-label">Usuários</div>
+      <div class="kpi-row four">
+        <div class="kpi" style="--c:#7c5cff"><div class="kpi-n" id="kpiUsersTotal">–</div><div class="kpi-l">Usuários no total</div></div>
+        <div class="kpi" style="--c:#199e70"><div class="kpi-n" id="kpiUsersNew7">–</div><div class="kpi-l">Novos (7 dias)</div></div>
+        <div class="kpi" style="--c:#3987e5"><div class="kpi-n" id="kpiUsersNew30">–</div><div class="kpi-l">Novos (30 dias)</div></div>
+        <div class="kpi" style="--c:#c98500"><div class="kpi-n" id="kpiUsersActive7">–</div><div class="kpi-l">Ativos (7 dias)</div></div>
+      </div>
+      <div class="charts-grid" style="grid-template-columns:1fr">
+        <div class="chart-card">
+          <div class="chart-head">
+            <div class="chart-title">Novos usuários por dia</div>
+            <div class="chart-legend"><span class="lg"><i style="background:#7c5cff"></i>Novos cadastros</span></div>
+          </div>
+          <div id="chartNewUsers" class="chart-body"></div>
+        </div>
+      </div>
+
       <!-- KPIs do período -->
+      <div class="section-label">Engajamento</div>
       <div class="kpi-row">
         <div class="kpi" style="--c:#3987e5"><div class="kpi-n" id="kpiLikes">–</div><div class="kpi-l">Likes no período</div></div>
         <div class="kpi" style="--c:#199e70"><div class="kpi-n" id="kpiSaves">–</div><div class="kpi-l">Salvos no período</div></div>
@@ -1440,6 +1461,14 @@ service cloud.firestore {
     // Perfil do usuário (foto, badges, privacidade): só o dono
     match /user_profiles/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Presença por usuário (createdAt/lastSeen) — métricas de usuários do
+    // admin. Cada um escreve o seu; só admin lê a coleção toda.
+    match /users_meta/{userId} {
+      allow read: if request.auth != null
+                  && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+      allow create, update: if request.auth != null && request.auth.uid == userId;
     }
 
     // Avaliações: média é pública; cada voto pertence ao seu dono
@@ -3029,6 +3058,9 @@ let metricsSort = { key: 'likes', dir: 'desc' };  // ordenação atual da tabela
 
 let metricPeriod = { preset: '30d', from: '', to: '' };  // filtro dos gráficos
 
+let userMeta = [];        // [{createdAt, lastSeen, …}] lidos de users_meta
+let usersLoaded = false;
+
 const pidOf  = (p) => p.id || p._docId;
 const catsOf = (p) => Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
 const escM  = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -3067,6 +3099,7 @@ async function mapLimit(items, limit, fn) {
 }
 
 function loadMetrics() {
+  if (!usersLoaded) loadUserMetrics();   // métricas de usuários (independe dos lugares)
   const loading = document.getElementById('metricsLoading');
   const content = document.getElementById('metricsContent');
   if (!allPlaces.length) {           // aba Lugares ainda carregando
@@ -3160,6 +3193,7 @@ window.renderMetricsTable = () => {
 // Preenche as colunas Likes-7d / Salvos / Já-fui de TODOS os lugares.
 // É opt-in (um clique) porque faz 3 leituras por lugar — não roda sozinho.
 window.loadAllMetricCounts = async () => {
+  loadUserMetrics();                 // atualiza também as métricas de usuários
   const btn = document.getElementById('btnLoadCounts');
   const orig = btn.innerHTML;
   btn.disabled = true;
@@ -3236,6 +3270,86 @@ window.recalibrateLikeCounters = async () => {
   );
 };
 
+// ── Métricas de usuários ────────────────────────────────────────
+// Lê users_meta/{uid} — 1 doc por usuário, escrito pelo app a cada login.
+// createdAt = quando a conta nasceu; lastSeen = último acesso.
+const _ts = (v) => v ? new Date(v).getTime() : 0;
+function userCreatedTs() { return userMeta.map(u => _ts(u.createdAt)).filter(t => t > 0); }
+
+window.loadUserMetrics = async () => {
+  try {
+    const snap = await getDocs(collection(db, 'users_meta'));
+    userMeta = snap.docs.map(d => d.data());
+    usersLoaded = true;
+    renderUserMetrics();
+  } catch (e) {
+    console.warn('loadUserMetrics:', e.message);
+    ['kpiUsersTotal','kpiUsersNew7','kpiUsersNew30','kpiUsersActive7']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+    const host = document.getElementById('chartNewUsers');
+    if (host) host.innerHTML = '<div class="chart-empty">Publique as regras atualizadas (aba Regras) para ver os usuários.</div>';
+  }
+};
+
+function renderUserMetrics() {
+  const now = Date.now(), d7 = now - 7 * 86400000, d30 = now - 30 * 86400000;
+  const created = userCreatedTs();
+  const seen    = userMeta.map(u => _ts(u.lastSeen)).filter(t => t > 0);
+  document.getElementById('kpiUsersTotal').textContent   = userMeta.length;
+  document.getElementById('kpiUsersNew7').textContent    = created.filter(t => t >= d7).length;
+  document.getElementById('kpiUsersNew30').textContent   = created.filter(t => t >= d30).length;
+  document.getElementById('kpiUsersActive7').textContent = seen.filter(t => t >= d7).length;
+  renderNewUsersChart(created);
+}
+
+// Barras de novos cadastros por dia (segue o filtro de período dos gráficos).
+function renderNewUsersChart(created) {
+  const host = document.getElementById('chartNewUsers');
+  if (!host) return;
+  const { from, to } = periodRange();
+  const pts = created.filter(t => t >= from && t <= to);
+  if (!pts.length) { host.innerHTML = '<div class="chart-empty">Nenhum cadastro no período.</div>'; return; }
+
+  const DAY = 86400000;
+  let lo = from, hi = to;
+  if (lo === 0) lo = Math.min(...pts);                 // "Tudo" → 1º cadastro
+  const days = Math.max(1, Math.ceil((hi - lo) / DAY));
+  const fmtDay = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  let unit, fmt;
+  if (days <= 31)       { unit = DAY;      fmt = fmtDay; }
+  else if (days <= 182) { unit = 7 * DAY;  fmt = fmtDay; }
+  else                  { unit = 30 * DAY; fmt = d => d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }); }
+
+  let start = lo;
+  if (unit === DAY) { const d = new Date(lo); d.setHours(0,0,0,0); start = d.getTime(); }
+  const buckets = [];
+  for (let s = start; s <= hi; s += unit) buckets.push({ n: 0, label: fmt(new Date(s)) });
+  if (!buckets.length) buckets.push({ n: 0, label: fmt(new Date(lo)) });
+  const idx = t => Math.min(buckets.length - 1, Math.max(0, Math.floor((t - start) / unit)));
+  pts.forEach(t => buckets[idx(t)].n++);
+
+  const max = Math.max(1, ...buckets.map(b => b.n));
+  const h = v => v ? Math.max(2, Math.round(v / max * 140)) : 0;
+  const step = Math.ceil(buckets.length / 12);
+
+  host.innerHTML = `<div class="bars">${buckets.map((b, i) => `
+    <div class="col" data-tip="${escM(b.label)}|${b.n}">
+      <div class="grp"><div class="b" style="height:${h(b.n)}px;background:#7c5cff;width:auto;flex:0 0 60%;max-width:22px"></div></div>
+      <div class="xl">${i % step === 0 ? escM(b.label) : ''}</div>
+    </div>`).join('')}</div>`;
+
+  const tip = ensureChartTip();
+  host.querySelectorAll('.col').forEach(col => {
+    col.addEventListener('mouseenter', () => {
+      const [label, n] = col.dataset.tip.split('|');
+      tip.innerHTML = `<div class="tt-date">${label}</div><div class="tt-row"><i style="background:#7c5cff"></i>Novos: ${n}</div>`;
+      tip.style.opacity = '1';
+    });
+    col.addEventListener('mousemove', e => { tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
+    col.addEventListener('mouseleave', () => { tip.style.opacity = '0'; });
+  });
+}
+
 // ── Filtro de período + gráficos ────────────────────────────────
 window.setPeriod = (preset) => {
   metricPeriod = { preset, from: '', to: '' };
@@ -3244,6 +3358,7 @@ window.setPeriod = (preset) => {
   document.querySelectorAll('.period-pill').forEach(b =>
     b.classList.toggle('active', b.dataset.preset === preset));
   renderCharts();
+  if (usersLoaded) renderNewUsersChart(userCreatedTs());
 };
 
 window.onCustomDate = () => {
@@ -3253,6 +3368,7 @@ window.onCustomDate = () => {
   metricPeriod = { preset: 'custom', from, to };
   document.querySelectorAll('.period-pill').forEach(b => b.classList.remove('active'));
   renderCharts();
+  if (usersLoaded) renderNewUsersChart(userCreatedTs());
 };
 
 function periodRange() {
