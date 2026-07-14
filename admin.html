@@ -1156,6 +1156,10 @@ th.sortable:hover { color: var(--acc3); }
           <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn" onclick="hostAllPhotos()" id="btnHostAllPhotos" title="Baixa e hospeda no nosso Storage as fotos dos lugares que ainda não têm — deixa o app rápido e sem custo de API do Google">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Salvar todas as fotos
+          </button>
           <button class="btn" onclick="migrateHours()" id="btnMigrateHours" title="Preenche a grade de horário por dia dos lugares antigos a partir do texto — sem sobrescrever quem já tem">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
             Converter horários
@@ -1954,7 +1958,7 @@ window.openPhotoModal = async () => {
     if (!data.photos?.length) throw new Error('Nenhuma foto encontrada para este lugar');
 
     availablePhotos = data.photos.map(ph =>
-      `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=1600&maxWidthPx=1200&key=${GOOGLE_API_KEY}`
+      `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=1000&maxWidthPx=800&key=${GOOGLE_API_KEY}`
     );
 
     renderPhotoGrid();
@@ -2093,6 +2097,59 @@ window.savePhotos = async () => {
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar fotos';
   }
+};
+
+// Hospeda no nosso Storage as fotos de TODOS os lugares que ainda não têm.
+// Roda uma vez e deixa o app rápido: com as fotos salvas no lugar, o app as
+// mostra direto (sem chamar — nem pagar — a API do Google a cada exibição).
+// Idempotente: pula quem já tem fotos e quem não tem Google ID.
+window.hostAllPhotos = async () => {
+  const targets = allPlaces.filter(p =>
+    p.pid && !p.pid.startsWith('ID_GOOGLE_') && !(Array.isArray(p.photos) && p.photos.length)
+  );
+  if (!targets.length) { showToast('Todos os lugares já têm fotos salvas. 🎉', 'success'); return; }
+  if (!confirm(`Vou baixar e hospedar no seu Firebase Storage as fotos de ${targets.length} lugar(es) que ainda não têm (até 5 fotos cada).\n\nDepois disso o app abre bem mais rápido e para de gastar a API do Google nessas exibições. Pode levar alguns minutos. Continuar?`)) return;
+
+  const btn = document.getElementById('btnHostAllPhotos');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  let done = 0, ok = 0, semFoto = 0, falhou = 0;
+
+  for (const p of targets) {
+    done++;
+    btn.innerHTML = `Salvando fotos… ${done}/${targets.length}`;
+    try {
+      // 1) metadados de foto do Google
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places/${p.pid}?fields=photos&key=${GOOGLE_API_KEY}`,
+        { headers: { 'X-Goog-FieldMask': 'photos' } }
+      );
+      if (!res.ok) { falhou++; continue; }
+      const data = await res.json();
+      if (!data.photos?.length) { semFoto++; continue; }   // Google não tem foto → pula
+      const urls = data.photos.slice(0, 5).map(ph =>
+        `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=1000&maxWidthPx=800&key=${GOOGLE_API_KEY}`);
+      // 2) hospeda cada uma no nosso Storage
+      const hosted = [];
+      for (let i = 0; i < urls.length; i++) hosted.push(await hostPhoto(urls[i], p._docId, i));
+      // 3) grava no lugar
+      const photosPos = hosted.map(() => '50% 50%');
+      await setDoc(doc(db, 'places', p._docId), { photos: hosted, photosPos, _updatedAt: serverTimestamp() }, { merge: true });
+      p.photos = [...hosted]; p.photosPos = [...photosPos];   // reflete localmente
+      ok++;
+    } catch (e) {
+      console.warn('hostAllPhotos', p._docId, e.message);
+      falhou++;
+    }
+  }
+
+  btn.innerHTML = orig;
+  btn.disabled = false;
+  updateStats();
+  renderTable();
+  const extra = [semFoto ? `${semFoto} sem foto no Google` : '', falhou ? `${falhou} com erro` : '']
+    .filter(Boolean).join(', ');
+  showToast(`Pronto! ${ok} lugar(es) com fotos salvas${extra ? ` — ${extra}` : ''}.`, falhou ? 'error' : 'success');
 };
 
 // ── Backup local: baixa as fotos num .zip organizado por lugar ─────
@@ -2331,7 +2388,7 @@ function renderCatsGrid() {
 function renderCatToggles() {
   const grid = document.getElementById('f_cats');
   grid.innerHTML = allCategoriesList.map(cat =>
-    `<button type="button" class="cat-toggle" data-cat="${cat.name}">${cat.emoji || ''} ${cat.name}</button>`
+    `<button type="button" class="cat-toggle" data-cat="${cat.name}">${cat.icon ? ic(cat.icon, 14, 1.7) : (cat.emoji || '')} ${cat.name}</button>`
   ).join('');
   grid.querySelectorAll('.cat-toggle').forEach(btn => {
     btn.addEventListener('click', () => btn.classList.toggle('on'));
@@ -2567,7 +2624,7 @@ function renderQuizOptions() {
       </div>
       <div class="quiz-opt-favlbl">Favorece as categorias:</div>
       <div class="cat-toggle-grid">
-        ${cats.map(c => `<button type="button" class="cat-toggle ${(o.cats||[]).includes(c.name)?'on':''}" onclick="toggleQuizOptCat(${i}, this.dataset.cat)" data-cat="${_escQ(c.name)}">${c.emoji||''} ${_escQ(c.name)}</button>`).join('') || '<span style="color:var(--text3);font-size:12px">Nenhuma categoria cadastrada.</span>'}
+        ${cats.map(c => `<button type="button" class="cat-toggle ${(o.cats||[]).includes(c.name)?'on':''}" onclick="toggleQuizOptCat(${i}, this.dataset.cat)" data-cat="${_escQ(c.name)}">${c.icon ? ic(c.icon, 14, 1.7) : (c.emoji || '')} ${_escQ(c.name)}</button>`).join('') || '<span style="color:var(--text3);font-size:12px">Nenhuma categoria cadastrada.</span>'}
       </div>
       <div class="quiz-opt-extra">
         <label>Preço alvo:
