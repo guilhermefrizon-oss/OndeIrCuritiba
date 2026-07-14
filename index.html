@@ -34,6 +34,17 @@
 
 <div class="phone">
 
+  <!-- ── Splash de carregamento (logo) — some quando os cards estão prontos ── -->
+  <div id="splash">
+    <div class="splash-brand">
+      <div class="splash-logo">Day<em>Match</em></div>
+      <div class="splash-sub">Curitiba</div>
+    </div>
+    <div class="splash-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+  </div>
+  <!-- Segurança: se o app não iniciar em 8s, tira a splash de qualquer jeito -->
+  <script>setTimeout(function(){var s=document.getElementById('splash');if(s)s.classList.add('hide');},8000);</script>
+
   <!-- ── Tela de boas-vindas ── -->
   <div id="welcomeScreen" style="display:none;position:absolute;inset:0;z-index:200;background:var(--bg);flex-direction:column;overflow:hidden;">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(20,20,15,.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(20,20,15,.04) 0%,transparent 50%);pointer-events:none;"></div>

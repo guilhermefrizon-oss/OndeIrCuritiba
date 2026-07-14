@@ -102,6 +102,19 @@ async function loadAllRatings() {
   // Re-renderiza os cards para mostrar as notas
   renderCard();
 }
+// Splash inicial (logo): some assim que os cards estão prontos. Garante um
+// tempo mínimo em tela pra não "piscar" em conexões rápidas.
+const _splashStart = Date.now();
+function hideSplash() {
+  const el = document.getElementById('splash');
+  if (!el || el.classList.contains('hide')) return;
+  const wait = Math.max(0, 500 - (Date.now() - _splashStart));
+  setTimeout(() => {
+    el.classList.add('hide');
+    setTimeout(() => el.remove(), 500);   // remove depois do fade
+  }, wait);
+}
+
 async function init() {
   // IMPORTANTE: não usar stack.innerHTML aqui — isso apagava os stamps
   // (#likeStamp etc.) e quebrava o arrastar do card.
@@ -129,6 +142,7 @@ async function init() {
 
   if (result === TIMEOUT) {
     loader.remove();
+    hideSplash();              // mostra o aviso de erro em vez de segurar a splash
     renderLoadError(stack);
     return;
   }
@@ -155,6 +169,7 @@ async function init() {
   renderCard();
   renderProgress();
   showWelcomeScreen();
+  hideSplash();               // cards prontos → tira a splash da logo
 
   // "Abertos agora" entra com o texto e, depois de um tempinho, recolhe pra
   // bolinha — a menos que a pessoa já tenha ligado o filtro nesse meio-tempo.

@@ -443,6 +443,25 @@ body {
 @keyframes fadeIn     { from { opacity: 0 } to { opacity: 1 } }
 @keyframes spin       { to { transform: rotate(360deg) } }
 
+/* ── Splash / tela de carregamento inicial (logo) ──────────────────── */
+#splash {
+  position: absolute; inset: 0; z-index: 500;
+  background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+  transition: opacity .45s ease;
+}
+#splash.hide { opacity: 0; pointer-events: none; }
+.splash-brand { text-align: center; animation: splashIn .6s ease both; }
+.splash-logo { font-size: 40px; font-weight: 800; letter-spacing: -1.2px; color: var(--text); line-height: 1; }
+.splash-logo em { color: var(--blue); font-style: normal; }
+.splash-sub { margin-top: 10px; font-size: 13px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: var(--text3); }
+.splash-dots { display: flex; gap: 7px; }
+.splash-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--acc); opacity: .3; animation: splashDot 1s ease-in-out infinite; }
+.splash-dots i:nth-child(2) { animation-delay: .15s; }
+.splash-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes splashDot { 0%, 100% { opacity: .25; transform: translateY(0) } 50% { opacity: 1; transform: translateY(-4px) } }
+@keyframes splashIn  { from { opacity: 0; transform: translateY(8px) scale(.98) } to { opacity: 1; transform: none } }
+
 /* ── Welcome screen ── */
 #welcomeScreen { display: flex; }
 .wcat-card {
