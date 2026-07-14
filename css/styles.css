@@ -1446,7 +1446,7 @@ body {
 .ic { display: inline-block; vertical-align: -0.16em; flex-shrink: 0; }
 .cat-pill .ic, .loc-pill .ic, .fav-toggle .ic { vertical-align: middle; }
 
-/* Botão "Abertos agora" (fica na linha do rótulo CATEGORIA) */
+/* Pills de horário (dentro da faixa .time-bar, eixo "quando") */
 .open-now-pill {
   display: flex; align-items: center; gap: 5px;
   background: var(--bg2); border: 1.5px solid var(--bg4);
@@ -1460,6 +1460,31 @@ body {
   font-weight: 700;
 }
 [data-theme="dark"] .open-now-pill.on { color: #34d399; }
+
+/* Faixa de horário — destaque no topo, separada das categorias.
+   Card claro "agrupado" (estilo iOS) pra sinalizar que é outro eixo de filtro. */
+.time-bar {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  margin: 0 22px 14px; padding: 9px 12px;
+  background: var(--bg2); border: 1px solid var(--bg4);
+  border-radius: 16px; box-shadow: var(--shadow);
+}
+.time-bar-label {
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text3);
+}
+.time-bar-pills {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0; overflow-x: auto; scrollbar-width: none;
+}
+.time-bar-pills::-webkit-scrollbar { display: none; }
+/* Pills sobre o card branco: fundo levemente mais escuro pra contrastar. */
+.time-bar .open-now-pill { background: var(--bg3); border-color: var(--bg4); box-shadow: none; }
+.time-bar .open-now-pill.on {
+  background: rgba(52,211,153,.14); border-color: #34d399; color: #059669;
+}
+[data-theme="dark"] .time-bar .open-now-pill.on { color: #34d399; }
 
 /* Stamps com ícone svg */
 .stamp { display: flex; align-items: center; gap: 6px; }
@@ -1603,10 +1628,7 @@ body {
 .quiz-more-meta { font-size: 12px; color: var(--text3); }
 .quiz-more-price { font-size: 13px; font-weight: 700; color: var(--text3); flex-shrink: 0; }
 
-/* ── Filtros de horário: pills + sheet "Aberto em…" ─────────────────── */
-.cats-pills { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.cats-pills::-webkit-scrollbar { display: none; }
-
+/* ── Sheet "Aberto em…" (aberta pelo pill da faixa .time-bar) ────────── */
 .plan-sheet-backdrop {
   position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.45);
   backdrop-filter: blur(4px); display: none; align-items: flex-end; justify-content: center;
