@@ -650,6 +650,22 @@ td {
 .emoji-opt:hover { background: var(--bg5); }
 .emoji-opt.selected { border-color: var(--acc); background: var(--acc-glow); }
 
+/* Seletor de ícone da categoria */
+.icon-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.icon-opt {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--bg3);
+  border: 1.5px solid var(--bg4);
+  color: var(--text2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.icon-opt:hover { background: var(--bg5); color: var(--text); }
+.icon-opt.selected { border-color: var(--acc); background: var(--acc-glow); color: var(--acc); }
+.icon-opt svg { width: 20px; height: 20px; }
+
 /* Quiz — chips na lista e editor de respostas */
 .quiz-chip {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1684,46 +1700,11 @@ service cloud.firestore {
           <label class="form-label">Nome da categoria *</label>
           <input class="form-input" id="fc_name" placeholder="ex: Rooftop, Brunch, Samba…">
         </div>
-        <div class="form-group" style="display:none">
-          <label class="form-label">Emoji *</label>
-          <input class="form-input" id="fc_emoji" placeholder="ex: 🌆" maxlength="4" style="font-size:22px; width:80px">
-          <div class="emoji-row" style="margin-top:10px">
-            <span class="emoji-opt" onclick="pickCatEmoji('🌆')">🌆</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('☕')">☕</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🍸')">🍸</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🎵')">🎵</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🕯️')">🕯️</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🍔')">🍔</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('⭐')">⭐</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🌱')">🌱</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🐾')">🐾</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('📸')">📸</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🥂')">🥂</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🎸')">🎸</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🍕')">🍕</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🥁')">🥁</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🎤')">🎤</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🏋️')">🏋️</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🌊')">🌊</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🎨')">🎨</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🎭')">🎭</span>
-            <span class="emoji-opt" onclick="pickCatEmoji('🛍️')">🛍️</span>
-          </div>
-        </div>
         <div class="form-group">
-          <label class="form-label">Cor do card (bg)</label>
-          <select class="form-select" id="fc_bg">
-            <option value="rooftop">rooftop — roxo</option>
-            <option value="cafe">cafe — amarelo</option>
-            <option value="bar">bar — azul</option>
-            <option value="balada">balada — rosa</option>
-            <option value="romantico">romantico — vermelho</option>
-            <option value="barato">barato — verde</option>
-            <option value="alta">alta — violeta</option>
-            <option value="vegano">vegano — esmeralda</option>
-            <option value="pet">pet — laranja</option>
-            <option value="insta">insta — fúcsia</option>
-          </select>
+          <label class="form-label">Ícone *</label>
+          <input type="hidden" id="fc_icon">
+          <div class="icon-row" id="catIconGrid"></div>
+          <div class="form-hint">O ícone que aparece nos filtros do app.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Ordem de exibição</label>
@@ -1811,7 +1792,7 @@ import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, serv
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
-import { ic, catIcon } from "./js/icons.js";
+import { ic, catIcon, catIconName, CAT_ICON_CHOICES } from "./js/icons.js";
 import { hoursToText, parseHoursText, defaultHours, WEEK_ORDER, DAY_LABEL } from "./js/hours.js";
 
 const firebaseConfig = {
@@ -2307,9 +2288,9 @@ function renderCatsGrid() {
   }
   grid.innerHTML = allCategoriesList.map(cat => `
     <div class="cat-card">
-      <div class="cat-card-emoji">${catIcon(cat.name, 28, 1.7)}</div>
+      <div class="cat-card-emoji">${cat.icon ? ic(cat.icon, 28, 1.7) : catIcon(cat.name, 28, 1.7)}</div>
       <div class="cat-card-name">${cat.name}</div>
-      <div class="cat-card-meta">Cor: ${cat.bg || '—'} · Ordem: ${cat.order || '—'}</div>
+      <div class="cat-card-meta">Ordem: ${cat.order || '—'}</div>
       <div class="cat-card-actions">
         <button class="btn btn-secondary btn-sm" onclick="openEditCatModal('${cat.id}')">${ic('edit',13)} Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCat('${cat.id}', '${(cat.name||'').replace(/'/g,"\\'")}')">${ic('trash',14)}</button>
@@ -2329,14 +2310,21 @@ function renderCatToggles() {
 }
 
 // Cat modal
+// Monta o grid de ícones (uma vez) e o pinta como selecionado.
+function buildCatIconGrid(selected) {
+  const grid = document.getElementById('catIconGrid');
+  grid.innerHTML = CAT_ICON_CHOICES.map(k =>
+    `<button type="button" class="icon-opt${k === selected ? ' selected' : ''}" data-icon="${k}" onclick="pickCatIcon('${k}')" title="${k}">${ic(k, 20, 1.8)}</button>`
+  ).join('');
+  document.getElementById('fc_icon').value = selected || '';
+}
+
 window.openCatModal = () => {
   editingCatId = null;
   document.getElementById('catModalTitle').textContent = 'Nova Categoria';
   document.getElementById('fc_name').value  = '';
-  document.getElementById('fc_emoji').value = '';
-  document.getElementById('fc_bg').value    = 'cafe';
   document.getElementById('fc_order').value = allCategoriesList.length + 1;
-  document.querySelectorAll('#catModalBackdrop .emoji-opt').forEach(e => e.classList.remove('selected'));
+  buildCatIconGrid('');
   document.getElementById('catModalBackdrop').classList.add('open');
 };
 
@@ -2346,12 +2334,9 @@ window.openEditCatModal = (id) => {
   editingCatId = id;
   document.getElementById('catModalTitle').textContent = 'Editar: ' + cat.name;
   document.getElementById('fc_name').value  = cat.name  || '';
-  document.getElementById('fc_emoji').value = cat.emoji || '';
-  document.getElementById('fc_bg').value    = cat.bg    || 'cafe';
   document.getElementById('fc_order').value = cat.order || '';
-  document.querySelectorAll('#catModalBackdrop .emoji-opt').forEach(e => {
-    e.classList.toggle('selected', e.textContent === cat.emoji);
-  });
+  // Sem ícone salvo (categoria antiga): mostra o palpite atual por nome.
+  buildCatIconGrid(cat.icon || catIconName(cat.name));
   document.getElementById('catModalBackdrop').classList.add('open');
 };
 
@@ -2360,25 +2345,25 @@ window.closeCatModalOnBackdrop = (e) => {
   if (e.target === document.getElementById('catModalBackdrop')) closeCatModal();
 };
 
-window.pickCatEmoji = (em) => {
-  document.getElementById('fc_emoji').value = em;
-  document.querySelectorAll('#catModalBackdrop .emoji-opt').forEach(el => {
-    el.classList.toggle('selected', el.textContent === em);
+window.pickCatIcon = (key) => {
+  document.getElementById('fc_icon').value = key;
+  document.querySelectorAll('#catIconGrid .icon-opt').forEach(el => {
+    el.classList.toggle('selected', el.dataset.icon === key);
   });
 };
 
 window.saveCat = async () => {
-  const name  = document.getElementById('fc_name').value.trim();
-  const emoji = document.getElementById('fc_emoji').value.trim();
-  if (!name)  { showToast('Nome é obrigatório', 'error'); return; }
+  const name = document.getElementById('fc_name').value.trim();
+  const icon = document.getElementById('fc_icon').value.trim();
+  if (!name) { showToast('Nome é obrigatório', 'error'); return; }
+  if (!icon) { showToast('Escolha um ícone', 'error'); return; }
 
   const btn = document.getElementById('btnSaveCat');
   btn.disabled = true; btn.textContent = 'Salvando…';
 
   const data = {
     name,
-    emoji,
-    bg:    document.getElementById('fc_bg').value,
+    icon,
     order: parseInt(document.getElementById('fc_order').value) || 99,
     _updatedAt: serverTimestamp(),
   };

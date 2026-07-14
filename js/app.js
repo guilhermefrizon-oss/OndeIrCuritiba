@@ -15,7 +15,7 @@ import { initQuiz, openQuiz } from './quiz.js';
 import { isOpenNow, isOpenDuring, getPlaceHours, PERIODS, WEEK_ORDER, DOW_KEYS, DAY_LABEL } from './hours.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
-import { ic, catIcon } from './icons.js';
+import { ic, catIcon, registerCatIcon } from './icons.js';
 
 // Sinaliza que toda a cadeia de módulos (firebase, store, auth, xp…)
 // carregou. O watchdog em index.html usa isto para detectar quando o
@@ -139,7 +139,10 @@ async function init() {
   if (cats.length) {
     CATS = ['Todos', ...cats.map(c => c.name)];
     CE   = {};
-    cats.forEach(c => { CE[c.name] = c.emoji || ''; });
+    cats.forEach(c => {
+      CE[c.name] = c.emoji || '';
+      registerCatIcon(c.name, c.icon); // ícone escolhido no admin tem prioridade
+    });
   }
 
   if (places.length) P = orderDeck(places);

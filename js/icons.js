@@ -68,8 +68,26 @@ function norm(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+// Ícones escolhidos no admin (nome normalizado → chave do ícone). Têm
+// prioridade sobre o palpite por nome. Preenchido no boot do app a partir
+// do banco; categorias antigas (sem ícone salvo) caem no palpite abaixo.
+const CAT_ICON_REGISTRY = {};
+export function registerCatIcon(catName, iconKey) {
+  const k = norm(catName);
+  if (k && iconKey && PATHS[iconKey]) CAT_ICON_REGISTRY[k] = iconKey;
+}
+
+// Sugestões de ícone pro seletor do admin (subconjunto util do PATHS).
+export const CAT_ICON_CHOICES = [
+  'coffee', 'martini', 'music', 'utensils', 'building', 'heart',
+  'leaf', 'paw', 'sun', 'dollar', 'camera', 'instagram',
+  'star', 'sparkles', 'flame', 'mic', 'compass', 'moon',
+  'home', 'globe', 'trophy', 'map-pin',
+];
+
 export function catIconName(catName) {
   const c = norm(catName);
+  if (CAT_ICON_REGISTRY[c])                       return CAT_ICON_REGISTRY[c];
   if (!c || c === 'todos')                        return 'map';
   if (c.includes('cafe'))                         return 'coffee';
   if (c.includes('bar') || c.includes('pub') || c.includes('cerveja')) return 'martini';
