@@ -42,11 +42,26 @@ Sempre que mudar o app web, rode `npm run sync:android` de novo antes de buildar
 - Permissões: `INTERNET`, `ACCESS_COARSE_LOCATION` (distância dos lugares).
 - Splash nativo com a cor de fundo do app.
 
+## Ícone e splash
+Já vêm com a marca do app (pin + coração) em todas as densidades — gerados a
+partir do `favicon.svg`. Os **fontes** ficam em `resources/` (`icon-only.png`,
+`icon-foreground.png`, `icon-background.png`, `splash.png`, `splash-dark.png`).
+
+Pra **regenerar** tudo (ex.: mudou a marca), rode na sua máquina:
+```bash
+npx @capacitor/assets generate --android
+```
+(Usa o `sharp`; instala liso no Mac. Aqui no ambiente remoto o proxy bloqueia o
+binário, por isso os PNGs foram gerados na mão desta vez.)
+
+## Deep links
+- **Já funciona sem domínio:** `daymatch://lugar/ID` (ou `daymatch://?lugar=ID`)
+  abre o app direto no lugar. Testar: `adb shell am start -a android.intent.action.VIEW -d "daymatch://lugar/ALGUM_ID"`.
+- **App Link https** (`https://SEU-DOMINIO/?lugar=ID` abrir no app) exige **domínio
+  próprio** + `assetlinks.json` no site. Há um `intent-filter` comentado no
+  `AndroidManifest.xml` pronto pra ativar quando tiver domínio.
+
 ## ⚠️ Pendências conhecidas (próximas fases)
-- **Login Google/Apple ainda não funciona dentro do app nativo.** O `signInWithPopup`
-  da web não roda em WebView — precisa migrar para o plugin nativo do Firebase
-  (`@capacitor-firebase/authentication`). Até lá, dá pra navegar/swipar, mas não logar.
-- **Ícone/splash em todas as resoluções:** gerar com `@capacitor/assets` a partir de
-  um PNG fonte (roda na sua máquina; aqui o proxy bloqueia o download do `sharp`).
-- **Deep links** (`?lugar=ID` abrir no app): precisam de domínio próprio.
+- **Login nativo:** o código já está pronto (Fase 2), mas precisa do setup de
+  console — ver [`AUTH-NATIVE.md`](./AUTH-NATIVE.md).
 - **Ficha da Play:** screenshots, descrição, classificação, formulário de Data Safety.

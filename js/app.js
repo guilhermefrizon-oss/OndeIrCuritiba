@@ -200,6 +200,8 @@ async function init() {
 
   // Se veio de um link compartilhado (?lugar=ID), abre o lugar direto.
   openSharedPlace();
+  // Deep links do app nativo (daymatch://…). Sem efeito na PWA.
+  setupNativeDeepLinks();
 }
 
 // ── Geolocalização (distância nos cards) ──────────────────────────
@@ -1345,16 +1347,57 @@ function sharePlace(p) {
   }
 }
 
+// Abre um lugar pelo ID (usado pelo link web ?lugar=ID e pelos deep links).
+function openPlaceById(id) {
+  if (!id) return;
+  const p = P.find(x => x.id === id);
+  if (p) openProfile(p);
+}
+
+// Extrai o ID de lugar de uma URL. Aceita o link web (?lugar=ID) e os deep
+// links nativos: daymatch://lugar/ID, daymatch://?lugar=ID e, quando houver
+// domínio, https://SEU-DOMINIO/?lugar=ID.
+function placeIdFromUrl(url) {
+  try {
+    const u = new URL(url);
+    const q = u.searchParams.get('lugar');
+    if (q) return q;
+    if (u.host === 'lugar' && u.pathname.length > 1) return u.pathname.replace(/^\/+/, '');
+    const seg = u.pathname.split('/').filter(Boolean);
+    const i = seg.indexOf('lugar');
+    if (i >= 0 && seg[i + 1]) return seg[i + 1];
+  } catch (e) { /* url inválida */ }
+  return null;
+}
+
 // Abre direto o lugar do link compartilhado (?lugar=ID), se houver.
 function openSharedPlace() {
   try {
     const id = new URLSearchParams(location.search).get('lugar');
     if (!id) return;
-    const p = P.find(x => x.id === id);
-    if (p) openProfile(p);
+    openPlaceById(id);
     // Limpa o parâmetro pra não reabrir ao navegar/atualizar.
     history.replaceState(null, '', location.origin + location.pathname);
   } catch (e) { /* ignora */ }
+}
+
+// Deep links no app nativo (Capacitor). Abre o lugar quando o app é iniciado
+// por um link (cold start) ou recebe um link já aberto (evento appUrlOpen).
+// Na PWA, o plugin App não existe e isto é ignorado.
+async function setupNativeDeepLinks() {
+  const App = window.Capacitor?.Plugins?.App;
+  if (!App) return;
+  try {
+    const res = await App.getLaunchUrl();
+    const id = placeIdFromUrl(res?.url || '');
+    if (id) openPlaceById(id);
+  } catch (e) { /* sem launch url */ }
+  try {
+    App.addListener('appUrlOpen', (data) => {
+      const id = placeIdFromUrl(data?.url || '');
+      if (id) openPlaceById(id);
+    });
+  } catch (e) { /* listener indisponível */ }
 }
 
 // ── Ações do perfil (Já fui · Pular · Quero ir · Salvar) ────────
