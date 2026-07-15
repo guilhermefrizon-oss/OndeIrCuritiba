@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Day Match</string>
+    <string name="title_activity_main">Day Match</string>
+    <string name="package_name">com.daymatch.curitiba</string>
+    <string name="custom_url_scheme">com.daymatch.curitiba</string>
+</resources>

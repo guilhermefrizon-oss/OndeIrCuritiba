@@ -1,2 +1,11 @@
 .DS_Store
 .claude/
+
+# Node / Capacitor
+node_modules/
+www/
+
+# Capacitor copia web assets + config gerada pra dentro do projeto nativo
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
