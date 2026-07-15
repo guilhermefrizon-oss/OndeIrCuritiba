@@ -23,10 +23,45 @@ import {
   reauthenticateWithPopup,
   reauthenticateWithCredential,
   EmailAuthProvider,
-  OAuthProvider
+  OAuthProvider,
+  signInWithCredential
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const provider = new GoogleAuthProvider();
+
+// ── Login nativo (Capacitor) ───────────────────────────────────────
+// Dentro do app nativo (Android/iOS), o signInWithPopup da web não roda em
+// WebView. Usamos o plugin @capacitor-firebase/authentication (acessado pelo
+// runtime global do Capacitor — não há bundler aqui) para o login nativo do
+// Google/Apple e completamos no SDK JS via signInWithCredential, que é o que
+// o resto do app (Firestore) usa. Na PWA, isNative() é false e nada muda.
+function isNative() {
+  const C = window.Capacitor;
+  return !!(C && typeof C.isNativePlatform === 'function' && C.isNativePlatform());
+}
+
+async function nativeSocialSignIn(kind) {
+  const FA = window.Capacitor?.Plugins?.FirebaseAuthentication;
+  if (!FA) throw new Error('Plugin FirebaseAuthentication indisponível no app nativo.');
+  if (kind === 'apple') {
+    const res = await FA.signInWithApple();
+    const idToken  = res?.credential?.idToken;
+    const rawNonce = res?.credential?.nonce;
+    if (!idToken) throw new Error('Sem idToken da Apple.');
+    const cred = new OAuthProvider('apple.com').credential({ idToken, rawNonce });
+    return signInWithCredential(auth, cred);
+  }
+  const res = await FA.signInWithGoogle();
+  const idToken = res?.credential?.idToken;
+  if (!idToken) throw new Error('Sem idToken do Google.');
+  return signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+}
+
+// Cancelamento do usuário no seletor nativo: não é erro pra mostrar.
+function isNativeCancel(e) {
+  const m = String(e?.message || e?.code || '').toLowerCase();
+  return m.includes('cancel') || m.includes('canceled') || m.includes('cancelled');
+}
 
 // Sign in with Apple. Exigido pela Apple (diretriz 4.8) quando há login
 // social. Para funcionar, é preciso: (1) ter conta no Apple Developer
@@ -149,6 +184,18 @@ const POPUP_UNSUPPORTED = [
 export async function signInWithGoogle() {
   const errEl = document.getElementById('loginError');
   if (errEl) errEl.style.display = 'none';
+  if (isNative()) {
+    try {
+      const result = await nativeSocialSignIn('google');
+      closeAuthModal();
+      if (getAdditionalUserInfo(result)?.isNewUser) showProfileEditor(result.user, { onboarding: true });
+    } catch (e) {
+      if (isNativeCancel(e)) return;
+      console.warn('Login Google nativo falhou:', e?.code, e?.message);
+      if (errEl) showErr(errEl, _friendlyError(e?.code));
+    }
+    return;
+  }
   try {
     const result = await signInWithPopup(auth, provider);
     closeAuthModal();
@@ -173,6 +220,22 @@ export async function signInWithGoogle() {
 export async function signInWithApple() {
   const errEl = document.getElementById('loginError');
   if (errEl) errEl.style.display = 'none';
+  if (isNative()) {
+    try {
+      const result = await nativeSocialSignIn('apple');
+      closeAuthModal();
+      if (getAdditionalUserInfo(result)?.isNewUser) showProfileEditor(result.user, { onboarding: true });
+    } catch (e) {
+      if (isNativeCancel(e)) return;
+      console.warn('Login Apple nativo falhou:', e?.code, e?.message);
+      if (e?.code === 'auth/account-exists-with-different-credential') {
+        if (errEl) showErr(errEl, 'Este e-mail já tem conta por outro método. Entre com Google ou e-mail/senha.');
+        return;
+      }
+      if (errEl) showErr(errEl, _friendlyError(e?.code));
+    }
+    return;
+  }
   try {
     const result = await signInWithPopup(auth, appleProvider);
     closeAuthModal();
