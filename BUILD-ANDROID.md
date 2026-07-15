@@ -32,7 +32,21 @@ No Android Studio:
 - **Rodar no aparelho/emulador:** botão ▶ (Run 'app').
 - **Gerar APK de teste:** Build → Build Bundle(s)/APK(s) → Build APK(s).
 - **Gerar AAB p/ Play Store:** Build → Generate Signed Bundle/APK → **Android App Bundle**
-  (crie/《use uma keystore e **guarde-a**; é ela que assina todas as versões futuras).
+  (crie/use uma keystore e **guarde-a**; é ela que assina todas as versões futuras).
+
+### APK direto (instalar sem a Play)
+Pra testar num aparelho ou compartilhar com poucas pessoas, sem passar pela loja:
+
+```bash
+npm run apk
+# saída: android/app/build/outputs/apk/debug/app-debug.apk
+```
+Instalar num aparelho/emulador conectado: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`
+(ou mande o `.apk` pro celular e abra — precisa permitir "instalar de fontes desconhecidas").
+
+- **Navegar, swipar e e-mail/senha** funcionam no APK de debug **sem setup** de Firebase.
+- **Login Google** só depois de registrar o **SHA-1 de debug** no Firebase (ver `AUTH-NATIVE.md`).
+- APK **assinado** (release): Android Studio → Generate Signed Bundle/APK → **APK**.
 
 Sempre que mudar o app web, rode `npm run sync:android` de novo antes de buildar.
 

@@ -81,6 +81,19 @@ Código já pronto; falta o setup. Detalhes em `AUTH-NATIVE.md`.
 
 ---
 
+## 03b · (opcional) Gerar um APK pra testar/instalar sem a Play
+Não precisa esperar a frente 04. O APK instala direto no aparelho ou emulador.
+
+```bash
+npm run apk
+# saída: android/app/build/outputs/apk/debug/app-debug.apk
+```
+- Instalar: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` (ou mandar o `.apk` pro celular e abrir).
+- Navegar/swipar/e-mail funcionam sem setup; **login Google** precisa do SHA de debug no Firebase (frente 03).
+- APK assinado (release): Android Studio → Generate Signed Bundle/APK → **APK**.
+
+---
+
 ## 04 · Publicar na Google Play
 
 - [ ] **Criar conta no Google Play Console** (US$ 25, uma vez) — play.google.com/console
