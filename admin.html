@@ -202,6 +202,22 @@ body {
 .nav-item.active { background: var(--acc-glow); color: var(--acc); }
 .nav-item svg { flex-shrink: 0; opacity: .7; }
 .nav-item.active svg { opacity: 1; }
+.nav-count { margin-left: auto; background: #e5484d; color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Cards da fila de correções */
+.corr-card { background: var(--bg2); border: 1px solid var(--bg4); border-radius: var(--r2, 14px); padding: 16px 18px; margin-bottom: 12px; }
+.corr-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.corr-place { font-size: 15px; font-weight: 700; color: var(--text); }
+.corr-field-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--acc); background: var(--acc-glow); padding: 3px 9px; border-radius: 100px; }
+.corr-meta { font-size: 12px; color: var(--text3); }
+.corr-values { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.corr-val-row { font-size: 13.5px; line-height: 1.5; color: var(--text); }
+.corr-val-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text3); margin-right: 6px; }
+.corr-val-row.old .corr-val-txt { color: var(--text3); text-decoration: line-through; }
+.corr-val-row.new .corr-val-txt { color: var(--text); font-weight: 600; }
+.corr-note { font-size: 13px; color: var(--text2); background: var(--bg3); border-radius: 10px; padding: 9px 12px; margin-bottom: 12px; line-height: 1.5; }
+.corr-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.corr-empty { text-align: center; color: var(--text3); padding: 48px 20px; font-size: 14px; }
 
 .sidebar-spacer { flex: 1; }
 
@@ -1114,6 +1130,11 @@ th.sortable:hover { color: var(--acc3); }
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
       Lugares
     </button>
+    <button class="nav-item" onclick="showPage('corrections')" id="nav-corrections">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Correções
+      <span class="nav-count" id="correctionsCount" style="display:none">0</span>
+    </button>
     <button class="nav-item" onclick="showPage('categories')" id="nav-categories">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Categorias
@@ -1220,6 +1241,23 @@ th.sortable:hover { color: var(--acc3); }
             <div class="page-btns" id="paginationBtns"></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Corrections Page ── -->
+    <div id="page-corrections" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Correções sugeridas</div>
+          <div class="page-subtitle" id="correctionsSubtitle">Sugestões enviadas pelos usuários no app. Aprove para aplicar no lugar.</div>
+        </div>
+        <button class="btn btn-secondary" onclick="loadCorrections()">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+      <div id="correctionsList">
+        <div class="table-loading"><div class="spinner"></div>Carregando…</div>
       </div>
     </div>
 
@@ -1509,6 +1547,18 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null
                             && request.auth.uid == resource.data.uid;
+    }
+
+    // Sugestões de correção: usuário logado envia (status 'pending', com o
+    // próprio uid); só admin lê a fila e aprova/descarta.
+    match /corrections/{id} {
+      allow read: if request.auth != null
+                  && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'pending';
+      allow update, delete: if request.auth != null
+                  && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
     }
   }
 }</pre>
@@ -1902,6 +1952,7 @@ onAuthStateChanged(auth, async user => {
 
     loadPlaces();
     loadCategories();
+    loadCorrectionsCount();
   } else {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
@@ -3093,15 +3144,153 @@ window.confirmDelete = async () => {
   }
 };
 
+// ── Correções sugeridas pelos usuários ──────────────────────────
+// Fila de sugestões (coleção `corrections`, status 'pending'). Aprovar
+// aplica o valor no lugar; descartar marca como rejeitada. Filtra por
+// status no servidor (índice automático de campo único) e ordena no
+// cliente — sem precisar criar índice composto no Firebase.
+let allCorrections = [];
+
+function updateCorrectionsBadge() {
+  const badge = document.getElementById('correctionsCount');
+  if (!badge) return;
+  const n = allCorrections.length;
+  badge.textContent = n;
+  badge.style.display = n ? 'inline-flex' : 'none';
+}
+
+async function loadCorrectionsCount() {
+  try {
+    const snap = await getDocs(query(collection(db, 'corrections'), where('status', '==', 'pending')));
+    allCorrections = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    allCorrections.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    updateCorrectionsBadge();
+  } catch (e) { console.warn('loadCorrectionsCount:', e); }
+}
+
+window.loadCorrections = async () => {
+  const list = document.getElementById('correctionsList');
+  if (list) list.innerHTML = '<div class="table-loading"><div class="spinner"></div>Carregando…</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'corrections'), where('status', '==', 'pending')));
+    allCorrections = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    allCorrections.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    updateCorrectionsBadge();
+    const sub = document.getElementById('correctionsSubtitle');
+    if (sub) sub.textContent = allCorrections.length
+      ? `${allCorrections.length} sugestão(ões) aguardando revisão. Aprovar aplica no lugar na hora.`
+      : 'Sugestões enviadas pelos usuários no app aparecem aqui.';
+    renderCorrections();
+  } catch (e) {
+    console.warn('loadCorrections:', e);
+    if (list) list.innerHTML = '<div class="corr-empty">Não consegui carregar. Confira se as regras do Firestore (aba <strong>Regras / Admins</strong>) foram publicadas.</div>';
+  }
+};
+
+function renderCorrections() {
+  const list = document.getElementById('correctionsList');
+  if (!list) return;
+  if (!allCorrections.length) {
+    list.innerHTML = '<div class="corr-empty">Nenhuma sugestão pendente. 🎉</div>';
+    return;
+  }
+  list.innerHTML = allCorrections.map(c => {
+    const when = c.createdAt?.toDate
+      ? c.createdAt.toDate().toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+      : '';
+    // 'cats' e 'other' pedem julgamento — o admin edita à mão. O resto aplica direto.
+    const canApply = c.field && c.field !== 'other' && c.field !== 'cats';
+    const oldVal = c.currentValue
+      ? `<div class="corr-val-row old"><span class="corr-val-label">Hoje</span><span class="corr-val-txt">${escM(c.currentValue)}</span></div>`
+      : '';
+    const note = c.note ? `<div class="corr-note">${escM(c.note)}</div>` : '';
+    const mainBtn = canApply
+      ? `<button class="btn btn-primary btn-sm" onclick="approveCorrection('${c._id}')">${ic('check',14)} Aprovar e aplicar</button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="openPlaceFromCorrection('${c._id}')">${ic('edit',14)} Abrir lugar pra editar</button>`;
+    return `
+      <div class="corr-card" id="corr-${c._id}">
+        <div class="corr-card-top">
+          <div>
+            <div class="corr-place">${escM(c.placeName || '—')}</div>
+            <div class="corr-meta">Por ${escM(c.userName || 'Usuário')}${when ? ' · ' + when : ''}</div>
+          </div>
+          <span class="corr-field-tag">${escM(c.fieldLabel || c.field || '')}</span>
+        </div>
+        <div class="corr-values">
+          ${oldVal}
+          <div class="corr-val-row new"><span class="corr-val-label">Sugerido</span><span class="corr-val-txt">${escM(c.suggested || '')}</span></div>
+        </div>
+        ${note}
+        <div class="corr-actions">
+          ${mainBtn}
+          <button class="btn btn-danger btn-sm" onclick="discardCorrection('${c._id}')">${ic('x',14)} Descartar</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.approveCorrection = async (id) => {
+  const c = allCorrections.find(x => x._id === id);
+  if (!c) return;
+  if (!c.placeId) { showToast('Sugestão sem lugar vinculado.', 'error'); return; }
+  try {
+    const patch = { _updatedAt: serverTimestamp() };
+    if (c.field === 'h') {
+      // Horário: tenta interpretar o texto pra atualizar a grade por dia também;
+      // se não der, guarda ao menos o texto de exibição.
+      const parsed = parseHoursText(c.suggested);
+      if (parsed) { patch.hours = parsed; patch.h = hoursToText(parsed); }
+      else { patch.h = c.suggested; }
+    } else {
+      patch[c.field] = c.suggested;
+    }
+    await setDoc(doc(db, 'places', c.placeId), patch, { merge: true });
+    await setDoc(doc(db, 'corrections', id), { status: 'approved', reviewedAt: serverTimestamp() }, { merge: true });
+    const p = allPlaces.find(x => x._docId === c.placeId);
+    if (p) Object.assign(p, patch);
+    allCorrections = allCorrections.filter(x => x._id !== id);
+    renderCorrections();
+    updateCorrectionsBadge();
+    showToast('Correção aplicada no lugar! ✅', 'success');
+  } catch (e) {
+    console.warn('approveCorrection:', e);
+    showToast('Erro ao aplicar: ' + e.message, 'error');
+  }
+};
+
+window.discardCorrection = async (id) => {
+  try {
+    await setDoc(doc(db, 'corrections', id), { status: 'rejected', reviewedAt: serverTimestamp() }, { merge: true });
+    allCorrections = allCorrections.filter(x => x._id !== id);
+    renderCorrections();
+    updateCorrectionsBadge();
+    showToast('Sugestão descartada.', 'success');
+  } catch (e) {
+    console.warn('discardCorrection:', e);
+    showToast('Erro: ' + e.message, 'error');
+  }
+};
+
+// Para 'categoria'/'outro': abre o lugar no editor pra o admin ajustar à mão.
+window.openPlaceFromCorrection = (id) => {
+  const c = allCorrections.find(x => x._id === id);
+  if (!c) return;
+  const p = allPlaces.find(x => x._docId === c.placeId);
+  if (!p) { showToast('Lugar não encontrado. Recarregue a aba Lugares.', 'error'); return; }
+  showPage('places');
+  openEditModal(c.placeId);
+};
+
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','categories','quiz','metrics','rules'].forEach(p => {
+  ['places','corrections','categories','quiz','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
   if (page === 'rules') loadAdmins();
   if (page === 'metrics') loadMetrics();
   if (page === 'quiz') loadQuizConfig();
+  if (page === 'corrections') loadCorrections();
   closeSidebar(); // fecha a gaveta no mobile após navegar
 };
 

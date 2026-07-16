@@ -594,6 +594,51 @@ body {
 .addr-sheet-btn:last-child { margin-bottom: 0; color: var(--text2); justify-content: center; }
 .addr-sheet-btn-icon { font-size: 20px; }
 
+/* ── Sugerir correção ──────────────────────────────────────────────── */
+/* Botão discreto no fim do perfil */
+.correct-btn-wrap { display: flex; justify-content: center; margin: 22px 0 4px; }
+.correct-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-family: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 8px 12px; border-radius: 100px; transition: background .15s, color .15s;
+}
+.correct-btn:hover, .correct-btn:active { background: var(--bg3); color: var(--text2); }
+.correct-btn svg { opacity: .8; }
+
+/* Sheet */
+.correct-sheet-backdrop { position: fixed; inset: 0; z-index: 320; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; animation: fadeIn .2s ease both; }
+.correct-sheet { background: var(--bg2); border-radius: 24px 24px 0 0; padding: 16px 20px 32px; width: 100%; max-width: 390px; border-top: 1.5px solid var(--bg4); box-shadow: 0 -8px 40px rgba(0,0,0,.12); max-height: 88dvh; overflow-y: auto; scrollbar-width: none; }
+.correct-sheet::-webkit-scrollbar { display: none; }
+.correct-sheet-handle { width: 36px; height: 4px; background: var(--bg4); border-radius: 2px; margin: 0 auto 16px; }
+.correct-sheet-title { font-size: 17px; font-weight: 800; color: var(--text); text-align: center; letter-spacing: -0.3px; }
+.correct-sheet-sub { font-size: 12.5px; color: var(--text3); text-align: center; margin: 2px 0 16px; }
+.correct-sheet-sub span { color: var(--text2); font-weight: 600; }
+
+.correct-field-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin: 14px 0 6px; }
+.correct-field-label:first-child { margin-top: 0; }
+.correct-select, .correct-input {
+  width: 100%; background: var(--bg3); border: 1.5px solid var(--bg4); border-radius: 14px;
+  padding: 12px 14px; font-family: inherit; font-size: 14.5px; color: var(--text);
+  outline: none; transition: border-color .15s;
+}
+.correct-select:focus, .correct-input:focus { border-color: var(--acc2); }
+.correct-input { resize: none; line-height: 1.5; }
+.correct-current { font-size: 12.5px; color: var(--text2); margin-top: 8px; line-height: 1.5; word-break: break-word; }
+.correct-current-tag { font-weight: 700; color: var(--text3); }
+.correct-submit {
+  width: 100%; margin-top: 18px; background: var(--acc); color: var(--acc-ink);
+  border: none; border-radius: 14px; padding: 14px; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 700; transition: transform .12s, opacity .15s;
+}
+.correct-submit:active { transform: scale(.98); }
+.correct-submit:disabled { opacity: .6; cursor: default; }
+.correct-cancel {
+  width: 100%; margin-top: 10px; background: none; border: none; cursor: pointer;
+  color: var(--text3); font-family: inherit; font-size: 14px; font-weight: 600; padding: 10px;
+}
+.correct-login-msg { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 4px; }
+
 /* ── Auth Modal ──────────────────────────────────────────────────── */
 .auth-modal-backdrop { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.45); backdrop-filter: blur(6px); display: flex; align-items: flex-end; justify-content: center; animation: fadeIn .2s ease both; }
 .auth-modal { background: var(--bg2); border-radius: 28px 28px 0 0; padding: 24px 24px 48px; width: 100%; max-width: 390px; border-top: 1.5px solid var(--bg4); text-align: center; box-shadow: 0 -8px 40px rgba(0,0,0,.12); }

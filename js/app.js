@@ -14,6 +14,7 @@ import { initSearch, openSearch } from './search.js';
 import { initQuiz, openQuiz } from './quiz.js';
 import { isOpenNow, isOpenDuring, getPlaceHours, PERIODS, WEEK_ORDER, DOW_KEYS, DAY_LABEL } from './hours.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
+import { renderCorrectionButton } from './corrections.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
 import { ic, catIcon, registerCatIcon } from './icons.js';
 
@@ -1310,6 +1311,7 @@ async function openProfile(p) {
 
   if (window.FEATURES?.ratings  && typeof renderRatingBlock    === 'function') renderRatingBlock(p.id);
   if (window.FEATURES?.comments && typeof renderCommentsSection === 'function') renderCommentsSection(p.id);
+  if (typeof renderCorrectionButton === 'function') renderCorrectionButton(p);
 
   document.getElementById('storyBars').innerHTML='<div class="story-bar"><div class="story-bar-fill"></div></div>';
 
