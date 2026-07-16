@@ -37,8 +37,9 @@ function currentValue(place, key) {
 let _place = null;
 
 // ── Botão no perfil ────────────────────────────────────────────────
-// Chamado pelo openProfile a cada abertura. Um botão discreto no fim do
-// perfil (padrão "sugerir uma edição").
+// Chamado pelo openProfile a cada abertura. Botão discreto, mas logo abaixo
+// das ações (Já fui/Quero ir) — visível sem precisar rolar até o fim dos
+// comentários.
 export function renderCorrectionButton(place) {
   _place = place;
   const old = document.getElementById('correctBtnWrap');
@@ -52,8 +53,15 @@ export function renderCorrectionButton(place) {
        ${ic('edit', 13)} Sugerir correção nas informações
      </button>`;
 
-  const body = document.getElementById('profileBody');
-  if (body) body.appendChild(wrap);
+  // Ancora logo depois das ações do perfil (ou da grade de infos, ou, por
+  // último, no fim do corpo). Assim não fica enterrado após os comentários.
+  const anchor = document.getElementById('profileActions')
+              || document.getElementById('profileInfoGrid');
+  if (anchor) anchor.insertAdjacentElement('afterend', wrap);
+  else {
+    const body = document.getElementById('profileBody');
+    if (body) body.appendChild(wrap);
+  }
 }
 
 // ── Abrir a sheet ──────────────────────────────────────────────────
