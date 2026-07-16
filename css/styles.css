@@ -100,7 +100,7 @@ body {
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────── */
-.topbar { padding: 8px 22px 14px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.topbar { padding: 6px 22px 6px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .wordmark { font-size: 20px; font-weight: 800; letter-spacing: -0.8px; color: var(--text); }
 .wordmark em { color: var(--blue); font-style: normal; }
 .wordmark small { font-size: 13px; font-weight: 600; color: var(--text3); letter-spacing: 0; margin-left: 2px; vertical-align: middle; }
@@ -144,9 +144,9 @@ body {
 .loc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 8px var(--acc); }
 
 /* ── Categories ──────────────────────────────────────────────────── */
-.cats-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 22px 10px; flex-shrink: 0; }
+.cats-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 22px 4px; flex-shrink: 0; }
 .cats-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); }
-.cats-scroll { display: flex; gap: 8px; padding: 0 22px 18px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.cats-scroll { display: flex; gap: 8px; padding: 0 22px 8px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .cats-scroll::-webkit-scrollbar { display: none; }
 .cat-pill {
   flex-shrink: 0; padding: 7px 15px; border-radius: 100px;
@@ -158,7 +158,7 @@ body {
 .cat-pill.on { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); font-weight: 700; box-shadow: var(--shadow); }
 
 /* ── Card stack ──────────────────────────────────────────────────── */
-.stack-wrap { flex: 1; position: relative; padding: 0 18px 8px; display: flex; align-items: flex-start; justify-content: center; min-height: 0; }
+.stack-wrap { flex: 1; position: relative; padding: 0 10px 4px; display: flex; align-items: flex-start; justify-content: center; min-height: 0; }
 .stack { position: relative; width: 100%; height: 100%; }
 
 .place-card {
@@ -1397,7 +1397,7 @@ body {
 .b-undo .lbl { color: var(--text3); }
 
 /* Com 5 botões a fileira precisa ser mais compacta */
-.btns { gap: 12px; padding: 12px 10px 14px; }
+.btns { gap: 12px; padding: 6px 10px 8px; }
 @media (max-width: 350px) {
   .btns { gap: 8px; }
   .b-pass .c, .b-like .c { width: 56px; height: 56px; }
@@ -1486,7 +1486,7 @@ body {
    Card claro "agrupado" (estilo iOS) pra sinalizar que é outro eixo de filtro. */
 .time-bar {
   display: flex; align-items: center; gap: 12px; flex-shrink: 0;
-  margin: 0 22px 14px; padding: 9px 12px;
+  margin: 0 22px 6px; padding: 7px 12px;
   background: var(--bg2); border: 1px solid var(--bg4);
   border-radius: 16px; box-shadow: var(--shadow);
 }
