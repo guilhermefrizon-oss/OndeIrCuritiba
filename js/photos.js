@@ -3,7 +3,17 @@ const GOOGLE_API_KEY = 'AIzaSyDIiBLGHZ_zgo-wKaHNK7qa4O-C_EZJJuY';
 const cache1 = {}; // single photo
 const cache2 = {}; // all photos
 
+// ── FREIO DE CUSTO ─────────────────────────────────────────────────
+// Por padrão o app NÃO chama a Places API (paga) ao vivo. Ele só exibe
+// fotos já HOSPEDADAS no nosso Storage (campo p.photos, populado pelo admin
+// em "Salvar fotos"). Lugares sem foto hospedada mostram o ícone da categoria.
+// Isso garante custo ZERO com o Google no app, mesmo que a API esteja ativa
+// no console. Para religar a busca ao vivo (só depois de restringir a chave e
+// pôr teto de cota), mude para true.
+const ENABLE_GOOGLE_PHOTOS = false;
+
 export async function fetchPlacePhoto(placeId) {
+  if (!ENABLE_GOOGLE_PHOTOS) return null;
   if (!placeId || placeId.startsWith('ID_GOOGLE_')) return null;
   if (cache1[placeId]) return cache1[placeId];
   try {
@@ -21,6 +31,7 @@ export async function fetchPlacePhoto(placeId) {
 }
 
 export async function fetchAllPhotos(placeId) {
+  if (!ENABLE_GOOGLE_PHOTOS) return [];
   if (!placeId || placeId.startsWith('ID_GOOGLE_')) return [];
   if (cache2[placeId]) return cache2[placeId];
   try {
