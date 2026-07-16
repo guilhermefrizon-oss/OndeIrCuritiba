@@ -235,6 +235,17 @@
   </div>
 </div>
 
+<!-- ── Correction Sheet (sugerir correção) ── -->
+<div class="correct-sheet-backdrop" id="correctSheetBackdrop" style="display:none;" onclick="closeCorrectSheet(event)">
+  <div class="correct-sheet">
+    <div class="correct-sheet-handle"></div>
+    <div class="correct-sheet-title">Sugerir correção</div>
+    <div class="correct-sheet-sub">em <span id="correctSheetPlace"></span></div>
+    <div id="correctSheetBody"></div>
+    <button class="correct-cancel" onclick="closeCorrectSheet()">Cancelar</button>
+  </div>
+</div>
+
 <!-- ── Watchdog de inicialização ──────────────────────────────────
      Se a cadeia de módulos não carregar (SDK do Firebase bloqueado por
      navegador embutido do Instagram/Facebook, rede ou extensão), o app
@@ -302,6 +313,7 @@
 <script type="module" src="js/auth.js"></script>
 <script type="module" src="js/comments.js"></script>
 <script type="module" src="js/ratings.js"></script>
+<script type="module" src="js/corrections.js"></script>
 <script type="module" src="js/app.js"></script>
 
 <!-- ── Service Worker (abre mais rápido / offline; rede primeiro) ── -->
