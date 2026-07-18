@@ -2,6 +2,9 @@
   "appId": "com.daymatch.curitiba",
   "appName": "Day Match",
   "webDir": "www",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 600,
