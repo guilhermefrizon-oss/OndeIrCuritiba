@@ -70,7 +70,15 @@ async function nativeSocialSignIn(kind) {
     console.warn('[diag] credencial recebida:', JSON.stringify(res?.credential || {}));
     throw new Error('Sem credenciais do Google.');
   }
-  return signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
+  console.warn('[diag] trocando credencial (idToken:', !!idToken, '/ accessToken:', !!accessToken, ')…');
+  const troca = signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
+  troca.then(
+    r => console.warn('[diag] signInWithCredential OK — uid:', r?.user?.uid),
+    e => console.warn('[diag] signInWithCredential ERRO:', e?.code, e?.message)
+  );
+  // Aviso se pendurar (rede presa no WebView)
+  setTimeout(() => console.warn('[diag] 15s se passaram — se não houve OK/ERRO acima, a troca está pendurada.'), 15000);
+  return troca;
 }
 
 // Cancelamento do usuário no seletor nativo: não é erro pra mostrar.
@@ -94,6 +102,7 @@ window.currentUser = null;
 window._customPhoto = null;
 
 onAuthStateChanged(auth, async (user) => {
+  console.warn('[diag] authChanged →', user ? ('uid ' + user.uid) : 'deslogado');
   window.currentUser = user;
   window._customPhoto = null;
   updateAvatarUI(user);
