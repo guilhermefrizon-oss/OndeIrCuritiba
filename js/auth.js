@@ -734,7 +734,13 @@ export async function showProfileEditor(user, opts = {}) {
         _loadProfileExtras(user);
       }
     } catch (e) {
-      showErr(errEl, 'Não foi possível salvar. Tente de novo.');
+      console.warn('salvar perfil:', e);
+      const msg = e?.code === 'permission-denied'
+        ? 'Sem permissão para salvar — as regras do banco precisam ser atualizadas (admin).'
+        : (e?.code === 'unavailable' || /network|fetch/i.test(e?.message || ''))
+          ? 'Sem conexão com o servidor. Verifique a internet e tente de novo.'
+          : `Não foi possível salvar. Tente de novo. (${e?.code || e?.message || 'erro desconhecido'})`;
+      showErr(errEl, msg);
     } finally {
       setLoading('profSaveBtn', false);
     }

@@ -256,8 +256,12 @@ body {
    O card ocupa a área inteira e os botões flutuam na base da foto.
    Pra voltar ao layout antigo, basta remover este bloco. */
 #discoverView { position: relative; }
+/* Card quase encosta na barra de baixo: sombra curta e centrada (a padrão
+   tem 16-24px de deslocamento pra baixo e vazava por cima da barra) */
+#discoverView .place-card { box-shadow: 0 4px 20px rgba(0, 0, 0, .16); }
+#discoverView .stack-wrap { padding-bottom: 10px; }
 #discoverView .btns {
-  position: absolute; left: 0; right: 0; bottom: 14px;
+  position: absolute; left: 0; right: 0; bottom: 22px;
   padding: 0 24px; gap: 18px; z-index: 30;
   background: none; pointer-events: none;           /* não bloqueia o swipe */
 }
