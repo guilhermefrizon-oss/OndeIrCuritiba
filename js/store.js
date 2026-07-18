@@ -260,15 +260,20 @@ export const fsLoadCategories = async () => {
   } catch (e) { console.warn('fsLoadCategories:', e); return []; }
 };
 
+// Um like conta por PESSOA + LUGAR + DIA: a lista "Quero ir" zera à
+// meia-noite, então querer ir hoje E amanhã são dois sinais de interesse —
+// e as métricas do admin devem refletir isso. O id do doc é `uid_AAAA-MM-DD`.
+const todayKey = () => new Date().toISOString().slice(0, 10);
+
 export const fsIncrementLike = async (placeId) => {
   const user = window.currentUser;
   if (!user) return;
   try {
-    const likeRef = doc(db, 'likes', placeId, 'users', user.uid);
+    const likeRef = doc(db, 'likes', placeId, 'users', `${user.uid}_${todayKey()}`);
     const existing = await getDoc(likeRef);
-    if (existing.exists()) return;
+    if (existing.exists()) return; // já curtiu HOJE — não conta duas vezes no dia
     await Promise.all([
-      setDoc(likeRef, { likedAt: new Date().toISOString() }),
+      setDoc(likeRef, { userId: user.uid, likedAt: new Date().toISOString() }),
       setDoc(doc(db, 'likes_by_user', user.uid, 'places', placeId), { likedAt: new Date().toISOString() }),
       setDoc(doc(db, 'places', placeId), { _likes: increment(1) }, { merge: true }),
     ]);
@@ -279,7 +284,8 @@ export const fsRemoveLike = async (placeId) => {
   const user = window.currentUser;
   if (!user) return;
   try {
-    const likeRef = doc(db, 'likes', placeId, 'users', user.uid);
+    // Desfazer só remove o like de HOJE (likes de dias anteriores são histórico)
+    const likeRef = doc(db, 'likes', placeId, 'users', `${user.uid}_${todayKey()}`);
     const existing = await getDoc(likeRef);
     if (!existing.exists()) return;
     await Promise.all([
@@ -314,7 +320,16 @@ export const fsDeleteAllUserData = async (uid) => {
   // 2) Apaga os espelhos públicos (voto/curtida/salvo/visita por lugar).
   await Promise.all([
     ...ratedPlaceIds.map(pid   => deleteDoc(doc(db, 'ratings', pid, 'votes', uid)).catch(() => {})),
-    ...likedPlaceIds.map(pid   => deleteDoc(doc(db, 'likes',   pid, 'users', uid)).catch(() => {})),
+    // Likes: pode haver um doc por DIA (id `uid_AAAA-MM-DD`) + o formato
+    // antigo (id = uid). Varre a subcoleção e apaga todos os do usuário.
+    ...likedPlaceIds.map(async pid => {
+      try {
+        const snap = await getDocs(collection(db, 'likes', pid, 'users'));
+        await Promise.all(snap.docs
+          .filter(d => d.id === uid || d.id.startsWith(uid + '_'))
+          .map(d => deleteDoc(d.ref).catch(() => {})));
+      } catch {}
+    }),
     ...savedPlaceIds.map(pid   => deleteDoc(doc(db, 'saves',   pid, 'users', uid)).catch(() => {})),
     ...visitedPlaceIds.map(pid => deleteDoc(doc(db, 'visits',  pid, 'users', uid)).catch(() => {})),
   ]);

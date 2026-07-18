@@ -85,7 +85,12 @@ service cloud.firestore {
     }
 
     // ── Contadores sociais por lugar (id do doc = uid do usuário) ─────
-    match /likes/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }
+    // Likes contam por dia: id `uid_AAAA-MM-DD` (o formato antigo, só o
+    // uid, continua aceito). O dono é sempre o trecho antes do "_".
+    match /likes/{placeId}/users/{docId} {
+      allow read: if true;
+      allow write: if signedIn() && docId.split('_')[0] == request.auth.uid;
+    }
     match /saves/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }
     match /visits/{placeId}/users/{uid}  { allow read: if true; allow write: if isOwner(uid); }
     match /ratings/{placeId}/votes/{uid} { allow read: if true; allow write: if isOwner(uid); }
