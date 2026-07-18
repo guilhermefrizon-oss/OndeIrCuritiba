@@ -1494,6 +1494,9 @@ window.profileWant = () => {
   if (skipped[p.id]) { delete skipped[p.id]; fsUnskip(p.id); }
   updateProfileActionStates(p);
   _syncDeckAfterProfileAction();
+  // Decisão tomada: fecha o perfil e volta pros cards (igual ao "Hoje não").
+  // "Salvar" e "Já fui" continuam mantendo o perfil aberto.
+  window.dismissOverlay('profile');
 };
 
 window.profileSaveToggle = () => {
