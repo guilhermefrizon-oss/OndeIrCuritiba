@@ -40,6 +40,8 @@ try {
 }
 
 const auth = getAuth(app);
+// E-mails do Firebase (verificação, redefinir senha) em português.
+auth.languageCode = 'pt-BR';
 
 export { db, auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged };
 export { doc, getDoc, setDoc, deleteDoc, getDocs, collection, increment };
