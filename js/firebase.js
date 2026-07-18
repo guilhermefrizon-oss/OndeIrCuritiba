@@ -42,15 +42,19 @@ try {
   db = getFirestore(app);
 }
 
-// Persistência via localStorage (síncrona — não pendura). O padrão usa
-// IndexedDB, que em alguns WebViews (iOS) trava a inicialização do Auth e
-// deixa TODA operação de login pendente pra sempre.
+// Persistência via localStorage (síncrona — não pendura o init).
+// IMPORTANTE: no app NATIVO não passamos o popupRedirectResolver — ele
+// carrega um iframe do authDomain na inicialização, e em WebViews (iOS)
+// esse iframe nunca conclui, deixando o Auth eternamente "inicializando"
+// (login e token do Firestore ficam presos na fila, sem erro nenhum).
+// No nativo o login social é pelo plugin (signInWithCredential), que não
+// precisa de popup/redirect. Na web (PWA), o resolver continua.
+const _isNativeShell = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
 let auth;
 try {
-  auth = initializeAuth(app, {
-    persistence: browserLocalPersistence,
-    popupRedirectResolver: browserPopupRedirectResolver
-  });
+  auth = initializeAuth(app, _isNativeShell
+    ? { persistence: browserLocalPersistence }
+    : { persistence: browserLocalPersistence, popupRedirectResolver: browserPopupRedirectResolver });
 } catch (e) {
   // Já inicializado (hot reload) → reaproveita.
   auth = getAuth(app);
