@@ -394,7 +394,7 @@ body {
 
 .search-top {
   display: flex; align-items: center; gap: 10px;
-  padding: 16px 18px 10px; flex-shrink: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 18px 10px; flex-shrink: 0;
 }
 .search-input-wrap {
   flex: 1; display: flex; align-items: center; gap: 10px;
@@ -1380,7 +1380,7 @@ body {
 @keyframes slideInRight  { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
 
-.ups-topbar { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px;
+.ups-topbar { display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 10px;
   border-bottom: 1.5px solid var(--bg4); flex-shrink: 0; }
 .ups-back-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--bg3);
   display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text1); flex-shrink: 0; }
@@ -1648,7 +1648,7 @@ body {
 
 .quiz-head {
   display: flex; align-items: center; gap: 12px;
-  padding: 16px 18px 8px; flex-shrink: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 18px 8px; flex-shrink: 0;
 }
 .quiz-back, .quiz-close {
   width: 34px; height: 34px; flex-shrink: 0; border-radius: 12px;
