@@ -957,6 +957,34 @@ function doSave(p) {
   }
 }
 
+// ── Grade de horários do perfil ────────────────────────────────────
+// Mostra o horário dia a dia (padronizado), com o dia de HOJE destacado.
+// Se o lugar não tiver horário estruturado nem texto interpretável,
+// cai no texto livre antigo (p.h).
+function fmtHM(hhmm) {
+  const [h, m] = String(hhmm).split(':');
+  return (m === '00' || m === undefined) ? `${+h}h` : `${+h}h${m}`;
+}
+
+function hoursCardHTML(p) {
+  const hours = getPlaceHours(p);
+  if (!hours) return `<div class="info-card-value">${p.h || 'Não informado'}</div>`;
+  const todayKey = DOW_KEYS[new Date().getDay()];
+  const rows = WEEK_ORDER.map(k => {
+    const e = hours[k];
+    const isToday = k === todayKey;
+    const val = (!e || e.closed || e.open == null || e.close == null)
+      ? '<span class="hours-closed">Fechado</span>'
+      : `${fmtHM(e.open)} – ${fmtHM(e.close)}`;
+    return `
+      <div class="hours-row${isToday ? ' hours-today' : ''}">
+        <span class="hours-day">${isToday ? ic('clock', 11) + ' ' : ''}${DAY_LABEL[k]}</span>
+        <span class="hours-time">${val}</span>
+      </div>`;
+  }).join('');
+  return `<div class="hours-grid">${rows}</div>`;
+}
+
 function setLastAction(a) {
   lastAction = a;
   const btn = document.getElementById('undoBtn');
@@ -1301,11 +1329,11 @@ async function openProfile(p) {
         <div class="info-card-value">${p.b}</div>
       </div>
     </div>
-    <div class="info-card">
+    <div class="info-card hours-card">
       <div class="info-card-icon">${ic('clock', 18)}</div>
       <div class="info-card-content">
         <div class="info-card-label">Horário</div>
-        <div class="info-card-value">${p.h}</div>
+        ${hoursCardHTML(p)}
       </div>
     </div>`;
 
