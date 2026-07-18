@@ -578,6 +578,13 @@ body {
 .comment-bubble-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .comment-user-name { font-size: 12px; font-weight: 700; color: var(--acc); }
 .comment-date { font-size: 10px; color: var(--text3); }
+.comment-report-btn {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 12px; line-height: 1; padding: 2px 4px;
+  border-radius: 6px; opacity: .55; transition: opacity .15s, color .15s;
+}
+.comment-report-btn:hover { opacity: 1; color: #e5484d; }
+.comment-report-btn:disabled { cursor: default; color: var(--accent, #7c5cff); opacity: 1; }
 .comment-text { font-size: 13px; color: var(--text); line-height: 1.5; }
 .comment-stars { font-size: 13px; color: #F59E0B; letter-spacing: 1px; display: block; margin-bottom: 4px; }
 .comment-empty { font-size: 13px; color: var(--text3); text-align: center; padding: 20px 0; }

@@ -144,7 +144,7 @@ function buildUnifiedInput(area, placeId, initialStars) {
 
 // ── Envio unificado (rating opcional + comentário) ─────────────────
 async function submitUnifiedReview(placeId, textarea, sendBtn, picker, area) {
-  const text  = textarea.value.trim();
+  const text  = textarea.value.trim().slice(0, 500);
   const stars = parseInt(picker?.dataset.pending || 0);
   if (!text || !window.currentUser) return;
 
@@ -205,10 +205,17 @@ function subscribeToComments(placeId) {
       const c        = docSnap.data();
       const dateStr  = c.createdAt?.toDate ? formatDate(c.createdAt.toDate()) : 'agora';
       const initials = (c.userName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-      const avatar   = c.userPhoto ? `<img src="${c.userPhoto}" alt="${esc(c.userName)}">` : initials;
+      // Segurança: só aceita URL https como foto (evita injeção de HTML/JS
+      // via campo userPhoto gravado por script malicioso) e escapa o valor.
+      const photoOk  = typeof c.userPhoto === 'string' && /^https:\/\//i.test(c.userPhoto);
+      const avatar   = photoOk ? `<img src="${esc(c.userPhoto)}" alt="${esc(c.userName)}">` : initials;
       const starsHTML = c.stars
         ? `<span class="comment-stars">${'★'.repeat(c.stars)}${'★'.repeat(5 - c.stars).replace(/★/g,'<span style="opacity:.3">★</span>')}</span>`
         : '';
+      const isMine    = window.currentUser && c.userId === window.currentUser.uid;
+      const reportBtn = isMine ? '' : `
+            <button class="comment-report-btn" title="Denunciar comentário"
+              data-comment-id="${esc(docSnap.id)}" aria-label="Denunciar">⚑</button>`;
       const item = document.createElement('div');
       item.className = 'comment-item';
       item.innerHTML = `
@@ -216,11 +223,13 @@ function subscribeToComments(placeId) {
         <div class="comment-bubble">
           <div class="comment-bubble-header">
             <span class="comment-user-name">${esc(c.userName)}</span>
-            <span class="comment-date">${dateStr}</span>
+            <span class="comment-date">${dateStr}</span>${reportBtn}
           </div>
           ${starsHTML}
           <div class="comment-text">${esc(c.text)}</div>
         </div>`;
+      const rbtn = item.querySelector('.comment-report-btn');
+      if (rbtn) rbtn.addEventListener('click', () => reportComment(placeId, docSnap.id, c, rbtn));
       list.appendChild(item);
     });
   }, err => {
@@ -228,6 +237,32 @@ function subscribeToComments(placeId) {
     const list = document.getElementById('commentList');
     if (list) list.innerHTML = '<div class="comment-empty">Não foi possível carregar comentários.</div>';
   });
+}
+
+// ── Denúncia de comentário ─────────────────────────────────────────
+// Exigido pela política de conteúdo gerado por usuário da Google Play:
+// qualquer usuário pode sinalizar um comentário; a fila aparece no admin.
+async function reportComment(placeId, commentId, c, btn) {
+  if (!window.currentUser) { window.showAuthModal?.(); return; }
+  if (!confirm('Denunciar este comentário como impróprio?')) return;
+  try {
+    btn.disabled = true;
+    await addDoc(collection(db, 'comment_reports'), {
+      placeId,
+      commentId,
+      commentText:     (c.text || '').slice(0, 300),
+      commentUserId:   c.userId || null,
+      commentUserName: c.userName || null,
+      reporterId:      window.currentUser.uid,
+      status:          'pending',
+      createdAt:       serverTimestamp()
+    });
+    btn.textContent = '✓';
+    btn.title = 'Denúncia enviada';
+  } catch (e) {
+    console.warn('Erro ao denunciar:', e);
+    btn.disabled = false;
+  }
 }
 
 export function unsubscribeComments() {

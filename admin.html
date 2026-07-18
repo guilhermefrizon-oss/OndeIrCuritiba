@@ -1135,6 +1135,11 @@ th.sortable:hover { color: var(--acc3); }
       Correções
       <span class="nav-count" id="correctionsCount" style="display:none">0</span>
     </button>
+    <button class="nav-item" onclick="showPage('reports')" id="nav-reports">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      Denúncias
+      <span class="nav-count" id="reportsCount" style="display:none">0</span>
+    </button>
     <button class="nav-item" onclick="showPage('categories')" id="nav-categories">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Categorias
@@ -1257,6 +1262,23 @@ th.sortable:hover { color: var(--acc3); }
         </button>
       </div>
       <div id="correctionsList">
+        <div class="table-loading"><div class="spinner"></div>Carregando…</div>
+      </div>
+    </div>
+
+    <!-- ── Reports Page (denúncias de comentários) ── -->
+    <div id="page-reports" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Denúncias de comentários</div>
+          <div class="page-subtitle" id="reportsSubtitle">Comentários sinalizados pelos usuários como impróprios. Revise e apague ou ignore.</div>
+        </div>
+        <button class="btn btn-secondary" onclick="loadReports()">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+      <div id="reportsList">
         <div class="table-loading"><div class="spinner"></div>Carregando…</div>
       </div>
     </div>
@@ -1465,101 +1487,171 @@ th.sortable:hover { color: var(--acc3); }
       <div class="rules-card">
         <h3>Regras de segurança do Firestore</h3>
         <pre id="rulesCode">rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────
+// Firestore Security Rules — OndeIr Curitiba
+//
+// ESTA é a barreira de segurança real do app (o painel admin no navegador
+// é só interface). REVISE e TESTE no "Rules Playground" do console do
+// Firebase antes de publicar (Firestore → Regras → Publicar).
+//
+// Princípios:
+//   • Conteúdo (places, categories, app_config): leitura pública, escrita
+//     só de admin — EXCETO o contador _likes do lugar, que o app incrementa
+//     por usuário logado (regra por campo abaixo).
+//   • Admin = existe um doc em /admins com id == e-mail do usuário logado.
+//   • Dados de cada usuário: só o próprio dono lê/escreve.
+//   • Contadores sociais/comentários: leitura pública; cada um escreve o seu.
+//   • Tudo o que não estiver liberado explicitamente é NEGADO.
+// ─────────────────────────────────────────────────────────────────────
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admins: qualquer admin pode ver e gerenciar a lista.
-    // (O 1º admin é criado uma vez no Console; os próximos, pelo painel.)
-    match /admins/{email} {
-      allow read, write: if request.auth != null
+    // ── Helpers ──────────────────────────────────────────────────────
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    // Admin: o e-mail do usuário logado é o id de um doc em /admins.
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
     }
+    // A atualização mexe SOMENTE nos campos listados?
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
 
-    // Lugares: leitura pública, escrita só para admins
-    match /places/{placeId} {
+    // ── Conteúdo do app ──────────────────────────────────────────────
+    // Lugares: leitura pública. Escrita de conteúdo só admin; mas um usuário
+    // logado pode atualizar APENAS o contador _likes (curtir/descurtir).
+    match /places/{id} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+      allow create, delete: if isAdmin();
+      // Usuário só mexe no _likes e só em ±1 por escrita (evita setar
+      // um número arbitrário tipo 999999 ou negativo).
+      allow update: if isAdmin()
+                    || (signedIn() && onlyChanges(['_likes'])
+                        && request.resource.data._likes is int
+                        && request.resource.data._likes >= 0
+                        && (request.resource.data._likes - resource.data.get('_likes', 0)) >= -1
+                        && (request.resource.data._likes - resource.data.get('_likes', 0)) <= 1);
     }
 
-    // Categorias: leitura pública, escrita só para admins
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if request.auth != null
-                   && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    match /categories/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /app_config/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    // ── Admins ───────────────────────────────────────────────────────
+    // Cada um lê o próprio doc (o painel usa isso pra saber se é admin);
+    // admin lê todos. Só admin adiciona/remove admins.
+    match /admins/{email} {
+      allow read:  if signedIn() && (request.auth.token.email == email || isAdmin());
+      allow write: if isAdmin();
     }
 
-    // Dados de cada usuário — só o dono lê e escreve o que é dele.
-    // (Salvos, Quero ir hoje, Visitados, Pulados, avaliações que fez,
-    //  curtidas que deu e eventos de XP.)
-    match /favorites/{userId}/{document=**}       { allow read, write: if request.auth != null && request.auth.uid == userId; }
-    match /want_today/{userId}/{document=**}       { allow read, write: if request.auth != null && request.auth.uid == userId; }
-    match /been_there/{userId}/{document=**}        { allow read, write: if request.auth != null && request.auth.uid == userId; }
-    match /skipped/{userId}/{document=**}           { allow read, write: if request.auth != null && request.auth.uid == userId; }
-    match /ratings_by_user/{userId}/{document=**}   { allow read, write: if request.auth != null && request.auth.uid == userId; }
-    match /likes_by_user/{userId}/{document=**}     { allow read, write: if request.auth != null && request.auth.uid == userId; }
-    match /xp_events/{userId}/{document=**}          { allow read, write: if request.auth != null && request.auth.uid == userId; }
+    // ── Dados privados por usuário (só o dono) ───────────────────────
+    match /favorites/{uid}/places/{pid}       { allow read, write: if isOwner(uid); }
+    match /want_today/{uid}/places/{pid}      { allow read, write: if isOwner(uid); }
+    match /skipped/{uid}/places/{pid}         { allow read, write: if isOwner(uid); }
+    match /been_there/{uid}/places/{pid}      { allow read, write: if isOwner(uid); }
+    match /xp_events/{uid}/events/{eid}       { allow read, write: if isOwner(uid); }
+    match /likes_by_user/{uid}/places/{pid}   { allow read, write: if isOwner(uid); }
+    match /ratings_by_user/{uid}/places/{pid} { allow read, write: if isOwner(uid); }
 
-    // Perfil do usuário (foto, badges, privacidade): só o dono
-    match /user_profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Perfil: leitura por qualquer logado (nome/avatar em comentários);
+    // escrita só o dono.
+    match /user_profiles/{uid} {
+      allow read:  if signedIn();
+      allow write: if isOwner(uid);
     }
 
-    // Presença por usuário (createdAt/lastSeen) — métricas de usuários do
-    // admin. Cada um escreve o seu; só admin lê a coleção toda.
-    match /users_meta/{userId} {
-      allow read: if request.auth != null
-                  && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
-      allow create, update: if request.auth != null && request.auth.uid == userId;
+    // Presença por usuário (createdAt/lastSeen) — alimenta as métricas de
+    // usuários do admin. Cada um só escreve o seu; só admin lê a coleção toda.
+    match /users_meta/{uid} {
+      allow read:  if isAdmin();
+      allow create, update: if isOwner(uid);
     }
 
-    // Avaliações: média é pública; cada voto pertence ao seu dono
+    // ── Contadores sociais por lugar (id do doc = uid do usuário) ─────
+    match /likes/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }
+    match /saves/{placeId}/users/{uid}   { allow read: if true; allow write: if isOwner(uid); }
+    match /visits/{placeId}/users/{uid}  { allow read: if true; allow write: if isOwner(uid); }
+    match /ratings/{placeId}/votes/{uid} { allow read: if true; allow write: if isOwner(uid); }
+
+    // Resumo de nota (avg/count) do lugar: o app calcula no cliente e grava
+    // no doc pai. Leitura pública; escrita por qualquer logado (limitação de
+    // um app client-side — o cálculo não é confiável, só o total de votos é).
     match /ratings/{placeId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-      match /votes/{userId} {
-        allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == userId;
-      }
+      allow read:  if true;
+      allow write: if signedIn() && onlyChanges(['avg', 'count']);
     }
 
-    // Curtidas: registro pertence ao seu dono
-    match /likes/{placeId}/users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Docs "pai" de contadores que o app NÃO escreve diretamente:
+    // leitura pública, escrita bloqueada.
+    match /likes/{placeId}   { allow read: if true; allow write: if false; }
+    match /saves/{placeId}   { allow read: if true; allow write: if false; }
+    match /visits/{placeId}  { allow read: if true; allow write: if false; }
+    match /comments/{placeId}{ allow read: if true; allow write: if false; }
+
+    // ── Comentários ──────────────────────────────────────────────────
+    // Leitura pública; cria só o próprio autor; edita/apaga o autor ou admin.
+    match /comments/{placeId}/items/{id} {
+      allow read:   if true;
+      // Cria só o próprio autor, com campos validados no servidor:
+      // texto 1–500 chars, estrelas 1–5 (ou null), nome ≤ 80, foto só
+      // URL https (ou null), e nenhum campo além dos esperados.
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasOnly(
+             ['text', 'stars', 'userId', 'userName', 'userPhoto', 'createdAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && (request.resource.data.stars == null
+            || (request.resource.data.stars is int
+                && request.resource.data.stars >= 1
+                && request.resource.data.stars <= 5))
+        && request.resource.data.userName is string
+        && request.resource.data.userName.size() >= 1
+        && request.resource.data.userName.size() <= 80
+        && (request.resource.data.userPhoto == null
+            || (request.resource.data.userPhoto is string
+                && request.resource.data.userPhoto.size() <= 500
+                && request.resource.data.userPhoto.matches('https://.*')));
+      allow update, delete: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
     }
 
-    // Salvos (espelho público por lugar) — métricas do admin
-    match /saves/{placeId}/users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // ── Denúncias de comentários (exigência da Google Play p/ UGC) ───
+    // Qualquer logado pode denunciar; ler e resolver a fila é só admin.
+    match /comment_reports/{id} {
+      allow read:   if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly(
+             ['placeId', 'commentId', 'commentText', 'commentUserId',
+              'commentUserName', 'reporterId', 'status', 'createdAt'])
+        && request.resource.data.commentText is string
+        && request.resource.data.commentText.size() <= 300;
+      allow update, delete: if isAdmin();
     }
 
-    // Já fui (espelho público por lugar) — métricas do admin
-    match /visits/{placeId}/users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Comentários
-    match /comments/{document=**} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null
-                            && request.auth.uid == resource.data.uid;
-    }
-
-    // Sugestões de correção: usuário logado envia (status 'pending', com o
-    // próprio uid); só admin lê a fila e aprova/descarta.
+    // ── Sugestões de correção (enviadas pelos usuários) ──────────────
+    // Qualquer usuário logado pode ENVIAR uma sugestão de correção de um
+    // lugar. O doc nasce como 'pending' e marcado com o uid de quem enviou.
+    // Ler a fila e aprovar/descartar é só admin. Aplicar a correção no lugar
+    // usa a regra de /places (isAdmin), não esta.
     match /corrections/{id} {
-      allow read: if request.auth != null
-                  && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
-      allow create: if request.auth != null
+      allow read:   if isAdmin();
+      allow create: if signedIn()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.status == 'pending';
-      allow update, delete: if request.auth != null
-                  && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+      allow update, delete: if isAdmin();
     }
+
+    // ── Padrão: nega o que não foi liberado acima ────────────────────
+    match /{document=**} { allow read, write: if false; }
   }
 }</pre>
         <button class="copy-btn" onclick="copyRules()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar regras</button>
@@ -1953,6 +2045,7 @@ onAuthStateChanged(auth, async user => {
     loadPlaces();
     loadCategories();
     loadCorrectionsCount();
+    loadReportsCount();
   } else {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
@@ -3168,6 +3261,108 @@ async function loadCorrectionsCount() {
   } catch (e) { console.warn('loadCorrectionsCount:', e); }
 }
 
+// ── Denúncias de comentários ─────────────────────────────────────
+let allReports = [];
+
+function updateReportsBadge() {
+  const el = document.getElementById('reportsCount');
+  if (!el) return;
+  el.textContent = allReports.length;
+  el.style.display = allReports.length ? 'inline-flex' : 'none';
+}
+
+async function loadReportsCount() {
+  try {
+    const snap = await getDocs(query(collection(db, 'comment_reports'), where('status', '==', 'pending')));
+    allReports = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    allReports.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    updateReportsBadge();
+  } catch (e) { console.warn('loadReportsCount:', e); }
+}
+
+window.loadReports = async () => {
+  const list = document.getElementById('reportsList');
+  if (list) list.innerHTML = '<div class="table-loading"><div class="spinner"></div>Carregando…</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'comment_reports'), where('status', '==', 'pending')));
+    allReports = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    allReports.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    updateReportsBadge();
+    const sub = document.getElementById('reportsSubtitle');
+    if (sub) sub.textContent = allReports.length
+      ? `${allReports.length} denúncia(s) aguardando revisão.`
+      : 'Comentários sinalizados pelos usuários como impróprios aparecem aqui.';
+    renderReports();
+  } catch (e) {
+    console.warn('loadReports:', e);
+    if (list) list.innerHTML = '<div class="corr-empty">Não consegui carregar. Confira se as regras do Firestore (aba <strong>Regras / Admins</strong>) foram publicadas.</div>';
+  }
+};
+
+function renderReports() {
+  const list = document.getElementById('reportsList');
+  if (!list) return;
+  if (!allReports.length) {
+    list.innerHTML = '<div class="corr-empty">Nenhuma denúncia pendente. 🎉</div>';
+    return;
+  }
+  list.innerHTML = allReports.map(r => {
+    const when = r.createdAt?.toDate
+      ? r.createdAt.toDate().toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+      : '';
+    const place = allPlaces.find(x => x._docId === r.placeId);
+    return `
+      <div class="corr-card" id="report-${r._id}">
+        <div class="corr-card-top">
+          <div>
+            <div class="corr-place">${escM(place?.n || r.placeId || '—')}</div>
+            <div class="corr-meta">Comentário de ${escM(r.commentUserName || 'Usuário')}${when ? ' · denunciado em ' + when : ''}</div>
+          </div>
+          <span class="corr-field-tag">comentário</span>
+        </div>
+        <div class="corr-values">
+          <div class="corr-val-row old"><span class="corr-val-label">Texto</span><span class="corr-val-txt">${escM(r.commentText || '(sem texto)')}</span></div>
+        </div>
+        <div class="corr-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteReportedComment('${r._id}')">${ic('trash',14)} Apagar comentário</button>
+          <button class="btn btn-secondary btn-sm" onclick="dismissReport('${r._id}')">${ic('x',14)} Ignorar denúncia</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Apaga o comentário denunciado e marca a denúncia como resolvida.
+window.deleteReportedComment = async (id) => {
+  const r = allReports.find(x => x._id === id);
+  if (!r || !r.placeId || !r.commentId) { showToast('Denúncia sem referência do comentário.', 'error'); return; }
+  if (!confirm('Apagar este comentário definitivamente?')) return;
+  try {
+    await deleteDoc(doc(db, 'comments', r.placeId, 'items', r.commentId));
+    await setDoc(doc(db, 'comment_reports', id), { status: 'resolved', action: 'deleted', reviewedAt: serverTimestamp() }, { merge: true });
+    allReports = allReports.filter(x => x._id !== id);
+    renderReports();
+    updateReportsBadge();
+    showToast('Comentário apagado. ✅', 'success');
+  } catch (e) {
+    console.warn('deleteReportedComment:', e);
+    showToast('Erro ao apagar: ' + e.message, 'error');
+  }
+};
+
+// Mantém o comentário e arquiva a denúncia.
+window.dismissReport = async (id) => {
+  try {
+    await setDoc(doc(db, 'comment_reports', id), { status: 'dismissed', reviewedAt: serverTimestamp() }, { merge: true });
+    allReports = allReports.filter(x => x._id !== id);
+    renderReports();
+    updateReportsBadge();
+    showToast('Denúncia ignorada.', 'success');
+  } catch (e) {
+    console.warn('dismissReport:', e);
+    showToast('Erro: ' + e.message, 'error');
+  }
+};
+
 window.loadCorrections = async () => {
   const list = document.getElementById('correctionsList');
   if (list) list.innerHTML = '<div class="table-loading"><div class="spinner"></div>Carregando…</div>';
@@ -3283,7 +3478,7 @@ window.openPlaceFromCorrection = (id) => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','corrections','categories','quiz','metrics','rules'].forEach(p => {
+  ['places','corrections','reports','categories','quiz','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
@@ -3291,6 +3486,7 @@ window.showPage = (page) => {
   if (page === 'metrics') loadMetrics();
   if (page === 'quiz') loadQuizConfig();
   if (page === 'corrections') loadCorrections();
+  if (page === 'reports') loadReports();
   closeSidebar(); // fecha a gaveta no mobile após navegar
 };
 

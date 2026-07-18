@@ -40,8 +40,14 @@ service cloud.firestore {
     match /places/{id} {
       allow read: if true;
       allow create, delete: if isAdmin();
+      // Usuário só mexe no _likes e só em ±1 por escrita (evita setar
+      // um número arbitrário tipo 999999 ou negativo).
       allow update: if isAdmin()
-                    || (signedIn() && onlyChanges(['_likes']));
+                    || (signedIn() && onlyChanges(['_likes'])
+                        && request.resource.data._likes is int
+                        && request.resource.data._likes >= 0
+                        && (request.resource.data._likes - resource.data.get('_likes', 0)) >= -1
+                        && (request.resource.data._likes - resource.data.get('_likes', 0)) <= 1);
     }
 
     match /categories/{id} { allow read: if true; allow write: if isAdmin(); }
@@ -103,9 +109,44 @@ service cloud.firestore {
     // Leitura pública; cria só o próprio autor; edita/apaga o autor ou admin.
     match /comments/{placeId}/items/{id} {
       allow read:   if true;
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      // Cria só o próprio autor, com campos validados no servidor:
+      // texto 1–500 chars, estrelas 1–5 (ou null), nome ≤ 80, foto só
+      // URL https (ou null), e nenhum campo além dos esperados.
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasOnly(
+             ['text', 'stars', 'userId', 'userName', 'userPhoto', 'createdAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && (request.resource.data.stars == null
+            || (request.resource.data.stars is int
+                && request.resource.data.stars >= 1
+                && request.resource.data.stars <= 5))
+        && request.resource.data.userName is string
+        && request.resource.data.userName.size() >= 1
+        && request.resource.data.userName.size() <= 80
+        && (request.resource.data.userPhoto == null
+            || (request.resource.data.userPhoto is string
+                && request.resource.data.userPhoto.size() <= 500
+                && request.resource.data.userPhoto.matches('https://.*')));
       allow update, delete: if isAdmin()
         || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // ── Denúncias de comentários (exigência da Google Play p/ UGC) ───
+    // Qualquer logado pode denunciar; ler e resolver a fila é só admin.
+    match /comment_reports/{id} {
+      allow read:   if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly(
+             ['placeId', 'commentId', 'commentText', 'commentUserId',
+              'commentUserName', 'reporterId', 'status', 'createdAt'])
+        && request.resource.data.commentText is string
+        && request.resource.data.commentText.size() <= 300;
+      allow update, delete: if isAdmin();
     }
 
     // ── Sugestões de correção (enviadas pelos usuários) ──────────────

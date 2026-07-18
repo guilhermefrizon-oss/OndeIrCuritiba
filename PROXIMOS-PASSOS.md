@@ -18,9 +18,19 @@ Tudo no console, vale também pro PWA.
 
 - [ ] **Publicar as Firestore Rules**
   1. Firebase Console → projeto `ondeircuritiba-91390` → **Firestore Database** → aba **Regras**.
-  2. Cole o conteúdo do arquivo `firestore.rules` do repo.
+  2. Cole o conteúdo do arquivo `firestore.rules` do repo (ou copie da aba **Regras / Admins** do painel admin — é a mesma coisa).
   3. Teste no **Playground** e clique em **Publicar**.
   - *Por quê:* sem isso, qualquer um consegue escrever no seu banco.
+  - *Obs.:* **republique sempre que o arquivo mudar.** A versão atual valida os
+    campos dos comentários, limita o `_likes` a ±1 e cria a coleção de
+    denúncias (`comment_reports`) — sem republicar, denúncia e comentário
+    novos falham.
+
+- [ ] **Publicar as Storage Rules** (novo)
+  1. Firebase Console → **Storage** → aba **Rules**.
+  2. Cole o conteúdo do arquivo `storage.rules` do repo e clique em **Publicar**.
+  - *Por quê:* sem isso o bucket de fotos pode estar aberto — qualquer um
+    poderia subir/apagar arquivos (e gerar custo).
 
 - [ ] **Restringir a chave do Google Maps/Places** (Google Cloud)
   1. Google Cloud Console → **APIs e serviços → Credenciais** → abra sua chave.
