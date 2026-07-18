@@ -100,7 +100,7 @@ body {
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────── */
-.topbar { padding: 6px 22px 6px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.topbar { padding: calc(env(safe-area-inset-top, 0px) + 6px) 22px 6px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .wordmark { font-size: 20px; font-weight: 800; letter-spacing: -0.8px; color: var(--text); }
 .wordmark em { color: var(--blue); font-style: normal; }
 .wordmark small { font-size: 13px; font-weight: 600; color: var(--text3); letter-spacing: 0; margin-left: 2px; vertical-align: middle; }
@@ -524,12 +524,12 @@ body {
 .story-tap { position: absolute; top: 0; bottom: 0; width: 45%; z-index: 10; cursor: pointer; }
 .story-tap-left  { left: 0; }
 .story-tap-right { right: 0; }
-.story-bars { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; gap: 4px; z-index: 20; }
+.story-bars { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 14px; right: 14px; display: flex; gap: 4px; z-index: 20; }
 .story-bar { flex: 1; height: 2.5px; border-radius: 2px; background: rgba(255,255,255,.28); overflow: hidden; }
 .story-bar-fill { height: 100%; background: #fff; width: 0%; }
 .story-bar-fill.done { width: 100%; }
 .profile-close {
-  position: absolute; top: 14px; right: 14px; z-index: 30;
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 14px; z-index: 30;
   width: 34px; height: 34px; border-radius: 50%;
   background: rgba(0,0,0,.42); backdrop-filter: blur(10px);
   border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -539,7 +539,7 @@ body {
 
 /* Botão de compartilhar o lugar — espelha o fechar, no canto superior esquerdo */
 .profile-share {
-  position: absolute; top: 14px; left: 14px; z-index: 30;
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 14px; z-index: 30;
   width: 34px; height: 34px; border-radius: 50%;
   background: rgba(0,0,0,.42); backdrop-filter: blur(10px);
   border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
