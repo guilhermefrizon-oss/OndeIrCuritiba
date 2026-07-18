@@ -1087,9 +1087,9 @@ function maybeShowSwipeHint() {
   const hint = document.createElement('div');
   hint.className = 'swipe-hint';
   hint.innerHTML = `
-    <div class="swipe-hint-label swipe-hint-nope">${ic('x', 13, 2.5)} Pular</div>
+    <div class="swipe-hint-label swipe-hint-nope">${ic('x', 13, 2.5)} Hoje não</div>
     <div class="swipe-hint-hand">${ic('move-horizontal', 52, 2)}</div>
-    <div class="swipe-hint-label swipe-hint-like">Quero ir! ${ic('heart', 13, 2.5)}</div>
+    <div class="swipe-hint-label swipe-hint-like">Quero ir! ${ic('thumbs-up', 13, 2.5)}</div>
     <div class="swipe-hint-text">Deslize o card para os lados</div>`;
   stack.appendChild(hint);
 
@@ -1110,7 +1110,7 @@ function showHeartBurst() {
   if (!stack) return;
   const h = document.createElement('div');
   h.className = 'heart-burst';
-  h.innerHTML = '<svg width="46" height="46" viewBox="0 0 24 24" fill="#ef4444" stroke="none" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+  h.innerHTML = '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>';
   stack.appendChild(h);
   h.addEventListener('animationend', () => h.remove());
 }
@@ -1306,10 +1306,10 @@ async function openProfile(p) {
       </button>
       <button class="abtn b-pass" id="pab-skip" onclick="window.profileSkip()">
         <div class="c"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
-        <div class="lbl">Pular</div>
+        <div class="lbl">Hoje não</div>
       </button>
       <button class="abtn b-like" id="pab-want" onclick="window.profileWant()">
-        <div class="c"><svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+        <div class="c"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg></div>
         <div class="lbl">Quero ir!</div>
       </button>
       <button class="abtn b-save" id="pab-save" onclick="window.profileSaveToggle()">
