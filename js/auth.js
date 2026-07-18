@@ -161,9 +161,13 @@ async function _loadCustomPhoto(user) {
 
 // Conclui o login quando voltamos de um signInWithRedirect (celular/webview).
 // onAuthStateChanged já cuida do estado; aqui só fechamos o modal e logamos erros.
-getRedirectResult(auth)
-  .then(res => { if (res && res.user) closeAuthModal(); })
-  .catch(e => console.warn('getRedirectResult:', e.code, e.message));
+// Só na WEB: no app nativo o Auth é inicializado sem popup/redirect resolver
+// (ver firebase.js) e esta chamada daria auth/argument-error.
+if (!isNative()) {
+  getRedirectResult(auth)
+    .then(res => { if (res && res.user) closeAuthModal(); })
+    .catch(e => console.warn('getRedirectResult:', e.code, e.message));
+}
 
 async function _migrateFavoritesIfNeeded(user) {
   const anonUid = localStorage.getItem('cwb_uid');
