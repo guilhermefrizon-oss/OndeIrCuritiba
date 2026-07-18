@@ -62,9 +62,15 @@ async function nativeSocialSignIn(kind) {
     return signInWithCredential(auth, cred);
   }
   const res = await FA.signInWithGoogle();
-  const idToken = res?.credential?.idToken;
-  if (!idToken) throw new Error('Sem idToken do Google.');
-  return signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+  // No iOS o plugin pode devolver só accessToken (sem idToken); o Firebase
+  // aceita qualquer um dos dois pra montar a credencial.
+  const idToken     = res?.credential?.idToken || null;
+  const accessToken = res?.credential?.accessToken || null;
+  if (!idToken && !accessToken) {
+    console.warn('[diag] credencial recebida:', JSON.stringify(res?.credential || {}));
+    throw new Error('Sem credenciais do Google.');
+  }
+  return signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
 }
 
 // Cancelamento do usuário no seletor nativo: não é erro pra mostrar.
