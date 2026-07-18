@@ -33,7 +33,9 @@ const app  = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 // que o app sempre carregue.
 let db;
 try {
-  db = initializeFirestore(app, { experimentalForceLongPolling: true });
+  // useFetchStreams:false — o WKWebView do iOS trava os streams de fetch do
+  // Firestore (timeout do SDK no app nativo); desligar resolve.
+  db = initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
 } catch (e) {
   // Já inicializado (ex.: hot reload) → reaproveita a instância existente.
   db = getFirestore(app);

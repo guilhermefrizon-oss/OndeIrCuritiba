@@ -11,7 +11,10 @@ install! 'cocoapods', :disable_input_output_paths => true
 def capacitor_pods
   pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-  pod 'CapacitorFirebaseAuthentication', :path => '../../node_modules/@capacitor-firebase/authentication'
+  # Inclui o módulo Google Sign-In (equivale ao rgcfaIncludeGoogle do Android).
+  # Atenção: se um `npx cap update ios` reverter esta linha, reaplique o
+  # sufixo /Google — sem ele o botão do Google não abre nada no iPhone.
+  pod 'CapacitorFirebaseAuthentication/Google', :path => '../../node_modules/@capacitor-firebase/authentication'
   pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
   pod 'CapacitorGeolocation', :path => '../../node_modules/@capacitor/geolocation'
   pod 'CapacitorShare', :path => '../../node_modules/@capacitor/share'
