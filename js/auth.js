@@ -41,8 +41,18 @@ function isNative() {
 }
 
 async function nativeSocialSignIn(kind) {
-  const FA = window.Capacitor?.Plugins?.FirebaseAuthentication;
-  if (!FA) throw new Error('Plugin FirebaseAuthentication indisponível no app nativo.');
+  // 1º tenta o atalho global; se não existir, registra o proxy manualmente
+  // (necessário em algumas versões do runtime iOS do Capacitor).
+  let FA = window.Capacitor?.Plugins?.FirebaseAuthentication;
+  if (!FA && typeof window.Capacitor?.registerPlugin === 'function') {
+    try { FA = window.Capacitor.registerPlugin('FirebaseAuthentication'); } catch (e) { console.warn('registerPlugin:', e); }
+  }
+  if (!FA) {
+    // Diagnóstico: o que o runtime nativo realmente expõe?
+    console.warn('[diag] Plugins:', Object.keys(window.Capacitor?.Plugins || {}).join(',') || '(vazio)');
+    console.warn('[diag] PluginHeaders:', (window.Capacitor?.PluginHeaders || []).map(h => h?.name).join(',') || '(vazio)');
+    throw new Error('Plugin FirebaseAuthentication indisponível no app nativo.');
+  }
   if (kind === 'apple') {
     const res = await FA.signInWithApple();
     const idToken  = res?.credential?.idToken;
