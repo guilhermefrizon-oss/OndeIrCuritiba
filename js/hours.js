@@ -10,8 +10,8 @@
 
 // getDay(): 0=Dom … 6=Sáb
 export const DOW_KEYS   = ['dom','seg','ter','qua','qui','sex','sab'];
-// Ordem de exibição (segunda primeiro, padrão BR)
-export const WEEK_ORDER = ['seg','ter','qua','qui','sex','sab','dom'];
+// Ordem de exibição: domingo → sábado (semana cheia, padrão calendário)
+export const WEEK_ORDER = ['dom','seg','ter','qua','qui','sex','sab'];
 export const DAY_LABEL  = { seg:'Seg', ter:'Ter', qua:'Qua', qui:'Qui', sex:'Sex', sab:'Sáb', dom:'Dom' };
 
 // Faixas contíguas (cobrem 24h sem buraco). A Noite começa às 19h pra que

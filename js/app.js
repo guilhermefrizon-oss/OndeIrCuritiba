@@ -630,7 +630,7 @@ function makeCard(p) {
       </div>
       <div class="card-addr">${ic('map-pin', 13)} ${p.a}</div>
       <div class="card-meta">
-        <span>${p.b}</span><div class="meta-sep"></div><span>${ic('clock', 12)} ${p.h}</span>
+        <span>${p.b}</span><div class="meta-sep"></div><span>${ic('clock', 12)} ${todayHoursText(p)}</span>
       </div>
       <div class="card-status-row">${distLabel(p)}</div>
       <div class="card-footer">
@@ -964,6 +964,16 @@ function doSave(p) {
 function fmtHM(hhmm) {
   const [h, m] = String(hhmm).split(':');
   return (m === '00' || m === undefined) ? `${+h}h` : `${+h}h${m}`;
+}
+
+// Texto curto pro card: só o horário de HOJE (a semana inteira fica no
+// perfil). Se não der pra interpretar o horário, mostra o texto antigo.
+function todayHoursText(p) {
+  const hours = getPlaceHours(p);
+  if (!hours) return p.h || '';
+  const e = hours[DOW_KEYS[new Date().getDay()]];
+  if (!e || e.closed || e.open == null || e.close == null) return 'Fechado hoje';
+  return `Hoje ${fmtHM(e.open)} – ${fmtHM(e.close)}`;
 }
 
 function hoursCardHTML(p) {
@@ -1663,7 +1673,7 @@ function renderWantToday() {
       <div class="saved-thumb bg-${p.bg}" id="wthumb-${p.id}">${catIcon(p.c, 22, 1.7)}</div>
       <div style="flex:1;min-width:0;">
         <div class="saved-name">${p.n}</div>
-        <div class="saved-meta">${p.b} · ${p.h}</div>
+        <div class="saved-meta">${p.b} · ${todayHoursText(p)}</div>
       </div>
       <div class="saved-price">${p.p}</div>
       <button class="fav-remove-btn" title="Remover" onclick="event.stopPropagation();window._removeWant('${p.id}')">
