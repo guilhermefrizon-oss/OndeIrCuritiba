@@ -70,6 +70,14 @@ Sem aparelho Android — use o emulador.
 ## 03 · Ligar o login nativo (Firebase)
 Código já pronto; falta o setup. Detalhes em `AUTH-NATIVE.md`.
 
+> **Anotado p/ o lançamento — login por TELEFONE (SMS):** decidido em jul/2026
+> deixar para a fase de lançamento. Requisitos na hora de fazer: plano
+> **Blaze** ativo (SMS é pago, ~US$ 0,03–0,05/envio no BR), provedor
+> "Telefone" habilitado no Authentication, SHA-1/SHA-256 registrados
+> (mesmos do login Google) e, no iOS, push notifications (conta Apple paga)
+> para o fluxo sem reCAPTCHA. Código de confirmação preenche automático
+> (autocomplete="one-time-code" na web; nativo já cuida no Android/iOS).
+
 - [ ] **Registrar o app Android no Firebase**
   1. Firebase Console → ⚙️ → **Seus apps → Adicionar app → Android**.
   2. Pacote: `com.daymatch.curitiba`.
