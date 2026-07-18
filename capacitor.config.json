@@ -5,9 +5,6 @@
   "android": {
     "adjustMarginsForEdgeToEdge": "auto"
   },
-  "server": {
-    "iosScheme": "https"
-  },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 0,
