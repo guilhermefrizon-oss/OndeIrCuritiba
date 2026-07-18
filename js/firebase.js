@@ -9,7 +9,8 @@ import {
   runTransaction, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
-  getAuth, GoogleAuthProvider,
+  getAuth, initializeAuth, browserLocalPersistence, browserPopupRedirectResolver,
+  GoogleAuthProvider,
   signInWithPopup, signInWithRedirect, getRedirectResult,
   signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -41,7 +42,19 @@ try {
   db = getFirestore(app);
 }
 
-const auth = getAuth(app);
+// Persistência via localStorage (síncrona — não pendura). O padrão usa
+// IndexedDB, que em alguns WebViews (iOS) trava a inicialização do Auth e
+// deixa TODA operação de login pendente pra sempre.
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: browserLocalPersistence,
+    popupRedirectResolver: browserPopupRedirectResolver
+  });
+} catch (e) {
+  // Já inicializado (hot reload) → reaproveita.
+  auth = getAuth(app);
+}
 // E-mails do Firebase (verificação, redefinir senha) em português.
 auth.languageCode = 'pt-BR';
 

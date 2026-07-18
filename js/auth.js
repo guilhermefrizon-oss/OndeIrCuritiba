@@ -71,6 +71,12 @@ async function nativeSocialSignIn(kind) {
     throw new Error('Sem credenciais do Google.');
   }
   console.warn('[diag] trocando credencial (idToken:', !!idToken, '/ accessToken:', !!accessToken, ')…');
+  // Prova de rede: um fetch cru pro endpoint de auth. Se isto responder e o
+  // SDK não, o problema é interno do SDK (persistência), não a rede.
+  fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyCz1Ti_twBmtDxGOc9cGiXHBNbFTOdvYAg', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+  }).then(r => console.warn('[diag] fetch cru auth → HTTP', r.status),
+          e => console.warn('[diag] fetch cru auth → FALHOU:', e?.message));
   const troca = signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
   troca.then(
     r => console.warn('[diag] signInWithCredential OK — uid:', r?.user?.uid),
