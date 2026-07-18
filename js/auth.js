@@ -47,12 +47,7 @@ async function nativeSocialSignIn(kind) {
   if (!FA && typeof window.Capacitor?.registerPlugin === 'function') {
     try { FA = window.Capacitor.registerPlugin('FirebaseAuthentication'); } catch (e) { console.warn('registerPlugin:', e); }
   }
-  if (!FA) {
-    // Diagnóstico: o que o runtime nativo realmente expõe?
-    console.warn('[diag] Plugins:', Object.keys(window.Capacitor?.Plugins || {}).join(',') || '(vazio)');
-    console.warn('[diag] PluginHeaders:', (window.Capacitor?.PluginHeaders || []).map(h => h?.name).join(',') || '(vazio)');
-    throw new Error('Plugin FirebaseAuthentication indisponível no app nativo.');
-  }
+  if (!FA) throw new Error('Plugin FirebaseAuthentication indisponível no app nativo.');
   if (kind === 'apple') {
     const res = await FA.signInWithApple();
     const idToken  = res?.credential?.idToken;
@@ -66,25 +61,8 @@ async function nativeSocialSignIn(kind) {
   // aceita qualquer um dos dois pra montar a credencial.
   const idToken     = res?.credential?.idToken || null;
   const accessToken = res?.credential?.accessToken || null;
-  if (!idToken && !accessToken) {
-    console.warn('[diag] credencial recebida:', JSON.stringify(res?.credential || {}));
-    throw new Error('Sem credenciais do Google.');
-  }
-  console.warn('[diag] trocando credencial (idToken:', !!idToken, '/ accessToken:', !!accessToken, ')…');
-  // Prova de rede: um fetch cru pro endpoint de auth. Se isto responder e o
-  // SDK não, o problema é interno do SDK (persistência), não a rede.
-  fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyCz1Ti_twBmtDxGOc9cGiXHBNbFTOdvYAg', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
-  }).then(r => console.warn('[diag] fetch cru auth → HTTP', r.status),
-          e => console.warn('[diag] fetch cru auth → FALHOU:', e?.message));
-  const troca = signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
-  troca.then(
-    r => console.warn('[diag] signInWithCredential OK — uid:', r?.user?.uid),
-    e => console.warn('[diag] signInWithCredential ERRO:', e?.code, e?.message)
-  );
-  // Aviso se pendurar (rede presa no WebView)
-  setTimeout(() => console.warn('[diag] 15s se passaram — se não houve OK/ERRO acima, a troca está pendurada.'), 15000);
-  return troca;
+  if (!idToken && !accessToken) throw new Error('Sem credenciais do Google.');
+  return signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
 }
 
 // Cancelamento do usuário no seletor nativo: não é erro pra mostrar.
@@ -108,7 +86,6 @@ window.currentUser = null;
 window._customPhoto = null;
 
 onAuthStateChanged(auth, async (user) => {
-  console.warn('[diag] authChanged →', user ? ('uid ' + user.uid) : 'deslogado');
   window.currentUser = user;
   window._customPhoto = null;
   updateAvatarUI(user);
