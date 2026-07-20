@@ -7,7 +7,7 @@
 // Requisições de OUTROS domínios (Firebase, Google Maps/Places, fotos) NÃO
 // são interceptadas — vão direto pra rede, como sempre.
 
-const CACHE = 'daymatch-v5';
+const CACHE = 'daymatch-v6';
 const PHOTO_CACHE = 'daymatch-photos-v1';   // fotos dos lugares (Google)
 const PHOTO_MAX = 150;                        // teto de fotos guardadas
 const CORE = ['./', './index.html', './css/styles.css', './site.webmanifest', './icon-192.png'];
