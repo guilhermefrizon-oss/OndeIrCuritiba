@@ -178,13 +178,6 @@ async function init() {
   showWelcomeScreen();
   hideSplash();               // cards prontos → tira a splash da logo
 
-  // "Abertos agora" entra com o texto e, depois de um tempinho, recolhe pra
-  // bolinha — a menos que a pessoa já tenha ligado o filtro nesse meio-tempo.
-  setTimeout(() => {
-    const b = document.getElementById('openNowBtn');
-    if (b && !openNowOnly) b.classList.add('tucked');
-  }, 2000);
-
   const [allSaved, allWant, allSkipped, allBeen] = await Promise.all([
     fsLoadAll(), fsLoadWantToday(), fsLoadSkipped(), fsLoadBeenThere()
   ]);
@@ -305,20 +298,19 @@ window.toggleOpenNow = () => {
   if (mapView && mapView.style.display !== 'none') renderMapView();
 };
 
-// Atualiza o visual dos dois pills (agora / outro dia-horário)
+// Atualiza o botão "Filtros" (rótulo + estado ativo) conforme os filtros.
 function syncFilterPills() {
-  const on = document.getElementById('openNowBtn');
-  if (on) {
-    on.classList.toggle('on', openNowOnly);
-    // Recolhe pra bolinha quando desligado; reabre (mostra o texto) quando ativo.
-    on.classList.toggle('tucked', !openNowOnly);
-  }
-  const pb = document.getElementById('planBtn');
-  const lbl = document.getElementById('planBtnLabel');
-  if (pb) pb.classList.toggle('on', !!planFilter);
-  if (lbl) lbl.textContent = planFilter
-    ? `${DAY_LABEL[DOW_KEYS[planFilter.dowIdx]]} · ${planFilter.period.label}`
-    : 'Outro dia/horário';
+  const active = openNowOnly || !!planFilter;
+  const btn = document.getElementById('discFiltersBtn');
+  if (btn) btn.classList.toggle('on', active);
+  const dot = document.getElementById('discFilterDot');
+  if (dot) dot.style.display = active ? 'block' : 'none';
+  const lbl = document.getElementById('discFiltersLbl');
+  if (lbl) lbl.textContent = !active
+    ? 'Filtros'
+    : (openNowOnly
+        ? 'Abertos agora'
+        : `${DAY_LABEL[DOW_KEYS[planFilter.dowIdx]]} · ${planFilter.period.label}`);
 }
 
 // Um lugar passa no filtro de planejamento? (desconhecido = passa, pra não sumir)
@@ -347,6 +339,63 @@ window.clearPlanFilter = () => {
   planFilter = null;
   _applyPlanChanges();
   closePlanSheet();
+};
+
+// ── Sheet "Filtros" (horário) ──────────────────────────────────────
+function closeFiltersSheet() {
+  const bd = document.getElementById('filtersSheetBackdrop');
+  if (bd) bd.style.display = 'none';
+  if (window.dismissOverlay) window.dismissOverlay('filtersSheet');
+}
+
+window.openFiltersSheet = () => {
+  let bd = document.getElementById('filtersSheetBackdrop');
+  if (!bd) {
+    bd = document.createElement('div');
+    bd.id = 'filtersSheetBackdrop';
+    bd.className = 'plan-sheet-backdrop';
+    document.querySelector('.phone').appendChild(bd);
+  }
+  bd.onclick = (e) => { if (e.target === bd) closeFiltersSheet(); };
+
+  const planActive = !!planFilter;
+  const planLabel = planActive
+    ? `${DAY_LABEL[DOW_KEYS[planFilter.dowIdx]]} · ${planFilter.period.label}`
+    : 'Outro dia / horário';
+
+  bd.innerHTML = `
+    <div class="plan-sheet">
+      <div class="plan-sheet-handle"></div>
+      <div class="plan-sheet-title">Filtros</div>
+      <div class="plan-sheet-sub">Por padrão mostramos tudo. Refine por horário se quiser.</div>
+      <button class="filter-opt ${openNowOnly ? 'on' : ''}" id="fltOpenNow">
+        <span class="filter-opt-ic">${ic('clock', 18)}</span>
+        <span class="filter-opt-lbl">Abertos agora</span>
+        <span class="filter-opt-end">${openNowOnly ? ic('check', 16) : ''}</span>
+      </button>
+      <button class="filter-opt ${planActive ? 'on' : ''}" id="fltPlan">
+        <span class="filter-opt-ic">${ic('map', 18)}</span>
+        <span class="filter-opt-lbl">${planLabel}</span>
+        <span class="filter-opt-end">${ic('search', 15)}</span>
+      </button>
+      <div class="plan-sheet-actions">
+        ${(openNowOnly || planActive) ? '<button class="plan-clear" id="fltClear">Limpar filtros</button>' : ''}
+        <button class="plan-apply" id="fltDone">Pronto</button>
+      </div>
+    </div>`;
+  bd.style.display = 'flex';
+  window.registerOverlay('filtersSheet', () => { bd.style.display = 'none'; });
+
+  document.getElementById('fltOpenNow').onclick = () => { window.toggleOpenNow(); closeFiltersSheet(); };
+  document.getElementById('fltPlan').onclick    = () => { closeFiltersSheet(); window.openPlanSheet(); };
+  document.getElementById('fltDone').onclick     = () => closeFiltersSheet();
+  const clr = document.getElementById('fltClear');
+  if (clr) clr.onclick = () => {
+    if (openNowOnly) openNowOnly = false;
+    planFilter = null;
+    _applyPlanChanges();
+    closeFiltersSheet();
+  };
 };
 
 window.openPlanSheet = () => {
@@ -720,10 +769,6 @@ function makeCard(p) {
         <span>${p.b}</span><div class="meta-sep"></div><span>${ic('clock', 12)} ${todayHoursText(p)}</span>
       </div>
       <div class="card-status-row">${distLabel(p)}</div>
-      <div class="card-footer">
-        <div class="ig-chip">${ic('camera', 12)}${p.ig}</div>
-        <div class="card-profile-hint">Ver perfil →</div>
-      </div>
     </div>`;
   return el;
 }

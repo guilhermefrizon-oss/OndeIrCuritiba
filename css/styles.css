@@ -31,7 +31,7 @@
   --red:   #C4392B;
   --shadow: 0 4px 24px rgba(20,20,15,.07);
   --shadow-card: 0 16px 44px rgba(20,20,15,.16);
-  --card-h: 470px;
+  --card-h: 432px;
   --r: 26px;
   --font-display: 'Bricolage Grotesque', sans-serif;
   --font-body: 'Manrope', sans-serif;
@@ -158,8 +158,40 @@ body {
 /* ── Categories ──────────────────────────────────────────────────── */
 .cats-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 22px 4px; flex-shrink: 0; }
 .cats-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); }
-.cats-scroll { display: flex; gap: 8px; padding: 0 22px 8px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.cats-scroll { display: flex; gap: 8px; padding: 10px 22px 8px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .cats-scroll::-webkit-scrollbar { display: none; }
+
+/* Linha de controles do discover: Filtros (esq) + Cards/Lista (dir) */
+.disc-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 16px 8px; flex-shrink: 0; }
+.disc-filter-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 15px; border-radius: 999px; cursor: pointer; font-family: inherit;
+  font-size: 13px; font-weight: 700; color: var(--text2);
+  background: var(--bg2); border: 1.5px solid var(--bg4); box-shadow: var(--shadow);
+  max-width: 62%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.disc-filter-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+.disc-filter-btn span { overflow: hidden; text-overflow: ellipsis; }
+.disc-filter-btn.on { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); }
+.disc-filter-dot {
+  position: absolute; top: -3px; right: -3px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--blue); border: 2px solid var(--bg);
+}
+
+/* Opções dentro do bottom sheet de Filtros */
+.filter-opt {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 15px 16px; margin-bottom: 10px; border-radius: 16px; cursor: pointer;
+  background: var(--bg2); border: 1.5px solid var(--bg4); color: var(--text);
+  font-family: inherit; font-size: 15px; font-weight: 700; text-align: left;
+}
+.filter-opt:active { transform: scale(.99); }
+.filter-opt.on { border-color: var(--acc); background: var(--p100); }
+.filter-opt-ic { display: flex; color: var(--text2); flex-shrink: 0; }
+.filter-opt.on .filter-opt-ic { color: var(--acc); }
+.filter-opt-lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter-opt-end { display: flex; color: var(--text3); flex-shrink: 0; }
+.filter-opt.on .filter-opt-end { color: var(--acc); }
 .cat-pill {
   flex-shrink: 0; padding: 7px 15px; border-radius: 100px;
   border: 1.5px solid var(--bg4); background: var(--bg2);
