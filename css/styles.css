@@ -305,7 +305,7 @@ body {
 #discoverView .place-card { box-shadow: 0 4px 20px rgba(0, 0, 0, .16); }
 #discoverView .stack-wrap { padding-bottom: 10px; }
 #discoverView .btns {
-  position: absolute; left: 0; right: 0; bottom: 22px;
+  position: absolute; left: 0; right: 0; bottom: 16px;
   padding: 0 24px; gap: 18px; z-index: 30;
   background: none; pointer-events: none;           /* não bloqueia o swipe */
 }
@@ -319,10 +319,10 @@ body {
   border-width: 0;
   box-shadow: 0 4px 18px rgba(0,0,0,.30);
 }
-#discoverView .btns .b-like .c { width: 66px; height: 66px; }
-#discoverView .btns .b-pass .c { width: 62px; height: 62px; }
+#discoverView .btns .b-like .c { width: 60px; height: 60px; }
+#discoverView .btns .b-pass .c { width: 56px; height: 56px; }
 /* o texto do card sobe pra não ficar embaixo dos botões (círculo + rótulo) */
-.stack .card-bottom { padding-bottom: 26px; }
+.stack .card-bottom { padding-bottom: 100px; }
 .abtn { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; background: none; border: none; }
 .abtn .c { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid; transition: transform .12s, background .15s; box-shadow: var(--shadow); }
 .abtn:active .c { transform: scale(.91); }
@@ -1354,8 +1354,8 @@ body {
 
 /* ── Buttons: single row, 4 buttons ──────────────────────────────── */
 .btns { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 16px; padding: 12px 16px 14px; flex-shrink: 0; }
-.b-been .c, .b-save .c { width: 50px; height: 50px; }
-.b-pass .c, .b-like .c { width: 64px; height: 64px; }
+.b-been .c, .b-save .c { width: 46px; height: 46px; }
+.b-pass .c, .b-like .c { width: 60px; height: 60px; }
 .b-pass .c   { border-color: #f87171; background: rgba(248,113,113,.08); color: #f87171; }
 .b-pass .lbl { color: #f87171; }
 .b-been .c   { border-color: #f59e0b; background: rgba(245,158,11,.08); color: #f59e0b; }
