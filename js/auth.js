@@ -1287,3 +1287,309 @@ window.closeAuthModal    = closeAuthModal;
 window.handleAvatarClick = handleAvatarClick;
 window.showUserProfile   = showUserProfile;
 window.closeUserProfile  = closeUserProfile;
+
+// ══════════════════════════════════════════════════════════════════
+// Menu sanduíche full-screen + telas de Perfil e Estatísticas
+// ══════════════════════════════════════════════════════════════════
+const _BACK_SVG = '<svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>';
+
+function _attr(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function _ensureScreen(id, cls) {
+  let el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = id; el.className = cls;
+    (document.querySelector('.phone') || document.body).appendChild(el);
+  }
+  return el;
+}
+
+function _hideScreen(id, visClass) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove(visClass);
+  setTimeout(() => { if (el && !el.classList.contains(visClass)) el.style.display = 'none'; }, 280);
+}
+
+// Upload de foto genérico (reusa _resizeImage). Liga botão+input+preview.
+function _bindPhotoUploadGeneric(user, btnId, inputId, mediaId) {
+  const btn = document.getElementById(btnId), input = document.getElementById(inputId);
+  if (!btn || !input) return;
+  btn.onclick = () => input.click();
+  input.onchange = async () => {
+    const file = input.files?.[0]; input.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { window.showToast?.('Selecione uma imagem.', 'error'); return; }
+    try {
+      const dataUrl = await _resizeImage(file, 256);
+      const media = document.getElementById(mediaId);
+      if (media) media.innerHTML = `<img src="${dataUrl}" alt="">`;
+      window._customPhoto = dataUrl; updateAvatarUI(user);
+      await setDoc(doc(db, 'user_profiles', user.uid), { photoDataUrl: dataUrl }, { merge: true });
+      window.showToast?.('Foto atualizada!', 'success');
+    } catch (e) { console.warn(e); window.showToast?.('Não consegui salvar a foto.', 'error'); }
+  };
+}
+
+// ── Menu sanduíche ─────────────────────────────────────────────────
+export function openAppMenu() {
+  const scr = _ensureScreen('appMenu', 'app-menu');
+  const u = window.currentUser;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const photo  = u ? effectivePhoto(u) : null;
+  const name   = u ? (u.displayName || 'Usuário') : 'Visitante';
+  const sub    = u ? (u.email || '') : 'Entre para salvar seus lugares';
+
+  scr.innerHTML = `
+    <div class="am-inner">
+      <div class="am-top">
+        <div class="am-wordmark">Day<em>Match</em></div>
+        <button class="am-close" id="amCloseBtn" aria-label="Fechar menu">${ic('x', 20)}</button>
+      </div>
+
+      <button class="am-user" id="amUserBtn">
+        <div class="am-avatar">${photo ? `<img src="${photo}" alt="">` : (u ? getInitials(u) : ic('user', 22))}</div>
+        <div class="am-user-info">
+          <div class="am-user-name">${name}</div>
+          <div class="am-user-sub">${sub}</div>
+        </div>
+        <span class="am-user-cta">${u ? '›' : 'Entrar'}</span>
+      </button>
+
+      <nav class="am-list">
+        <button class="am-item" data-act="perfil">
+          <span class="am-item-ic">${ic('user', 20)}</span><span class="am-item-lbl">Perfil</span><span class="am-item-ch">›</span>
+        </button>
+        <button class="am-item" data-act="stats">
+          <span class="am-item-ic">${ic('trophy', 20)}</span><span class="am-item-lbl">Estatísticas</span><span class="am-item-ch">›</span>
+        </button>
+        <button class="am-item" data-act="privacy">
+          <span class="am-item-ic">${ic('lock', 20)}</span><span class="am-item-lbl">Política de Privacidade</span><span class="am-item-ch">›</span>
+        </button>
+        <button class="am-item" data-act="theme">
+          <span class="am-item-ic" id="amThemeIc">${ic(isDark ? 'sun' : 'moon', 20)}</span>
+          <span class="am-item-lbl" id="amThemeLbl">${isDark ? 'Modo claro' : 'Modo escuro'}</span>
+          <span class="am-item-ch"></span>
+        </button>
+      </nav>
+
+      <div class="am-bottom">
+        ${u ? `<button class="am-signout" data-act="signout">${ic('log-out', 18)} Sair</button>` : ''}
+      </div>
+    </div>`;
+
+  scr.style.display = 'flex';
+  requestAnimationFrame(() => scr.classList.add('am-visible'));
+  if (window.registerOverlay) window.registerOverlay('appMenu', () => _hideScreen('appMenu', 'am-visible'));
+
+  const close = () => { if (window.dismissOverlay) window.dismissOverlay('appMenu'); else _hideScreen('appMenu', 'am-visible'); };
+  document.getElementById('amCloseBtn').onclick = close;
+
+  document.getElementById('amUserBtn').onclick = () => {
+    // Abre o perfil SOBRE o menu (voltar retorna ao menu). Evita fechar e
+    // reabrir no mesmo tick, que causaria corrida no histórico do back.
+    if (window.currentUser) openProfileScreen();
+    else { close(); showAuthModal('default'); }
+  };
+
+  scr.querySelectorAll('.am-item, .am-signout').forEach(btn => {
+    btn.onclick = () => {
+      const act = btn.dataset.act;
+      if (act === 'theme') {
+        window.toggleTheme?.();
+        const nowDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const icEl = document.getElementById('amThemeIc'), lblEl = document.getElementById('amThemeLbl');
+        if (icEl) icEl.innerHTML = ic(nowDark ? 'sun' : 'moon', 20);
+        if (lblEl) lblEl.textContent = nowDark ? 'Modo claro' : 'Modo escuro';
+        return; // mantém o menu aberto
+      }
+      if (act === 'privacy')  { close(); window.open('privacidade.html', '_blank', 'noopener'); return; }
+      if (act === 'signout')  { close(); signOutUser(); return; }
+      // Perfil/Estatísticas: abrem por cima do menu (drill-down).
+      if (act === 'perfil')   { if (window.currentUser) openProfileScreen(); else { close(); showAuthModal('default'); } return; }
+      if (act === 'stats')    { if (window.currentUser) openStatsScreen();   else { close(); showAuthModal('default'); } return; }
+    };
+  });
+}
+
+// ── Tela de Perfil (nova) ──────────────────────────────────────────
+export async function openProfileScreen() {
+  const user = window.currentUser;
+  if (!user) { showAuthModal('default'); return; }
+
+  const scr      = _ensureScreen('profileScreen2', 'pf-screen');
+  const photo    = effectivePhoto(user);
+  const initials = getInitials(user);
+  const name     = user.displayName || '';
+  const email    = user.email || '';
+  const verified = user.emailVerified;
+  const memberSince = user.metadata?.creationTime
+    ? new Date(user.metadata.creationTime).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    : '';
+
+  scr.innerHTML = `
+    <div class="pf-topbar">
+      <button class="pf-back" id="pfBack" aria-label="Voltar">${_BACK_SVG}</button>
+      <span class="pf-title">Perfil</span>
+      <span class="pf-topbar-spacer"></span>
+    </div>
+    <div class="pf-scroll">
+      <div class="pf-avatar-wrap">
+        <button class="pf-avatar" id="pfAvatarBtn" title="Trocar foto">
+          <div id="pfAvatarMedia">${photo ? `<img src="${photo}" alt="">` : `<span class="pf-initials">${initials}</span>`}</div>
+          <span class="pf-cam">${ic('camera', 14)}</span>
+        </button>
+        <input type="file" id="pfPhotoInput" accept="image/*" style="display:none">
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="pfName">Nome</label>
+        <input class="pf-input" id="pfName" type="text" value="${_attr(name)}" placeholder="Seu nome">
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="pfPhone">Telefone</label>
+        <input class="pf-input" id="pfPhone" type="tel" value="" placeholder="(41) 99999-9999">
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label">E-mail</label>
+        <div class="pf-email-row">
+          <span class="pf-email">${email}</span>
+          <span class="pf-badge ${verified ? 'ok' : 'warn'}">${verified ? ic('check-circle', 13) + ' Verificado' : ic('alert', 13) + ' Não verificado'}</span>
+        </div>
+        ${verified ? '' : `<button class="pf-verify" id="pfVerifyBtn">${ic('mail', 13)} Reenviar verificação</button>`}
+      </div>
+
+      ${memberSince ? `<div class="pf-since">Membro desde ${memberSince}</div>` : ''}
+
+      <button class="pf-save" id="pfSaveBtn">Salvar alterações</button>
+      <button class="pf-prefs" id="pfPrefsBtn">${ic('edit', 15)} Editar preferências (bairro, interesses)</button>
+
+      <button class="pf-delete" id="pfDeleteBtn">Excluir Perfil</button>
+    </div>`;
+
+  scr.style.display = 'flex';
+  requestAnimationFrame(() => scr.classList.add('pf-visible'));
+  if (window.registerOverlay) window.registerOverlay('profileScreen2', () => _hideScreen('profileScreen2', 'pf-visible'));
+  const close = () => { if (window.dismissOverlay) window.dismissOverlay('profileScreen2'); else _hideScreen('profileScreen2', 'pf-visible'); };
+  document.getElementById('pfBack').onclick = close;
+
+  // Telefone salvo no perfil
+  try {
+    const snap = await getDoc(doc(db, 'user_profiles', user.uid));
+    if (snap.exists() && snap.data().telefone) document.getElementById('pfPhone').value = snap.data().telefone;
+  } catch {}
+
+  _bindPhotoUploadGeneric(user, 'pfAvatarBtn', 'pfPhotoInput', 'pfAvatarMedia');
+  document.getElementById('pfVerifyBtn')?.addEventListener('click', () => resendVerification(user));
+  document.getElementById('pfPrefsBtn').onclick = () => showProfileEditor(user, { onboarding: false });
+  document.getElementById('pfDeleteBtn').onclick = () => deleteAccount(user);
+
+  document.getElementById('pfSaveBtn').onclick = async () => {
+    const btn = document.getElementById('pfSaveBtn');
+    const newName  = document.getElementById('pfName').value.trim();
+    const newPhone = document.getElementById('pfPhone').value.trim();
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    try {
+      if (newName && newName !== (user.displayName || '')) {
+        await updateProfile(auth.currentUser, { displayName: newName });
+        window.currentUser = auth.currentUser;
+        updateAvatarUI(auth.currentUser);
+      }
+      await setDoc(doc(db, 'user_profiles', user.uid), { telefone: newPhone }, { merge: true });
+      window.showToast?.('Perfil atualizado!', 'success');
+      btn.textContent = 'Salvo!';
+      setTimeout(() => { btn.textContent = 'Salvar alterações'; btn.disabled = false; }, 1200);
+    } catch (e) {
+      console.warn(e); window.showToast?.('Não consegui salvar.', 'error');
+      btn.textContent = 'Salvar alterações'; btn.disabled = false;
+    }
+  };
+}
+
+// ── Tela de Estatísticas (dedicada) ────────────────────────────────
+export async function openStatsScreen() {
+  const user = window.currentUser;
+  if (!user) { showAuthModal('default'); return; }
+  const F   = window.FEATURES || {};
+  const scr = _ensureScreen('statsScreen2', 'st-screen');
+
+  scr.innerHTML = `
+    <div class="pf-topbar">
+      <button class="pf-back" id="stBack" aria-label="Voltar">${_BACK_SVG}</button>
+      <span class="pf-title">Estatísticas</span>
+      <span class="pf-topbar-spacer"></span>
+    </div>
+    <div class="st-scroll">
+      <div class="st-cards">
+        <div class="st-card">
+          <div class="st-num" id="stVisited">…</div>
+          <div class="st-lbl">${ic('map-pin', 14)} Visitados</div>
+        </div>
+        <div class="st-card">
+          <div class="st-num" id="stSaved">…</div>
+          <div class="st-lbl">${ic('bookmark', 14)} Salvos</div>
+        </div>
+        ${F.ratings ? `
+        <div class="st-card">
+          <div class="st-num" id="stRatings">…</div>
+          <div class="st-lbl">${ic('star', 14)} Avaliações</div>
+        </div>` : ''}
+      </div>
+
+      <div class="st-section">
+        <div class="st-section-title">${ic('map-pin', 15)} Bairros favoritos</div>
+        <div id="stBairros"><div class="st-loading">Carregando…</div></div>
+      </div>
+    </div>`;
+
+  scr.style.display = 'flex';
+  requestAnimationFrame(() => scr.classList.add('st-visible'));
+  if (window.registerOverlay) window.registerOverlay('statsScreen2', () => _hideScreen('statsScreen2', 'st-visible'));
+  document.getElementById('stBack').onclick = () => {
+    if (window.dismissOverlay) window.dismissOverlay('statsScreen2'); else _hideScreen('statsScreen2', 'st-visible');
+  };
+
+  const setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  const fmt = n => (n == null ? '—' : n);
+  const countCol = async (path) => { try { return (await getDocs(collection(db, ...path))).size; } catch { return null; } };
+
+  countCol(['favorites', user.uid, 'places']).then(n => setTxt('stSaved', fmt(n)));
+  if (F.ratings && window.countUserRatings) window.countUserRatings(user.uid).then(n => setTxt('stRatings', fmt(n)));
+
+  // Visitados + bairros favoritos (mesma coleção been_there)
+  try {
+    const snap   = await getDocs(collection(db, 'been_there', user.uid, 'places'));
+    const places = snap.docs.map(d => d.data());
+    setTxt('stVisited', places.length);
+
+    const box = document.getElementById('stBairros');
+    if (!places.length) {
+      box.innerHTML = '<div class="st-empty">Marque lugares como “Já fui” para ver seus bairros favoritos aqui.</div>';
+      return;
+    }
+    const bc = {};
+    places.forEach(p => { const b = p.b || 'Desconhecido'; bc[b] = (bc[b] || 0) + 1; });
+    const top = Object.entries(bc).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const max = top[0][1];
+    box.innerHTML = top.map(([b, n]) => `
+      <div class="st-bar-row">
+        <span class="st-bar-lbl">${b}</span>
+        <div class="st-bar-track"><div class="st-bar-fill" style="width:${Math.round(n / max * 100)}%"></div></div>
+        <span class="st-bar-num">${n}</span>
+      </div>`).join('');
+  } catch (e) {
+    console.warn('stats:', e);
+    setTxt('stVisited', '—');
+    const box = document.getElementById('stBairros');
+    if (box) box.innerHTML = '<div class="st-empty">Não consegui carregar agora.</div>';
+  }
+}
+
+window.openAppMenu      = openAppMenu;
+window.openProfileScreen = openProfileScreen;
+window.openStatsScreen  = openStatsScreen;
