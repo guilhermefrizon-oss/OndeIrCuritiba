@@ -1,13 +1,120 @@
 // ── favorites.js ──────────────────────────────────────────────────
 import { fetchPlacePhoto } from './photos.js';
-import { ic, catIcon } from './icons.js';
+import { ic, catIcon, catIconName, iconPath } from './icons.js';
 import { fsRemove } from './store.js';
 
 const GOOGLE_API_KEY = 'AIzaSyDIiBLGHZ_zgo-wKaHNK7qa4O-C_EZJJuY';
 
+// ── Marcadores com ícone + nome e agrupamento (clustering) ─────────
+// A partir deste zoom os nomes dos lugares aparecem embaixo do pin.
+// Abaixo dele (mais afastado) mostramos só o círculo com o ícone — e
+// os pins próximos ficam agrupados em clusters.
+const LABEL_ZOOM   = 16;
+const CLUSTER_COLOR = '#F26522'; // laranja dos clusters (igual à referência)
+
+function _escXml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Cor do pin conforme o estado do lugar (Quero ir / Salvo / normal).
+function _pinColor(p) {
+  const isWant  = !!window._isWantToday?.(p.id);
+  const isSaved = !!window._isSaved?.(p.id);
+  return isWant ? '#ef4444' : isSaved ? '#f59e0b' : '#14140F';
+}
+
+// Ícone (google.maps) de um lugar: círculo branco com o ícone da
+// categoria e, quando `labeled`, o nome do lugar embaixo.
+function placePinIcon(p, labeled) {
+  if (!window.google?.maps) return null;
+  const color = _pinColor(p);
+  const path  = iconPath(catIconName(p.c));
+
+  const pad = 6, D = 38, R = 19, ICON = 20, isc = ICON / 24;
+  const fs = 13, gap = 5;
+
+  let name = (p.n || '').trim();
+  if (name.length > 24) name = name.slice(0, 23) + '…';
+
+  const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+  const txtFill   = isDark ? '#F2F2ED' : '#14140F';
+  const txtStroke = isDark ? 'rgba(11,11,9,.85)' : '#FFFFFF';
+
+  const textW = labeled ? Math.ceil(name.length * (fs * 0.62)) + 10 : 0;
+  const W  = Math.max(D + pad * 2, textW);
+  const CX = W / 2;
+  const CY = pad + R;
+  const H  = labeled ? (pad + D + gap + fs + 4) : (pad + D + pad);
+  const iconX = CX - ICON / 2, iconY = CY - ICON / 2;
+
+  const label = labeled
+    ? `<text x="${CX}" y="${pad + D + gap + fs - 2}" text-anchor="middle" ` +
+      `font-family="Manrope,-apple-system,'Segoe UI',Roboto,Arial,sans-serif" ` +
+      `font-size="${fs}" font-weight="700" fill="${txtFill}" stroke="${txtStroke}" ` +
+      `stroke-width="3" paint-order="stroke" style="stroke-linejoin:round">${_escXml(name)}</text>`
+    : '';
+
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+    `<defs><filter id="sh" x="-50%" y="-50%" width="200%" height="200%">` +
+    `<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="rgba(0,0,0,0.28)"/></filter></defs>` +
+    `<circle cx="${CX}" cy="${CY}" r="${R}" fill="#fff" stroke="#EDECE7" stroke-width="1" filter="url(#sh)"/>` +
+    `<g transform="translate(${iconX},${iconY}) scale(${isc})" fill="none" stroke="${color}" ` +
+    `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${path}</g>` +
+    label +
+    `</svg>`;
+
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new window.google.maps.Size(W, H),
+    anchor: new window.google.maps.Point(CX, CY),
+  };
+}
+
+// Renderer dos clusters: círculo laranja com a contagem no centro.
+function makeClusterRenderer() {
+  return {
+    render: ({ count, position }) => {
+      const size = count < 10 ? 40 : count < 50 ? 48 : count < 100 ? 56 : 64;
+      const r = size / 2;
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">` +
+        `<circle cx="${r}" cy="${r}" r="${r - 2}" fill="${CLUSTER_COLOR}" ` +
+        `stroke="#fff" stroke-width="3"/></svg>`;
+      return new window.google.maps.Marker({
+        position,
+        icon: {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+          scaledSize: new window.google.maps.Size(size, size),
+          anchor: new window.google.maps.Point(r, r),
+        },
+        label: {
+          text: String(count), color: '#fff',
+          fontSize: '13px', fontWeight: '800',
+          fontFamily: 'Manrope,-apple-system,Arial,sans-serif',
+        },
+        zIndex: 1000 + count,
+      });
+    },
+  };
+}
+
+// Carrega a lib de clustering (uma vez). Retorna a classe MarkerClusterer.
+let _clustererLib = null;
+function loadClusterer() {
+  if (_clustererLib) return Promise.resolve(_clustererLib);
+  return import('https://cdn.jsdelivr.net/npm/@googlemaps/markerclusterer@2/+esm')
+    .then(mod => { _clustererLib = mod; return mod; })
+    .catch(() => null); // sem clustering se o CDN falhar — mapa segue funcionando
+}
+
 let mapInstance   = null;
 let mapMarkers    = [];
 let mapInitialized = false;
+let favMapCluster = null; // MarkerClusterer do mapa de favoritos
+let favMapLabeled = null; // estado atual dos rótulos no mapa de favoritos
 let favViewMode   = 'list'; // 'list' | 'map'
 
 // ── Render entry point ─────────────────────────────────────────────
@@ -149,36 +256,64 @@ function buildMap(saved) {
       streetViewControl: false,
       fullscreenControl: false,
     });
+    // Ao dar zoom, alterna entre "só ícone" e "ícone + nome" nos pins.
+    mapInstance.addListener('zoom_changed', () => { applyFavLabelState(); });
   } else {
     mapInstance.setCenter(center);
   }
+
+  // Limpa o cluster anterior antes de replotar (os marcadores antigos já
+  // foram removidos do mapa em initMap).
+  if (favMapCluster) favMapCluster.clearMarkers();
+  favMapLabeled = (mapInstance.getZoom() || 13) >= LABEL_ZOOM;
 
   // Geocode and place markers for each favorite
   // Use Places API for places that have a placeId
   const bounds = new window.google.maps.LatLngBounds();
   let boundsExtended = false;
 
-  saved.forEach(p => {
-    // Try to use lat/lng stored in place data, fallback to geocoding
-    if (p.lat && p.lng) {
-      placeMarker(p, { lat: p.lat, lng: p.lng }, bounds);
-      boundsExtended = true;
-    } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
-      // Fetch lat/lng from Places API
-      fetchPlaceLatLng(p.pid).then(coords => {
-        if (coords) { placeMarker(p, coords, null); }
-      });
-    } else {
-      // Geocode from address
-      geocodeAddress(p.a + ', Curitiba, PR').then(coords => {
-        if (coords) { placeMarker(p, coords, null); }
+  loadClusterer().then(lib => {
+    if (!mapInstance) return;
+    if (lib?.MarkerClusterer && !favMapCluster) {
+      favMapCluster = new lib.MarkerClusterer({
+        map: mapInstance,
+        renderer: makeClusterRenderer(),
       });
     }
-  });
 
-  if (boundsExtended && saved.length > 1) {
-    mapInstance.fitBounds(bounds);
-  }
+    saved.forEach(p => {
+      // Try to use lat/lng stored in place data, fallback to geocoding
+      if (p.lat && p.lng) {
+        placeMarker(p, { lat: p.lat, lng: p.lng }, bounds);
+        boundsExtended = true;
+      } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+        // Fetch lat/lng from Places API
+        fetchPlaceLatLng(p.pid).then(coords => {
+          if (coords) { placeMarker(p, coords, null); }
+        });
+      } else {
+        // Geocode from address
+        geocodeAddress(p.a + ', Curitiba, PR').then(coords => {
+          if (coords) { placeMarker(p, coords, null); }
+        });
+      }
+    });
+
+    if (boundsExtended && saved.length > 1) {
+      mapInstance.fitBounds(bounds);
+    }
+  });
+}
+
+// Alterna rótulos (nome) dos pins do mapa de favoritos conforme o zoom.
+function applyFavLabelState() {
+  if (!mapInstance) return;
+  const labeled = (mapInstance.getZoom() || 13) >= LABEL_ZOOM;
+  if (labeled === favMapLabeled) return;
+  favMapLabeled = labeled;
+  mapMarkers.forEach(m => {
+    if (m._place) m.setIcon(placePinIcon(m._place, labeled));
+  });
 }
 
 function placeMarker(place, coords, bounds) {
@@ -186,17 +321,10 @@ function placeMarker(place, coords, bounds) {
 
   const marker = new window.google.maps.Marker({
     position: coords,
-    map: mapInstance,
     title: place.n,
-    icon: {
-      path: window.google.maps.SymbolPath.CIRCLE,
-      scale: 10,
-      fillColor: '#14140F',
-      fillOpacity: 1,
-      strokeColor: '#fff',
-      strokeWeight: 2,
-    }
+    icon: placePinIcon(place, favMapLabeled),
   });
+  marker._place = place;
 
   const infoWindow = new window.google.maps.InfoWindow({
     content: `
@@ -213,6 +341,8 @@ function placeMarker(place, coords, bounds) {
 
   if (bounds) bounds.extend(coords);
   mapMarkers.push(marker);
+  if (favMapCluster) favMapCluster.addMarker(marker);
+  else marker.setMap(mapInstance);
 }
 
 // Cache das coordenadas por placeId — evita refazer as ~57 chamadas à
@@ -284,6 +414,8 @@ let mainMapInstance = null;
 let mainMapMarkers  = [];
 let mainMapEl       = null;
 let mainMapBuild    = 0; // token de geração: descarta callbacks de builds antigos
+let mainMapCluster  = null; // instância do MarkerClusterer
+let mainMapLabeled  = null; // estado atual dos rótulos (true/false) p/ evitar re-render à toa
 
 export function renderFavMap(places, mapEl, onOpenProfile) {
   if (!mapEl) return;
@@ -292,6 +424,7 @@ export function renderFavMap(places, mapEl, onOpenProfile) {
   if (mainMapEl !== mapEl) {
     mainMapInstance = null; mainMapMarkers = []; mainMapEl = mapEl;
     userMarker = null; userAccuracy = null;
+    mainMapCluster = null; mainMapLabeled = null;
   }
 
   if (!window.google?.maps) {
@@ -392,6 +525,11 @@ function buildMainMap(places, mapEl, onOpenProfile) {
       gestureHandling: 'greedy',
     });
     addLocateControl();
+
+    // Ao dar zoom, alterna entre "só ícone" e "ícone + nome" nos pins.
+    mainMapInstance.addListener('zoom_changed', () => {
+      applyMainLabelState();
+    });
   }
 
   // Localização da pessoa: se já sabemos (cache), repinta e centraliza na
@@ -408,8 +546,11 @@ function buildMainMap(places, mapEl, onOpenProfile) {
     locateUser(true);
   }
 
+  // Limpa marcadores e cluster anteriores.
+  if (mainMapCluster) { mainMapCluster.clearMarkers(); mainMapCluster.setMap(null); mainMapCluster = null; }
   mainMapMarkers.forEach(m => m.setMap(null));
   mainMapMarkers = [];
+  mainMapLabeled = null;
 
   // Cada build recebe um token; buscas assíncronas de builds anteriores
   // (ex.: filtro "Abertos agora" recém-alternado) são ignoradas para não
@@ -419,24 +560,15 @@ function buildMainMap(places, mapEl, onOpenProfile) {
   const bounds = new window.google.maps.LatLngBounds();
   let boundsCount = 0;
   const infoWindow = new window.google.maps.InfoWindow();
+  const labeled = (mainMapInstance.getZoom() || 13) >= LABEL_ZOOM;
 
   const addMarker = (p, coords) => {
-    const isWant  = !!window._isWantToday?.(p.id);
-    const isSaved = !!window._isSaved?.(p.id);
-    const color = isWant ? '#ef4444' : isSaved ? '#f59e0b' : '#14140F';
     const marker = new window.google.maps.Marker({
       position: coords,
-      map: mainMapInstance,
       title: p.n,
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: color,
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 2,
-      }
+      icon: placePinIcon(p, labeled),
     });
+    marker._place = p; // guarda o lugar p/ recolorir/rotular depois
     marker.addListener('click', () => {
       infoWindow.setContent(`
         <div style="font-family:'Manrope',sans-serif;padding:4px 2px;max-width:210px;">
@@ -450,6 +582,8 @@ function buildMainMap(places, mapEl, onOpenProfile) {
       infoWindow.open(mainMapInstance, marker);
     });
     mainMapMarkers.push(marker);
+    if (mainMapCluster) mainMapCluster.addMarker(marker);
+    else marker.setMap(mainMapInstance);
     bounds.extend(coords);
     boundsCount++;
     // Só reenquadra em todos os lugares quando NÃO temos a localização da
@@ -462,13 +596,41 @@ function buildMainMap(places, mapEl, onOpenProfile) {
     if (p && onOpenProfile) onOpenProfile(p);
   };
 
-  places.forEach(p => {
-    if (p.lat && p.lng) addMarker(p, { lat: p.lat, lng: p.lng });
-    else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
-      fetchPlaceLatLng(p.pid).then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
-    } else if (p.a) {
-      geocodeAddress(p.a + ', Curitiba, PR').then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
+  // Inicializa o agrupador (clustering) e só então adiciona os marcadores.
+  loadClusterer().then(lib => {
+    if (myBuild !== mainMapBuild || !mainMapInstance) return;
+    if (lib?.MarkerClusterer) {
+      mainMapCluster = new lib.MarkerClusterer({
+        map: mainMapInstance,
+        renderer: makeClusterRenderer(),
+      });
+      // Marcadores já criados antes da lib carregar entram no cluster agora.
+      if (mainMapMarkers.length) {
+        mainMapMarkers.forEach(m => m.setMap(null));
+        mainMapCluster.addMarkers(mainMapMarkers);
+      }
     }
+    mainMapLabeled = labeled;
+
+    places.forEach(p => {
+      if (p.lat && p.lng) addMarker(p, { lat: p.lat, lng: p.lng });
+      else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+        fetchPlaceLatLng(p.pid).then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
+      } else if (p.a) {
+        geocodeAddress(p.a + ', Curitiba, PR').then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
+      }
+    });
+  });
+}
+
+// Alterna rótulos (nome) dos pins do mapa principal conforme o zoom atual.
+function applyMainLabelState() {
+  if (!mainMapInstance) return;
+  const labeled = (mainMapInstance.getZoom() || 13) >= LABEL_ZOOM;
+  if (labeled === mainMapLabeled) return; // nada mudou
+  mainMapLabeled = labeled;
+  mainMapMarkers.forEach(m => {
+    if (m._place) m.setIcon(placePinIcon(m._place, labeled));
   });
 }
 

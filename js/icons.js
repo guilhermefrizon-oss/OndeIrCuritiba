@@ -64,6 +64,12 @@ export function ic(name, size = 16, sw = 2) {
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 }
 
+// Retorna só o markup interno (paths) de um ícone, num viewBox 24x24.
+// Usado para embutir o ícone dentro do SVG dos marcadores do mapa.
+export function iconPath(name) {
+  return PATHS[name] || PATHS['map-pin'];
+}
+
 // ── Ícone por categoria (substitui o emoji vindo do banco) ─────────
 function norm(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
