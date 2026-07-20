@@ -130,14 +130,14 @@ export function renderFavorites(saved, onOpenProfile, onRemove) {
     document.getElementById('favEmpty').style.display = 'flex';
     grid.style.display = 'none';
     if (mapEl) mapEl.style.display = 'none';
-    subtitle.textContent = 'Nenhum lugar salvo';
+    subtitle.textContent = 'Nenhum lugar favoritado';
     document.getElementById('favToggle').style.display = 'none';
     return;
   }
 
   document.getElementById('favEmpty').style.display = 'none';
   document.getElementById('favToggle').style.display = 'flex';
-  subtitle.textContent = `${saved.length} lugar${saved.length > 1 ? 'es' : ''} salvo${saved.length > 1 ? 's' : ''}`;
+  subtitle.textContent = `${saved.length} lugar${saved.length > 1 ? 'es' : ''} favoritado${saved.length > 1 ? 's' : ''}`;
 
   if (favViewMode === 'map') {
     grid.style.display = 'none';

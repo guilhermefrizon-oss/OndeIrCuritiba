@@ -321,7 +321,7 @@ function paintResult() {
       <div class="quiz-reasons">${reasons.map(r => `<span class="quiz-reason">${r}</span>`).join('')}</div>
 
       <div class="quiz-actions">
-        <button class="quiz-act primary" id="quizSave">${ic('bookmark', 17)} Salvar</button>
+        <button class="quiz-act primary" id="quizSave">${ic('bookmark', 17)} Favoritar</button>
         <button class="quiz-act" id="quizMap">${ic('map-pin', 17)} Ver no mapa</button>
       </div>
       <button class="quiz-act ghost" id="quizReroll">${ic('undo', 16)} Não curti, sugere outro</button>
@@ -341,7 +341,7 @@ function paintResult() {
   saveBtn.onclick = () => {
     window.dmSavePlace && window.dmSavePlace(p);
     markSaved(saveBtn);
-    window.dmToast && window.dmToast('Salvo nos seus lugares!');
+    window.dmToast && window.dmToast('Favoritado!');
   };
 
   document.getElementById('quizMap').onclick = () => {
@@ -377,7 +377,7 @@ function paintResult() {
 function markSaved(btn) {
   if (!btn) return;
   btn.classList.add('done');
-  btn.innerHTML = `${ic('check', 17)} Salvo`;
+  btn.innerHTML = `${ic('check', 17)} Favoritado`;
 }
 
 function loadHero(p) {

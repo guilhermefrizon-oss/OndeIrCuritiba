@@ -1042,12 +1042,12 @@ window.savePlace = () => {
     st._to = setTimeout(() => { st.style.opacity = '0'; }, 900);
   }
   if (alreadySaved) {
-    showToast('✓ Já está nos salvos');
+    showToast('✓ Já está nos favoritos');
   } else if (!localStorage.getItem('cwb_hint_save')) {
     localStorage.setItem('cwb_hint_save','1');
-    showToast('Salvo para depois! Fica na aba "Salvos"', true);
+    showToast('Favoritado! Fica na aba "Favoritos"', true);
   } else {
-    showToast('Salvo para depois!');
+    showToast('Favoritado!');
   }
 };
 
@@ -1446,7 +1446,7 @@ async function openProfile(p) {
       </button>
       <button class="abtn b-save" id="pab-save" onclick="window.profileSaveToggle()">
         <div class="c"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
-        <div class="lbl" id="pab-save-lbl">Salvar</div>
+        <div class="lbl" id="pab-save-lbl">Favoritar</div>
       </button>`;
     // Fica embaixo de tudo, depois dos cards de info (endereço/bairro/horário).
     const infoGrid = document.getElementById('profileInfoGrid');
@@ -1583,7 +1583,7 @@ function updateProfileActionStates(p) {
   set('pab-want', !!wantToday.find(w => w.id === p.id));
   set('pab-save', save);
   const bl = document.getElementById('pab-been-lbl'); if (bl) bl.textContent = been ? 'Você já foi' : 'Já fui aqui';
-  const sl = document.getElementById('pab-save-lbl'); if (sl) sl.textContent = save ? 'Salvo'       : 'Salvar';
+  const sl = document.getElementById('pab-save-lbl'); if (sl) sl.textContent = save ? 'Favoritado'   : 'Favoritar';
 }
 
 function _requireLoginProfile() {
@@ -1634,7 +1634,7 @@ window.profileWant = () => {
 window.profileSaveToggle = () => {
   const p = _profilePlace; if (!p || !_requireLoginProfile()) return;
   if (saved.find(s => s.id === p.id)) { removeFav(p.id); showToast('Removido dos salvos'); }
-  else { doSave(p); showToast('Salvo para depois!'); }
+  else { doSave(p); showToast('Favoritado!'); }
   updateProfileActionStates(p);
 };
 
@@ -1878,7 +1878,7 @@ function renderMapView() {
     <div class="map-legend">
       <span><i style="background:#1a73e8"></i>Você</span>
       <span><i style="background:#ef4444"></i>Quero ir</span>
-      <span><i style="background:#f59e0b"></i>Salvos</span>
+      <span><i style="background:#f59e0b"></i>Favoritos</span>
       <span><i style="background:#14140F"></i>Demais</span>
     </div>
     <div id="mainMap" style="flex:1;width:100%;min-height:0;"></div>`;

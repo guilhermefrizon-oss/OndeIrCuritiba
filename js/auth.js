@@ -873,7 +873,7 @@ export function showUserProfile() {
           <div class="ups-stat-divider"></div>
           <div class="ups-stat">
             <div class="ups-stat-num" id="upsStatSaved">—</div>
-            <div class="ups-stat-lbl">Salvos</div>
+            <div class="ups-stat-lbl">Favoritos</div>
           </div>
           ${F.ratings ? `
           <div class="ups-stat-divider"></div>
@@ -1532,7 +1532,7 @@ export async function openStatsScreen() {
         </div>
         <div class="st-card">
           <div class="st-num" id="stSaved">…</div>
-          <div class="st-lbl">${ic('bookmark', 14)} Salvos</div>
+          <div class="st-lbl">${ic('bookmark', 14)} Favoritos</div>
         </div>
         ${F.ratings ? `
         <div class="st-card">

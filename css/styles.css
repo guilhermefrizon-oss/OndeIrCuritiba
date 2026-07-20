@@ -305,7 +305,7 @@ body {
 #discoverView .place-card { box-shadow: 0 4px 20px rgba(0, 0, 0, .16); }
 #discoverView .stack-wrap { padding-bottom: 10px; }
 #discoverView .btns {
-  position: absolute; left: 0; right: 0; bottom: 16px;
+  position: absolute; left: 0; right: 0; bottom: 30px;
   padding: 0 24px; gap: 18px; z-index: 30;
   background: none; pointer-events: none;           /* não bloqueia o swipe */
 }
@@ -322,7 +322,7 @@ body {
 #discoverView .btns .b-like .c { width: 60px; height: 60px; }
 #discoverView .btns .b-pass .c { width: 56px; height: 56px; }
 /* o texto do card sobe pra não ficar embaixo dos botões (círculo + rótulo) */
-.stack .card-bottom { padding-bottom: 100px; }
+.stack .card-bottom { padding-bottom: 116px; }
 .abtn { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; background: none; border: none; }
 .abtn .c { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid; transition: transform .12s, background .15s; box-shadow: var(--shadow); }
 .abtn:active .c { transform: scale(.91); }
@@ -403,13 +403,12 @@ body {
   background: var(--bg3); border-radius: 999px;
 }
 .disc-seg-btn {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; justify-content: center;
   border: none; background: none; cursor: pointer;
-  font-family: inherit; font-size: 13px; font-weight: 600;
-  color: var(--text2); padding: 7px 15px; border-radius: 999px;
+  color: var(--text2); padding: 8px 16px; border-radius: 999px;
   transition: background .15s, color .15s;
 }
-.disc-seg-btn svg { width: 15px; height: 15px; }
+.disc-seg-btn svg { width: 18px; height: 18px; }
 .disc-seg-btn.on { background: var(--bg2); color: var(--text); box-shadow: var(--shadow); }
 
 .discover-list {
