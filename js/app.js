@@ -30,6 +30,11 @@ let CE       = {};  // emojis do banco não são mais usados na UI
 let cat      = 'Todos';
 let filtered = [];
 let idx      = 0;
+// Visualização da tela principal: 'cards' (swipe) ou 'list' (rolagem).
+let discoverViewMode = (() => {
+  try { return localStorage.getItem('dm_discview') === 'list' ? 'list' : 'cards'; }
+  catch { return 'cards'; }
+})();
 let saved    = [];      // favoritos permanentes
 let wantToday = [];     // quero ir hoje
 let skipped   = {};     // pulados hoje {id: true}
@@ -167,6 +172,7 @@ async function init() {
   initQuiz(P);
 
   buildCategoryRow();
+  applyDiscoverViewDOM(); // aplica a visualização salva (cards/lista)
   renderCard();
   renderProgress();
   showWelcomeScreen();
@@ -440,8 +446,89 @@ function renderProgress() {
   }
 }
 
+// ── Visualização: Cards ↔ Lista ────────────────────────────────────
+function applyDiscoverViewDOM() {
+  const isList = discoverViewMode === 'list';
+  document.getElementById('discSegCards')?.classList.toggle('on', !isList);
+  document.getElementById('discSegList') ?.classList.toggle('on',  isList);
+  const wrap = document.querySelector('#discoverView .stack-wrap');
+  const btns = document.querySelector('#discoverView .btns');
+  const list = document.getElementById('discoverList');
+  if (wrap) wrap.style.display = isList ? 'none' : '';
+  if (btns) btns.style.display = isList ? 'none' : 'flex';
+  if (list) list.style.display = isList ? 'flex' : 'none';
+}
+
+function setDiscoverView(mode) {
+  discoverViewMode = mode === 'list' ? 'list' : 'cards';
+  try { localStorage.setItem('dm_discview', discoverViewMode); } catch {}
+  applyDiscoverViewDOM();
+  renderCard(); // monta o baralho ou a lista conforme o modo
+}
+window.setDiscoverView = setDiscoverView;
+window.toggleDiscoverView = () =>
+  setDiscoverView(discoverViewMode === 'list' ? 'cards' : 'list');
+
+// Observer para carregar as fotos das linhas só quando entram na tela
+// (evita dezenas de chamadas à API de fotos de uma vez).
+let _discPhotoObs = null;
+
+function renderDiscoverList() {
+  const list = document.getElementById('discoverList');
+  if (!list) return;
+  if (_discPhotoObs) { _discPhotoObs.disconnect(); _discPhotoObs = null; }
+
+  if (!filtered.length) {
+    list.innerHTML =
+      `<div class="empty" style="margin:auto"><div class="empty-ico">${ic('search', 40, 1.5)}</div>` +
+      `<div class="empty-title">Nada por aqui</div>` +
+      `<div class="empty-sub">Tente outra categoria ou horário.</div></div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'saved-row';
+    row.onclick = () => openProfile(p);
+    row.innerHTML =
+      `<div class="saved-thumb bg-${p.bg}" data-pid="${p.pid || ''}">${catIcon(p.c, 22, 1.7)}</div>` +
+      `<div style="flex:1;min-width:0;">` +
+        `<div class="saved-name">${p.n}</div>` +
+        `<div class="saved-meta">${p.b} · ${todayHoursText(p)}</div>` +
+      `</div>` +
+      `<div class="saved-price">${p.p}</div>`;
+    list.appendChild(row);
+
+    // Foto já disponível nos dados → aplica na hora, sem chamar a API.
+    const thumb = row.querySelector('.saved-thumb');
+    if (Array.isArray(p.photos) && p.photos.length) {
+      thumb.style.backgroundImage = `url("${p.photos[0]}")`;
+      thumb.innerHTML = '';
+      thumb.removeAttribute('data-pid');
+    }
+  });
+
+  // Lazy-load das fotos restantes conforme rola.
+  _discPhotoObs = new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const t = e.target; obs.unobserve(t);
+      const pid = t.getAttribute('data-pid');
+      if (pid && !pid.startsWith('ID_GOOGLE_')) {
+        fetchPlacePhoto(pid).then(url => {
+          if (url) { t.style.backgroundImage = `url("${url}")`; t.innerHTML = ''; }
+        });
+      }
+    });
+  }, { root: list, rootMargin: '250px' });
+  list.querySelectorAll('.saved-thumb[data-pid]').forEach(t => _discPhotoObs.observe(t));
+}
+
 // ── Cards ──────────────────────────────────────────────────────────
 function renderCard() {
+  // No modo lista, o baralho não é montado — renderiza a lista rolável.
+  if (discoverViewMode === 'list') { renderDiscoverList(); return; }
   const stack = document.getElementById('cardStack');
   stack.querySelectorAll('.place-card').forEach(e => e.remove());
   stack.querySelector('.deck-empty')?.remove();

@@ -103,6 +103,16 @@
 
   <!-- ── Discover view ── -->
   <div id="discoverView" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+    <div class="disc-toolbar">
+      <div class="disc-seg" role="tablist" aria-label="Visualização">
+        <button class="disc-seg-btn on" id="discSegCards" onclick="window.setDiscoverView('cards')" aria-label="Ver como cards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><line x1="8" y1="17" x2="16" y2="17"/></svg> Cards
+        </button>
+        <button class="disc-seg-btn" id="discSegList" onclick="window.setDiscoverView('list')" aria-label="Ver como lista">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> Lista
+        </button>
+      </div>
+    </div>
     <div class="stack-wrap">
       <div class="stack" id="cardStack">
         <div class="stamp stamp-like" id="likeStamp">Quero ir!</div>
@@ -129,6 +139,8 @@
         <div class="lbl">Salvar</div>
       </button>
     </div>
+    <!-- Lista (alternativa aos cards) -->
+    <div class="discover-list" id="discoverList" style="display:none;"></div>
   </div>
 
   <!-- ── Want Today view ── -->
