@@ -196,32 +196,34 @@
 
 <!-- ── Profile Screen ── -->
 <div class="profile-screen" id="profileScreen" style="display:none;">
-  <div class="profile-photo-wrap" id="profilePhotoWrap">
-    <div class="profile-photo-img"      id="profilePhotoImg"></div>
-    <div class="profile-photo-fallback" id="profilePhotoFallback"></div>
-    <div class="story-bars" id="storyBars"></div>
-    <div class="story-tap story-tap-left"  id="storyTapLeft"></div>
-    <div class="story-tap story-tap-right" id="storyTapRight"></div>
-    <button class="profile-close" id="profileClose">
-      <svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-    <button class="profile-share" id="profileShare" title="Compartilhar">
-      <svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
-    </button>
-    <div class="profile-photo-overlay"></div>
-  </div>
-  <div class="profile-body" id="profileBody">
-    <div class="profile-name"    id="profileName"></div>
-    <div class="profile-cat-row">
-      <div class="profile-cat-badge" id="profileCat"></div>
-      <div class="profile-price"     id="profilePrice"></div>
+  <button class="profile-close" id="profileClose" aria-label="Voltar">
+    <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+  </button>
+  <button class="profile-share" id="profileShare" title="Compartilhar" aria-label="Compartilhar">
+    <svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+  </button>
+  <div class="profile-scroll" id="profileScroll">
+    <div class="profile-photo-wrap" id="profilePhotoWrap">
+      <div class="profile-photo-img"      id="profilePhotoImg"></div>
+      <div class="profile-photo-fallback" id="profilePhotoFallback"></div>
+      <div class="story-bars" id="storyBars"></div>
+      <div class="story-tap story-tap-left"  id="storyTapLeft"></div>
+      <div class="story-tap story-tap-right" id="storyTapRight"></div>
+      <div class="profile-photo-overlay"></div>
     </div>
-    <div class="profile-info-grid" id="profileInfoGrid"></div>
-    <a class="ig-btn" id="profileIgBtn" target="_blank" rel="noopener">
-      <span class="ig-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
-      <span id="profileIgHandle"></span>
-    </a>
-    <!-- Comentários injetados por comments.js -->
+    <div class="profile-body" id="profileBody">
+      <div class="profile-name"    id="profileName"></div>
+      <div class="profile-cat-row">
+        <div class="profile-cat-badge" id="profileCat"></div>
+        <div class="profile-price"     id="profilePrice"></div>
+      </div>
+      <div class="profile-info-grid" id="profileInfoGrid"></div>
+      <a class="ig-btn" id="profileIgBtn" target="_blank" rel="noopener">
+        <span class="ig-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        <span id="profileIgHandle"></span>
+      </a>
+      <!-- Comentários injetados por comments.js -->
+    </div>
   </div>
 </div>
 

@@ -594,8 +594,8 @@ body {
 .story-bar-fill { height: 100%; background: #fff; width: 0%; }
 .story-bar-fill.done { width: 100%; }
 .profile-close {
-  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 14px; z-index: 30;
-  width: 34px; height: 34px; border-radius: 50%;
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 14px; z-index: 40;
+  width: 38px; height: 38px; border-radius: 50%;
   background: rgba(0,0,0,.42); backdrop-filter: blur(10px);
   border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: background .15s;
@@ -604,8 +604,8 @@ body {
 
 /* Botão de compartilhar o lugar — espelha o fechar, no canto superior esquerdo */
 .profile-share {
-  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 14px; z-index: 30;
-  width: 34px; height: 34px; border-radius: 50%;
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 14px; z-index: 40;
+  width: 38px; height: 38px; border-radius: 50%;
   background: rgba(0,0,0,.42); backdrop-filter: blur(10px);
   border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: background .15s;
@@ -614,7 +614,11 @@ body {
 .profile-share svg { stroke: #fff; }
 .profile-photo-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to top, var(--bg) 0%, transparent 100%); pointer-events: none; z-index: 5; }
 
-.profile-body { flex: 1; overflow-y: auto; padding: 0 22px 40px; scrollbar-width: none; }
+/* Scroll único: a foto (hero) rola junto com as infos e sai pra cima;
+   os botões voltar/compartilhar ficam fixos no topo da tela. */
+.profile-scroll { flex: 1; overflow-y: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.profile-scroll::-webkit-scrollbar { display: none; }
+.profile-body { padding: 0 22px 40px; }
 .profile-body::-webkit-scrollbar { display: none; }
 .profile-name { font-size: 28px; font-weight: 800; letter-spacing: -1px; color: var(--text); line-height: 1.05; margin-bottom: 6px; }
 .profile-cat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
