@@ -1,10 +1,10 @@
 // ── comments.js ───────────────────────────────────────────────────
-// Seção unificada de avaliação + comentário.
+// Seção de avaliação + comentário (com foto opcional).
 // Estrelas são opcionais; comentário é obrigatório para enviar.
 // Se estrelas forem selecionadas, chama submitRating() de ratings.js.
 
 import {
-  db,
+  db, doc, deleteDoc,
   addDoc, collection, query, orderBy, onSnapshot, serverTimestamp
 } from './firebase.js';
 import { ic } from './icons.js';
@@ -13,17 +13,19 @@ import { awardXp } from './xp.js';
 import { checkAndAwardBadges } from './badges.js';
 
 let activeUnsubscribe = null;
+let pendingPhoto = null; // data URL da foto anexada ao comentário em digitação
 
 // ── Ponto de entrada ───────────────────────────────────────────────
 export function renderCommentsSection(placeId) {
   const old = document.getElementById('commentsSection');
   if (old) old.remove();
+  pendingPhoto = null;
 
   const section = document.createElement('div');
   section.className = 'comments-section';
   section.id = 'commentsSection';
   section.innerHTML = `
-    <div class="comments-title">${ic('star', 16)} Avalie e comente</div>
+    <div class="comments-title">${ic('message-circle', 16)} Avaliações e comentários</div>
     <div id="commentInputArea"></div>
     <div class="comment-list" id="commentList">
       <div class="comment-loading"><div class="spinner"></div></div>
@@ -59,7 +61,6 @@ async function renderCommentInput(placeId) {
     return;
   }
 
-  // Renderiza imediatamente com 0 estrelas; atualiza depois
   buildUnifiedInput(area, placeId, 0);
 
   const { userStars } = await loadRating(placeId);
@@ -74,11 +75,12 @@ async function renderCommentInput(placeId) {
   }
 }
 
-// ── Monta o card unificado (estrelas + caixa de texto) ─────────────
+// ── Monta o card unificado (estrelas + texto + foto) ───────────────
 function buildUnifiedInput(area, placeId, initialStars) {
   const user = window.currentUser;
+  pendingPhoto = null;
   const avatarHTML = user.photoURL
-    ? `<img src="${user.photoURL}" alt="">`
+    ? `<img src="${esc(user.photoURL)}" alt="">`
     : (user.displayName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   area.innerHTML = `
@@ -93,15 +95,29 @@ function buildUnifiedInput(area, placeId, initialStars) {
         <div class="comment-avatar-mini">${avatarHTML}</div>
         <textarea class="comment-textarea" id="commentTextarea"
           placeholder="Conta o que achou deste lugar..." rows="1" maxlength="500"></textarea>
+      </div>
+      <div class="unified-photo-preview" id="uPhotoPreview" style="display:none"></div>
+      <div class="unified-actions">
+        <button class="comment-photo-btn" id="commentPhotoBtn" type="button" title="Adicionar foto">
+          ${ic('camera', 16)} <span>Foto</span>
+        </button>
+        <input type="file" id="commentPhotoInput" accept="image/*" style="display:none">
         <button class="comment-send-btn" id="commentSendBtn" disabled>Enviar</button>
       </div>
     </div>`;
 
-  const picker   = document.getElementById('uStarPicker');
-  const textarea = document.getElementById('commentTextarea');
-  const sendBtn  = document.getElementById('commentSendBtn');
+  const picker    = document.getElementById('uStarPicker');
+  const textarea  = document.getElementById('commentTextarea');
+  const sendBtn   = document.getElementById('commentSendBtn');
+  const photoBtn  = document.getElementById('commentPhotoBtn');
+  const photoInput= document.getElementById('commentPhotoInput');
+  const preview   = document.getElementById('uPhotoPreview');
 
-  // ── Lógica do picker de estrelas ──────────────────────────────
+  const refreshSend = () => {
+    sendBtn.disabled = textarea.value.trim().length === 0;
+  };
+
+  // ── Picker de estrelas ────────────────────────────────────────
   picker.addEventListener('click', e => {
     const btn = e.target.closest('.rstar');
     if (!btn) return;
@@ -111,28 +127,42 @@ function buildUnifiedInput(area, placeId, initialStars) {
     const label = area.querySelector('.unified-stars-label');
     if (label) label.textContent = `Sua nota: ${val}★`;
   });
-  picker.addEventListener('mouseover', e => {
-    const btn = e.target.closest('.rstar');
-    if (!btn) return;
-    const val = parseInt(btn.dataset.val);
-    picker.querySelectorAll('.rstar').forEach((b, i) => b.classList.toggle('hover', i < val));
-  });
-  picker.addEventListener('mouseout', () => {
-    const pending = parseInt(picker.dataset.pending || 0);
-    picker.querySelectorAll('.rstar').forEach((b, i) => {
-      b.classList.remove('hover');
-      b.classList.toggle('on', i < pending);
-    });
-  });
 
-  // ── Lógica do textarea ────────────────────────────────────────
+  // ── Textarea ──────────────────────────────────────────────────
   textarea.addEventListener('input', () => {
     textarea.style.height = 'auto';
     textarea.style.height = textarea.scrollHeight + 'px';
-    sendBtn.disabled = textarea.value.trim().length === 0;
+    refreshSend();
   });
 
-  const doSubmit = () => submitUnifiedReview(placeId, textarea, sendBtn, picker, area);
+  // ── Foto ──────────────────────────────────────────────────────
+  photoBtn.addEventListener('click', () => photoInput.click());
+  photoInput.addEventListener('change', async () => {
+    const file = photoInput.files?.[0];
+    photoInput.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { window.showToast?.('Selecione uma imagem.', 'error'); return; }
+    try {
+      preview.style.display = 'block';
+      preview.innerHTML = '<div class="upp-loading">Processando foto…</div>';
+      pendingPhoto = await resizeImageMax(file, 900, 380000);
+      preview.innerHTML = `
+        <div class="upp-thumb">
+          <img src="${pendingPhoto}" alt="">
+          <button class="upp-remove" type="button" title="Remover foto">${ic('x', 14)}</button>
+        </div>`;
+      preview.querySelector('.upp-remove').addEventListener('click', () => {
+        pendingPhoto = null; preview.style.display = 'none'; preview.innerHTML = '';
+      });
+    } catch (e) {
+      console.warn('resize foto comentário:', e);
+      pendingPhoto = null; preview.style.display = 'none'; preview.innerHTML = '';
+      window.showToast?.('Não consegui processar a foto.', 'error');
+    }
+  });
+
+  // ── Enviar ────────────────────────────────────────────────────
+  const doSubmit = () => submitUnifiedReview(placeId, textarea, sendBtn, picker, area, preview);
   sendBtn.addEventListener('click', doSubmit);
   textarea.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey && textarea.value.trim()) {
@@ -142,8 +172,8 @@ function buildUnifiedInput(area, placeId, initialStars) {
   });
 }
 
-// ── Envio unificado (rating opcional + comentário) ─────────────────
-async function submitUnifiedReview(placeId, textarea, sendBtn, picker, area) {
+// ── Envio unificado (rating opcional + comentário + foto opcional) ─
+async function submitUnifiedReview(placeId, textarea, sendBtn, picker, area, preview) {
   const text  = textarea.value.trim().slice(0, 500);
   const stars = parseInt(picker?.dataset.pending || 0);
   if (!text || !window.currentUser) return;
@@ -152,33 +182,33 @@ async function submitUnifiedReview(placeId, textarea, sendBtn, picker, area) {
   sendBtn.textContent = '...';
 
   try {
-    if (stars > 0) {
-      await submitRating(placeId, stars);
-    }
-    await addDoc(collection(db, 'comments', placeId, 'items'), {
+    if (stars > 0) await submitRating(placeId, stars);
+
+    const payload = {
       text,
       stars:     stars || null,
       userId:    window.currentUser.uid,
       userName:  window.currentUser.displayName || 'Usuário',
       userPhoto: window.currentUser.photoURL || null,
       createdAt: serverTimestamp()
-    });
+    };
+    if (pendingPhoto) payload.photo = pendingPhoto; // só inclui se houver foto
 
+    await addDoc(collection(db, 'comments', placeId, 'items'), payload);
+
+    // Limpa o formulário
     textarea.value = '';
     textarea.style.height = 'auto';
+    pendingPhoto = null;
+    if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
     sendBtn.textContent = 'Enviar';
-    // Concede XP e verifica badges por comentário
+
     awardXp('comment', { placeId });
     checkAndAwardBadges();
 
-    // Atualiza label de estrelas pós-envio
     const label = area?.querySelector('.unified-stars-label');
     if (label && stars > 0) label.textContent = `Sua nota: ${stars}★ — alterar:`;
-
-    // Atualiza o bloco de resumo (topo do perfil)
-    if (stars > 0 && typeof window.renderRatingBlock === 'function') {
-      window.renderRatingBlock(placeId);
-    }
+    if (stars > 0 && typeof window.renderRatingBlock === 'function') window.renderRatingBlock(placeId);
   } catch (e) {
     console.warn('Erro ao enviar:', e);
     sendBtn.textContent = 'Erro';
@@ -189,10 +219,7 @@ async function submitUnifiedReview(placeId, textarea, sendBtn, picker, area) {
 // ── Listener de comentários em tempo real ─────────────────────────
 function subscribeToComments(placeId) {
   if (activeUnsubscribe) activeUnsubscribe();
-  const q = query(
-    collection(db, 'comments', placeId, 'items'),
-    orderBy('createdAt', 'desc')
-  );
+  const q = query(collection(db, 'comments', placeId, 'items'), orderBy('createdAt', 'desc'));
   activeUnsubscribe = onSnapshot(q, snap => {
     const list = document.getElementById('commentList');
     if (!list) return;
@@ -201,37 +228,7 @@ function subscribeToComments(placeId) {
       return;
     }
     list.innerHTML = '';
-    snap.forEach(docSnap => {
-      const c        = docSnap.data();
-      const dateStr  = c.createdAt?.toDate ? formatDate(c.createdAt.toDate()) : 'agora';
-      const initials = (c.userName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-      // Segurança: só aceita URL https como foto (evita injeção de HTML/JS
-      // via campo userPhoto gravado por script malicioso) e escapa o valor.
-      const photoOk  = typeof c.userPhoto === 'string' && /^https:\/\//i.test(c.userPhoto);
-      const avatar   = photoOk ? `<img src="${esc(c.userPhoto)}" alt="${esc(c.userName)}">` : initials;
-      const starsHTML = c.stars
-        ? `<span class="comment-stars">${'★'.repeat(c.stars)}${'★'.repeat(5 - c.stars).replace(/★/g,'<span style="opacity:.3">★</span>')}</span>`
-        : '';
-      const isMine    = window.currentUser && c.userId === window.currentUser.uid;
-      const reportBtn = isMine ? '' : `
-            <button class="comment-report-btn" title="Denunciar comentário"
-              data-comment-id="${esc(docSnap.id)}" aria-label="Denunciar">⚑</button>`;
-      const item = document.createElement('div');
-      item.className = 'comment-item';
-      item.innerHTML = `
-        <div class="comment-user-avatar">${avatar}</div>
-        <div class="comment-bubble">
-          <div class="comment-bubble-header">
-            <span class="comment-user-name">${esc(c.userName)}</span>
-            <span class="comment-date">${dateStr}</span>${reportBtn}
-          </div>
-          ${starsHTML}
-          <div class="comment-text">${esc(c.text)}</div>
-        </div>`;
-      const rbtn = item.querySelector('.comment-report-btn');
-      if (rbtn) rbtn.addEventListener('click', () => reportComment(placeId, docSnap.id, c, rbtn));
-      list.appendChild(item);
-    });
+    snap.forEach(docSnap => list.appendChild(buildCommentCard(placeId, docSnap.id, docSnap.data())));
   }, err => {
     console.warn('Erro ao carregar comentários:', err);
     const list = document.getElementById('commentList');
@@ -239,14 +236,129 @@ function subscribeToComments(placeId) {
   });
 }
 
+// ── Card de um comentário ──────────────────────────────────────────
+function buildCommentCard(placeId, commentId, c) {
+  const dateStr  = c.createdAt?.toDate ? formatDate(c.createdAt.toDate()) : 'agora';
+  const initials = (c.userName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const photoOk  = typeof c.userPhoto === 'string' && /^https:\/\//i.test(c.userPhoto);
+  const avatar   = photoOk ? `<img src="${esc(c.userPhoto)}" alt="${esc(c.userName)}">` : initials;
+  const isMine   = window.currentUser && c.userId === window.currentUser.uid;
+
+  const starsHTML = c.stars
+    ? `<div class="cm-stars">${'★'.repeat(c.stars)}<span class="cm-stars-off">${'★'.repeat(5 - c.stars)}</span></div>`
+    : '';
+
+  // Foto do comentário: aceita data URL de imagem ou https
+  const cPhotoOk = typeof c.photo === 'string' && /^(data:image\/|https:\/\/)/i.test(c.photo);
+  const photoHTML = cPhotoOk
+    ? `<div class="cm-photo"><img src="${esc(c.photo)}" alt="Foto do comentário" loading="lazy"></div>`
+    : '';
+
+  const item = document.createElement('div');
+  item.className = 'cm-item';
+  item.innerHTML = `
+    <div class="cm-top">
+      <div class="cm-avatar">${avatar}</div>
+      <div class="cm-name">${esc(c.userName)}</div>
+      ${starsHTML}
+    </div>
+    <div class="cm-body">
+      ${photoHTML}
+      <div class="cm-text">${esc(c.text)}</div>
+    </div>
+    <div class="cm-foot"><span class="cm-time">${dateStr}</span></div>`;
+
+  // Expandir texto/foto ao tocar no corpo (não na foto — a foto abre o zoom)
+  const body = item.querySelector('.cm-body');
+  const textEl = item.querySelector('.cm-text');
+  body.addEventListener('click', (e) => {
+    if (e.target.closest('.cm-photo')) return;      // clique na foto → lightbox
+    if (item._wasLongPress) { item._wasLongPress = false; return; }
+    item.classList.toggle('expanded');
+  });
+  // marca se o texto é grande (pra mostrar o "ver mais")
+  requestAnimationFrame(() => {
+    if (textEl.scrollHeight > textEl.clientHeight + 4) item.classList.add('cm-clampable');
+  });
+
+  // Clique na foto → lightbox
+  const photoEl = item.querySelector('.cm-photo img');
+  if (photoEl) photoEl.addEventListener('click', (e) => { e.stopPropagation(); openLightbox(photoEl.src); });
+
+  // Segurar (long-press) → menu Denunciar / Excluir
+  attachLongPress(item, () => showCommentMenu(item, placeId, commentId, c, isMine));
+
+  return item;
+}
+
+// ── Long-press (toque/mouse) ───────────────────────────────────────
+function attachLongPress(el, onLongPress, ms = 480) {
+  let timer = null, sx = 0, sy = 0;
+  const start = (x, y) => {
+    sx = x; sy = y; el._wasLongPress = false;
+    timer = setTimeout(() => { el._wasLongPress = true; onLongPress(); }, ms);
+  };
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  el.addEventListener('touchstart', (e) => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) cancel();
+  }, { passive: true });
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchcancel', cancel);
+  // Desktop: mouse
+  el.addEventListener('mousedown', (e) => start(e.clientX, e.clientY));
+  el.addEventListener('mousemove', (e) => { if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) cancel(); });
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+  // Botão direito também abre o menu (desktop)
+  el.addEventListener('contextmenu', (e) => { e.preventDefault(); el._wasLongPress = true; onLongPress(); });
+}
+
+// ── Menu de ações do comentário (long-press) ───────────────────────
+function showCommentMenu(item, placeId, commentId, c, isMine) {
+  closeCommentMenu();
+  const bd = document.createElement('div');
+  bd.className = 'cm-menu-backdrop';
+  bd.id = 'cmMenuBackdrop';
+  bd.innerHTML = `
+    <div class="cm-menu">
+      ${isMine
+        ? `<button class="cm-menu-item danger" data-act="delete">${ic('trash', 16)} Excluir comentário</button>`
+        : `<button class="cm-menu-item danger" data-act="report">${ic('alert', 16)} Denunciar comentário</button>`}
+      <button class="cm-menu-item" data-act="cancel">Cancelar</button>
+    </div>`;
+  document.body.appendChild(bd);
+  if (window.navigator?.vibrate) { try { navigator.vibrate(12); } catch {} }
+
+  bd.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cm-menu-item');
+    if (!btn && e.target === bd) { closeCommentMenu(); return; }
+    if (!btn) return;
+    const act = btn.dataset.act;
+    closeCommentMenu();
+    if (act === 'report') reportComment(placeId, commentId, c);
+    else if (act === 'delete') deleteComment(placeId, commentId);
+  });
+}
+function closeCommentMenu() {
+  document.getElementById('cmMenuBackdrop')?.remove();
+}
+
+// ── Lightbox (foto ampliada) ───────────────────────────────────────
+function openLightbox(src) {
+  const bd = document.createElement('div');
+  bd.className = 'cm-lightbox';
+  bd.innerHTML = `<img src="${esc(src)}" alt=""><button class="cm-lightbox-close" aria-label="Fechar">${ic('x', 22)}</button>`;
+  bd.addEventListener('click', () => bd.remove());
+  document.body.appendChild(bd);
+}
+
 // ── Denúncia de comentário ─────────────────────────────────────────
-// Exigido pela política de conteúdo gerado por usuário da Google Play:
-// qualquer usuário pode sinalizar um comentário; a fila aparece no admin.
-async function reportComment(placeId, commentId, c, btn) {
+async function reportComment(placeId, commentId, c) {
   if (!window.currentUser) { window.showAuthModal?.(); return; }
   if (!confirm('Denunciar este comentário como impróprio?')) return;
   try {
-    btn.disabled = true;
     await addDoc(collection(db, 'comment_reports'), {
       placeId,
       commentId,
@@ -257,16 +369,28 @@ async function reportComment(placeId, commentId, c, btn) {
       status:          'pending',
       createdAt:       serverTimestamp()
     });
-    btn.textContent = '✓';
-    btn.title = 'Denúncia enviada';
+    window.showToast?.('Denúncia enviada. Obrigado!', true);
   } catch (e) {
     console.warn('Erro ao denunciar:', e);
-    btn.disabled = false;
+    window.showToast?.('Não consegui enviar a denúncia.', 'error');
+  }
+}
+
+// ── Excluir o próprio comentário ───────────────────────────────────
+async function deleteComment(placeId, commentId) {
+  if (!confirm('Excluir seu comentário?')) return;
+  try {
+    await deleteDoc(doc(db, 'comments', placeId, 'items', commentId));
+    window.showToast?.('Comentário excluído.', true);
+  } catch (e) {
+    console.warn('Erro ao excluir:', e);
+    window.showToast?.('Não consegui excluir agora.', 'error');
   }
 }
 
 export function unsubscribeComments() {
   if (activeUnsubscribe) { activeUnsubscribe(); activeUnsubscribe = null; }
+  closeCommentMenu();
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -275,11 +399,39 @@ function formatDate(date) {
   if (diff < 60)    return 'agora';
   if (diff < 3600)  return `${Math.floor(diff / 60)}min`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  const days = Math.floor(diff / 86400);
+  if (days < 7)     return `${days}d`;
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 }
 
 function esc(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Redimensiona a imagem mantendo proporção (lado maior = maxDim) e reduz a
+// qualidade até caber em maxBytes (tamanho aproximado do data URL).
+function resizeImageMax(file, maxDim = 900, maxBytes = 380000) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else if (height > maxDim)             { width  = Math.round(width * maxDim / height); height = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        let q = 0.72, url = canvas.toDataURL('image/jpeg', q);
+        while (url.length > maxBytes && q > 0.4) { q -= 0.1; url = canvas.toDataURL('image/jpeg', q); }
+        resolve(url);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 // Atualiza input quando auth muda (login/logout)

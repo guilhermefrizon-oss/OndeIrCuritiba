@@ -120,7 +120,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.keys().hasOnly(
-             ['text', 'stars', 'userId', 'userName', 'userPhoto', 'createdAt'])
+             ['text', 'stars', 'userId', 'userName', 'userPhoto', 'photo', 'createdAt'])
         && request.resource.data.text is string
         && request.resource.data.text.size() >= 1
         && request.resource.data.text.size() <= 500
@@ -134,7 +134,14 @@ service cloud.firestore {
         && (request.resource.data.userPhoto == null
             || (request.resource.data.userPhoto is string
                 && request.resource.data.userPhoto.size() <= 500
-                && request.resource.data.userPhoto.matches('https://.*')));
+                && request.resource.data.userPhoto.matches('https://.*')))
+        // Foto do comentário: opcional. Ou ausente/null, ou uma data URL de
+        // imagem (base64) com teto de ~400 KB (bem abaixo do limite de 1 MB
+        // do documento). Mesmo padrão da foto de perfil.
+        && (!('photo' in request.resource.data) || request.resource.data.photo == null
+            || (request.resource.data.photo is string
+                && request.resource.data.photo.size() <= 400000
+                && request.resource.data.photo.matches('data:image/.*')));
       allow update, delete: if isAdmin()
         || (signedIn() && resource.data.userId == request.auth.uid);
     }
