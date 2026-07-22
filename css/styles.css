@@ -343,7 +343,7 @@ body {
 .ni { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 8px 4px; border-radius: 16px; transition: background .15s; background: none; border: none; }
 .ni.on { background: var(--p100); }
 .ni-icon { font-size: 19px; line-height: 1; }
-.ni-lbl { font-size: 10px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text3); }
+.ni-lbl { font-size: 10px; font-weight: 600; letter-spacing: .6px; text-transform: none; color: var(--text3); }
 .ni.on .ni-lbl { color: var(--acc); }
 .nbadge { position: absolute; top: -6px; right: -10px; background: var(--blue); color: var(--blue-ink); font-size: 9px; font-weight: 800; line-height: 1; border-radius: 100px; padding: 2px 5px; min-width: 15px; text-align: center; box-shadow: 0 0 0 2px var(--bg2); }
 
