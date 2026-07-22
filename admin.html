@@ -182,6 +182,8 @@ body {
 }
 
 .tool-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+.tool-step { align-self: flex-start; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--acc3); background: var(--acc-glow, rgba(255,255,255,.08)); border: 1px solid var(--border); padding: 3px 10px; border-radius: 999px; margin-bottom: 2px; }
+.tool-step-opt { color: var(--text3); }
 .tool-card-ic { color: var(--acc3); opacity: .85; }
 .tool-card-t { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 15px; color: var(--text); }
 .tool-card-d { font-size: 13px; color: var(--text2); line-height: 1.5; flex: 1; }
@@ -1330,32 +1332,42 @@ th.sortable:hover { color: var(--acc3); }
         <div>As fotos ficam hospedadas de graça na pasta <strong>fotos/</strong> do projeto. O fluxo é: <strong>1)</strong> baixar o .zip aqui → <strong>2)</strong> extrair na raiz do projeto e me avisar pra dar o push → <strong>3)</strong> clicar em <strong>Aplicar</strong>. Na aba <strong>Lugares</strong>, a coluna “Fotos” mostra quem ainda não está local.</div>
       </div>
 
-      <div class="section-label" style="margin-top:24px">Fotos</div>
+      <div class="section-label" style="margin-top:24px">Fotos · passo a passo</div>
       <div class="tools-grid">
         <div class="tool-card">
-          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-          <div class="tool-card-t">1 · Baixar faltantes</div>
-          <div class="tool-card-d">Baixa do Google (em HD) as fotos dos lugares que ainda <strong>não estão locais</strong> — sem foto ou com foto externa. Gera um .zip pra pasta fotos/. É o que você usa no dia a dia ao adicionar lugares.</div>
+          <div class="tool-step">Passo 1</div>
+          <div class="tool-card-t">Baixar faltantes</div>
+          <div class="tool-card-d">Baixa do Google (em HD) as fotos dos lugares que ainda <strong>não estão locais</strong> — sem foto ou com foto externa. Gera um <strong>.zip</strong> pra pasta fotos/. É o que você usa no dia a dia ao adicionar lugares.</div>
           <button class="btn btn-primary" onclick="hdFetchMissing()" id="btnHdMissing">Baixar faltantes (.zip)</button>
         </div>
         <div class="tool-card">
-          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></div>
-          <div class="tool-card-t">Re-baixar tudo em HD</div>
-          <div class="tool-card-d">Refaz <strong>todas</strong> as fotos em alta resolução (corrige pixelização). Usa mais API do Google — rode só quando quiser um upgrade geral, não é do dia a dia.</div>
-          <button class="btn" onclick="hdFetchAll()" id="btnHdAll">Re-baixar tudo (.zip)</button>
+          <div class="tool-step">Passo 2</div>
+          <div class="tool-card-t">Subir a pasta fotos/</div>
+          <div class="tool-card-d">Extraia o .zip e coloque a pasta <strong>fotos/</strong> na raiz do projeto. Depois <strong>me avise no chat</strong> — eu faço o commit/push pro GitHub (é onde as fotos ficam hospedadas de graça).</div>
+          <div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:8px">Esse passo é comigo — não tem botão.</div>
         </div>
         <div class="tool-card">
-          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="tool-card-t">3 · Aplicar fotos</div>
-          <div class="tool-card-d">Passo final: depois que a pasta fotos/ já foi pro ar (push), aponta os endereços das fotos no banco. <strong>Só clique depois do push</strong>, senão as fotos ficam quebradas até subir.</div>
-          <button class="btn" onclick="applyHDPhotos()" id="btnHdApply">Aplicar no banco</button>
+          <div class="tool-step">Passo 3</div>
+          <div class="tool-card-t">Aplicar no banco</div>
+          <div class="tool-card-d">Só <strong>depois</strong> do push: aponta os endereços das fotos no banco. Se clicar antes de eu subir, as fotos ficam quebradas até subir.</div>
+          <button class="btn btn-primary" onclick="applyHDPhotos()" id="btnHdApply">Aplicar no banco</button>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:28px">Fotos · extras (uso raro)</div>
+      <div class="tools-grid">
+        <div class="tool-card">
+          <div class="tool-step tool-step-opt">Opcional</div>
+          <div class="tool-card-t">Re-baixar tudo em HD</div>
+          <div class="tool-card-d">Refaz <strong>todas</strong> as fotos em alta resolução de uma vez (corrige pixelização geral). Usa mais API do Google — só quando quiser um upgrade completo. Depois segue o Passo 2 e 3 normalmente.</div>
+          <button class="btn" onclick="hdFetchAll()" id="btnHdAll">Re-baixar tudo (.zip)</button>
         </div>
       </div>
 
       <div class="section-label" style="margin-top:28px">Horários</div>
       <div class="tools-grid">
         <div class="tool-card">
-          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+          <div class="tool-step tool-step-opt">Manutenção</div>
           <div class="tool-card-t">Converter horários</div>
           <div class="tool-card-d">Preenche a grade de horário por dia dos lugares antigos a partir do texto — sem sobrescrever quem já tem a grade preenchida.</div>
           <button class="btn" onclick="migrateHours()" id="btnMigrateHours">Converter horários</button>
