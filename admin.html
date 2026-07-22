@@ -178,9 +178,19 @@ body {
   text-transform: uppercase;
   color: var(--text3);
   padding: 0 12px;
-  margin-bottom: 32px;
+  margin-bottom: 22px;
 }
 
+.nav-section {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 0 12px;
+  margin: 18px 0 6px;
+}
+.nav-section:first-of-type { margin-top: 0; }
 .nav-item {
   display: flex;
   align-items: center;
@@ -1127,10 +1137,21 @@ th.sortable:hover { color: var(--acc3); }
     <div class="sidebar-logo">Onde<em>Ir</em></div>
     <div class="sidebar-badge">Admin Panel</div>
 
+    <div class="nav-section">Conteúdo</div>
     <button class="nav-item active" onclick="showPage('places')" id="nav-places">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
       Lugares
     </button>
+    <button class="nav-item" onclick="showPage('categories')" id="nav-categories">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Categorias
+    </button>
+    <button class="nav-item" onclick="showPage('quiz')" id="nav-quiz">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Quiz
+    </button>
+
+    <div class="nav-section">Moderação</div>
     <button class="nav-item" onclick="showPage('corrections')" id="nav-corrections">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Correções
@@ -1146,14 +1167,8 @@ th.sortable:hover { color: var(--acc3); }
       Notificações
       <span class="nav-count" id="notifScheduledCount" style="display:none;background:#8b6f2e">0</span>
     </button>
-    <button class="nav-item" onclick="showPage('categories')" id="nav-categories">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Categorias
-    </button>
-    <button class="nav-item" onclick="showPage('quiz')" id="nav-quiz">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Quiz
-    </button>
+
+    <div class="nav-section">Sistema</div>
     <button class="nav-item" onclick="showPage('metrics')" id="nav-metrics">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Métricas
