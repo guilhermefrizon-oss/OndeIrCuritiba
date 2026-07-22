@@ -1212,17 +1212,21 @@ th.sortable:hover { color: var(--acc3); }
           <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap">
-          <button class="btn" onclick="hostAllPhotos()" id="btnHostAllPhotos" title="Baixa e hospeda no nosso Storage as fotos dos lugares que ainda não têm — deixa o app rápido e sem custo de API do Google">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            Salvar todas as fotos
+          <button class="btn" onclick="hdFetchMissing()" id="btnHdMissing" title="Baixa do Google, em alta resolução, as fotos dos lugares que ainda não têm foto local. Gera um .zip pra você colocar na pasta fotos/ do projeto.">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Fotos: baixar novas
+          </button>
+          <button class="btn" onclick="hdFetchAll()" id="btnHdAll" title="Re-baixa em ALTA RESOLUÇÃO as fotos de TODOS os lugares com Google ID (corrige a pixelização). Usa a API do Google (custo pequeno, uma vez).">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+            Fotos: re-HD tudo
+          </button>
+          <button class="btn" onclick="applyHDPhotos()" id="btnHdApply" title="Depois de já ter dado push na pasta fotos/, aponta os endereços das fotos no banco.">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Fotos: aplicar
           </button>
           <button class="btn" onclick="migrateHours()" id="btnMigrateHours" title="Preenche a grade de horário por dia dos lugares antigos a partir do texto — sem sobrescrever quem já tem">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
             Converter horários
-          </button>
-          <button class="btn" onclick="repointPhotosToLocal()" id="btnRepointPhotos" title="Troca os endereços das fotos no banco (Storage → pasta fotos/). Rode SÓ depois de já ter baixado a pasta fotos/ e dado push.">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-            Apontar fotos p/ /fotos
           </button>
           <button class="btn btn-primary" onclick="openAddModal()">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -2576,6 +2580,109 @@ window.repointPhotosToLocal = async () => {
     showToast('Endereços trocados! Agora pode esvaziar o Storage e ir pro Spark. 🎉', 'success');
   } catch (e) {
     showToast('Erro ao trocar: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
+};
+
+// ── Fotos em HD do Google → pasta /fotos (servidor interno, sem Storage) ──
+// Resolução alvo (cards de celular retina pedem ~1200px de largura).
+const HD_MAXH = 1600, HD_MAXW = 1200;
+let _hdManifest = {};   // docId -> quantidade de fotos baixadas nesta sessão
+
+function isLocalPhotos(p) {
+  return Array.isArray(p.photos) && p.photos.length &&
+    p.photos.every(u => typeof u === 'string' && u.startsWith('fotos/'));
+}
+
+// Baixa as fotos (HD) dos lugares-alvo num .zip fotos/places/<docId>/<i>.jpg.
+async function _hdFetch(targets, btn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  const files = [];
+  const manifest = {};
+  let ok = 0, fail = 0, semFoto = 0, idx = 0;
+  for (const p of targets) {
+    idx++;
+    btn.textContent = `Baixando ${idx}/${targets.length}…`;
+    try {
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places/${p.pid}?fields=photos&key=${GOOGLE_API_KEY}`,
+        { headers: { 'X-Goog-FieldMask': 'photos' } });
+      if (!res.ok) { fail++; continue; }
+      const data = await res.json();
+      const metas = (data.photos || []).slice(0, 5);
+      if (!metas.length) { semFoto++; continue; }
+      let n = 0;
+      for (let i = 0; i < metas.length; i++) {
+        try {
+          const r = await fetch(`https://places.googleapis.com/v1/${metas[i].name}/media?maxHeightPx=${HD_MAXH}&maxWidthPx=${HD_MAXW}&key=${GOOGLE_API_KEY}`);
+          if (!r.ok) throw new Error(r.status);
+          const bytes = new Uint8Array(await r.arrayBuffer());
+          files.push({ name: `fotos/places/${p._docId}/${i}.jpg`, data: bytes });
+          n++;
+        } catch (e) { console.warn('hd foto', p._docId, i, e.message); }
+      }
+      if (n) { manifest[p._docId] = n; ok++; }
+    } catch (e) { console.warn('hd place', p._docId, e.message); fail++; }
+  }
+  if (!files.length) {
+    btn.disabled = false; btn.innerHTML = orig;
+    showToast('Não baixei nenhuma foto (veja o console — cota da API do Google?).', 'error');
+    return;
+  }
+  const enc = new TextEncoder();
+  files.push({ name: 'fotos/_manifest.json', data: enc.encode(JSON.stringify(manifest)) });
+  btn.textContent = 'Gerando .zip…';
+  const url = URL.createObjectURL(makeZip(files));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'fotos-hd.zip';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  _hdManifest = manifest;
+  btn.disabled = false; btn.innerHTML = orig;
+  showToast(`${ok} lugar(es) baixados${semFoto ? `, ${semFoto} sem foto no Google` : ''}${fail ? `, ${fail} erro` : ''}. Extraia a pasta "fotos" na RAIZ do projeto, dê push, e clique em "Fotos: aplicar".`, fail ? 'error' : 'success');
+}
+
+// Só os lugares novos (com Google ID e sem foto local ainda).
+window.hdFetchMissing = () => {
+  const targets = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_') && !isLocalPhotos(p));
+  if (!targets.length) { showToast('Nenhum lugar novo sem foto local. 🎉', 'info'); return; }
+  if (!confirm(`Baixar fotos (HD) de ${targets.length} lugar(es) novo(s)?\nUsa a API do Google (custo pequeno). Continuar?`)) return;
+  _hdFetch(targets, document.getElementById('btnHdMissing'));
+};
+
+// TODOS os lugares com Google ID (o upgrade de qualidade, roda uma vez).
+window.hdFetchAll = () => {
+  const targets = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_'));
+  if (!targets.length) { showToast('Nenhum lugar com Google ID.', 'info'); return; }
+  if (!confirm(`RE-BAIXAR em alta resolução as fotos de TODOS os ${targets.length} lugares com Google ID?\n\nCorrige a pixelização (fotos maiores). Usa a API do Google (custo pequeno, uma vez). Continuar?`)) return;
+  _hdFetch(targets, document.getElementById('btnHdAll'));
+};
+
+// Depois do push da pasta fotos/: aponta os endereços no banco.
+window.applyHDPhotos = async () => {
+  const ids = Object.keys(_hdManifest);
+  if (!ids.length) { showToast('Baixe as fotos primeiro (botão "Fotos: baixar novas" ou "re-HD tudo").', 'info'); return; }
+  if (!confirm(`Vou apontar no banco as fotos de ${ids.length} lugar(es) para a pasta fotos/.\n\n⚠️ Só clique depois de já ter dado PUSH na pasta fotos/, senão as fotos ficam quebradas até subir. Continuar?`)) return;
+  const btn = document.getElementById('btnHdApply');
+  const orig = btn.innerHTML; btn.disabled = true;
+  let done = 0;
+  try {
+    for (const docId of ids) {
+      done++; btn.textContent = `Aplicando ${done}/${ids.length}…`;
+      const n = _hdManifest[docId];
+      const photos = Array.from({ length: n }, (_, i) => `fotos/places/${docId}/${i}.jpg`);
+      const p = allPlaces.find(x => x._docId === docId);
+      const oldPos = (p && Array.isArray(p.photosPos)) ? p.photosPos : [];
+      const photosPos = Array.from({ length: n }, (_, i) => oldPos[i] || '50% 50%'); // preserva enquadramento
+      await setDoc(doc(db, 'places', docId), { photos, photosPos, _updatedAt: serverTimestamp() }, { merge: true });
+      if (p) { p.photos = photos; p.photosPos = photosPos; }
+    }
+    updateCatCounts?.();
+    showToast('Fotos aplicadas! Elas agora carregam do /fotos em HD. 🎉', 'success');
+  } catch (e) {
+    showToast('Erro ao aplicar: ' + e.message, 'error');
   } finally {
     btn.disabled = false; btn.innerHTML = orig;
   }
