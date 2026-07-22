@@ -1564,11 +1564,14 @@ th.sortable:hover { color: var(--acc3); }
       <!-- Usuários -->
       <div class="section-label">Usuários</div>
       <div class="kpi-row four">
+        <div class="kpi" style="--c:#22c55e" title="Usuários logados com atividade nos últimos ~3 minutos"><div class="kpi-n" id="kpiUsersOnline">–</div><div class="kpi-l">Online agora <span id="onlineDot" style="display:none;width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;margin-left:4px;vertical-align:middle"></span></div></div>
+        <div class="kpi" style="--c:#06b6d4" title="Usuários logados que abriram o app hoje"><div class="kpi-n" id="kpiUsersToday">–</div><div class="kpi-l">Abriram hoje</div></div>
         <div class="kpi" style="--c:#7c5cff"><div class="kpi-n" id="kpiUsersTotal">–</div><div class="kpi-l">Usuários no total</div></div>
         <div class="kpi" style="--c:#199e70"><div class="kpi-n" id="kpiUsersNew7">–</div><div class="kpi-l">Novos (7 dias)</div></div>
         <div class="kpi" style="--c:#3987e5"><div class="kpi-n" id="kpiUsersNew30">–</div><div class="kpi-l">Novos (30 dias)</div></div>
         <div class="kpi" style="--c:#c98500"><div class="kpi-n" id="kpiUsersActive7">–</div><div class="kpi-l">Ativos (7 dias)</div></div>
       </div>
+      <div style="font-size:12px;color:var(--text3);margin:-8px 0 18px">“Online agora” e “Abriram hoje” contam usuários <strong>logados</strong> (visitantes sem login não entram nessa conta).</div>
       <div class="charts-grid" style="grid-template-columns:1fr">
         <div class="chart-card">
           <div class="chart-head">
@@ -4534,13 +4537,36 @@ window.loadUserMetrics = async () => {
 
 function renderUserMetrics() {
   const now = Date.now(), d7 = now - 7 * 86400000, d30 = now - 30 * 86400000;
+  const online = now - 3 * 60000;                       // últimos 3 min
+  const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
   const created = userCreatedTs();
   const seen    = userMeta.map(u => _ts(u.lastSeen)).filter(t => t > 0);
+  const onlineN = seen.filter(t => t >= online).length;
+  document.getElementById('kpiUsersOnline').textContent  = onlineN;
+  document.getElementById('kpiUsersToday').textContent   = seen.filter(t => t >= startToday.getTime()).length;
   document.getElementById('kpiUsersTotal').textContent   = userMeta.length;
   document.getElementById('kpiUsersNew7').textContent    = created.filter(t => t >= d7).length;
   document.getElementById('kpiUsersNew30').textContent   = created.filter(t => t >= d30).length;
   document.getElementById('kpiUsersActive7').textContent = seen.filter(t => t >= d7).length;
+  const dot = document.getElementById('onlineDot'); if (dot) dot.style.display = onlineN > 0 ? 'inline-block' : 'none';
   renderNewUsersChart(created);
+  _scheduleOnlineRefresh();
+}
+
+// Atualiza "online agora" / "abriram hoje" a cada 30s enquanto a aba
+// Métricas estiver aberta (relê users_meta). Para sozinho ao sair da aba.
+let _onlineTimer = null;
+function _scheduleOnlineRefresh() {
+  if (_onlineTimer) return;
+  _onlineTimer = setInterval(async () => {
+    const pg = document.getElementById('page-metrics');
+    if (!pg || pg.style.display === 'none') { clearInterval(_onlineTimer); _onlineTimer = null; return; }
+    try {
+      const snap = await getDocs(collection(db, 'users_meta'));
+      userMeta = snap.docs.map(d => d.data());
+      renderUserMetrics();
+    } catch (e) { /* silencioso */ }
+  }, 30000);
 }
 
 // Barras de novos cadastros por dia (segue o filtro de período dos gráficos).

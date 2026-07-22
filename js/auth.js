@@ -93,6 +93,9 @@ onAuthStateChanged(auth, async (user) => {
     await _migrateFavoritesIfNeeded(user);
     _loadCustomPhoto(user); // assíncrono, atualiza o avatar quando chega
     _recordUserMeta(user);  // registra o acesso p/ as métricas do admin
+    _startPresence(user);   // heartbeat de "online agora"
+  } else {
+    _stopPresence();
   }
   window.dispatchEvent(new CustomEvent('authChanged', { detail: user }));
 });
@@ -113,6 +116,26 @@ async function _recordUserMeta(user) {
       lastSeen:  new Date().toISOString(),
     }, { merge: true });
   } catch (e) { console.warn('_recordUserMeta:', e); }
+}
+
+// Heartbeat de presença: atualiza lastSeen a cada 90s enquanto o app está
+// visível. Permite ao admin mostrar "online agora" (lastSeen recente) e
+// "abriram hoje". Só roda pra usuário logado; para no logout.
+let _presenceTimer = null;
+let _onVisibility = null;
+function _startPresence(user) {
+  _stopPresence();
+  const beat = () => {
+    if (document.visibilityState === 'hidden') return;
+    setDoc(doc(db, 'users_meta', user.uid), { lastSeen: new Date().toISOString() }, { merge: true }).catch(() => {});
+  };
+  _presenceTimer = setInterval(beat, 90000);
+  _onVisibility = () => { if (document.visibilityState === 'visible') beat(); };
+  document.addEventListener('visibilitychange', _onVisibility);
+}
+function _stopPresence() {
+  if (_presenceTimer) { clearInterval(_presenceTimer); _presenceTimer = null; }
+  if (_onVisibility) { document.removeEventListener('visibilitychange', _onVisibility); _onVisibility = null; }
 }
 
 // Foto efetiva do usuário: a que ela enviou > a do Google.
