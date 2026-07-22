@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OndeIr · Admin</title>
+<title>DayMatch · Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -949,6 +949,7 @@ pre {
 .cat-card-emoji { font-size: 32px; line-height: 1; }
 .cat-card-name { font-family: 'Bricolage Grotesque', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); padding-right: 34px; }
 .cat-card-meta { font-size: 12px; color: var(--text3); }
+.cat-card-count { font-size: 11.5px; color: var(--text3); margin-top: -4px; }
 .cat-card-actions { display: flex; gap: 6px; margin-top: 4px; }
 
 /* Scrollbar */
@@ -1116,7 +1117,7 @@ th.sortable:hover { color: var(--acc3); }
 <!-- ══ Login Screen ══════════════════════════════════════════════ -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-logo">Onde<em>Ir</em> Curitiba</div>
+    <div class="login-logo">Day<em>Match</em> Curitiba</div>
     <div class="login-badge">Admin Panel</div>
     <div class="login-title">Entrar como administrador</div>
     <div class="login-sub">Acesso restrito. Use sua conta Google autorizada para gerenciar os lugares do app.</div>
@@ -1136,13 +1137,13 @@ th.sortable:hover { color: var(--acc3); }
     <button class="hamburger" onclick="toggleSidebar()" aria-label="Abrir menu">
       <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="mobile-topbar-title">Onde<em>Ir</em> <span>Admin</span></div>
+    <div class="mobile-topbar-title">Day<em>Match</em> <span>Admin</span></div>
   </div>
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">Onde<em>Ir</em></div>
+    <div class="sidebar-logo">Day<em>Match</em></div>
     <div class="sidebar-badge">Admin Panel</div>
 
     <div class="nav-section">Conteúdo</div>
@@ -2657,6 +2658,7 @@ function renderCatsGrid() {
       <span class="cat-card-num">#${i + 1}</span>
       <div class="cat-card-emoji">${cat.icon ? ic(cat.icon, 28, 1.7) : catIcon(cat.name, 28, 1.7)}</div>
       <div class="cat-card-name">${cat.name}</div>
+      <div class="cat-card-count">${catPlaceCountLabel(cat.name)}</div>
       <div class="cat-card-actions">
         <button class="btn btn-secondary btn-sm" onclick="openEditCatModal('${cat.id}')">${ic('edit',13)} Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCat('${cat.id}', '${(cat.name||'').replace(/'/g,"\\'")}')">${ic('trash',14)}</button>
@@ -2664,6 +2666,29 @@ function renderCatsGrid() {
     </div>
   `).join('');
   wireCatDragAndDrop();
+}
+
+// Quantos lugares estão nesta categoria (usa allPlaces já carregado).
+function catPlaceCount(catName) {
+  if (!Array.isArray(allPlaces) || !allPlaces.length) return 0;
+  return allPlaces.filter(p => {
+    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    return cats.includes(catName);
+  }).length;
+}
+function catPlaceCountLabel(catName) {
+  const n = catPlaceCount(catName);
+  return `${n} ${n === 1 ? 'lugar' : 'lugares'}`;
+}
+// Atualiza só os contadores dos cards (chamado quando os lugares carregam).
+function updateCatCounts() {
+  const grid = document.getElementById('catsGrid');
+  if (!grid) return;
+  grid.querySelectorAll('.cat-card').forEach(card => {
+    const cat = allCategoriesList.find(c => c.id === card.dataset.id);
+    const el = card.querySelector('.cat-card-count');
+    if (cat && el) el.textContent = catPlaceCountLabel(cat.name);
+  });
 }
 
 // ── Drag & drop pra reordenar as categorias ─────────────────────────
@@ -3064,6 +3089,7 @@ async function loadPlaces() {
     document.getElementById('tableLoading').style.display = 'none';
     document.getElementById('tableContent').style.display = 'block';
     document.getElementById('placesSubtitle').textContent = `${allPlaces.length} lugares cadastrados`;
+    updateCatCounts(); // atualiza os contadores nos cards de categoria
   } catch(e) {
     const isPermErr = e.message?.includes('permission') || e.message?.includes('Missing');
     document.getElementById('tableLoading').innerHTML = isPermErr
