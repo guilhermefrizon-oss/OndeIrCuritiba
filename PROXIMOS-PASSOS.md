@@ -78,6 +78,25 @@ Código já pronto; falta o setup. Detalhes em `AUTH-NATIVE.md`.
 > para o fluxo sem reCAPTCHA. Código de confirmação preenche automático
 > (autocomplete="one-time-code" na web; nativo já cuida no Android/iOS).
 
+> **Anotado p/ o lançamento — PUSH no celular (notificação com app fechado):**
+> decidido em jul/2026 deixar para quando o app estiver no ar. As notificações
+> **in-app já estão prontas** (aba no menu + envio pelo admin com agendamento,
+> segmentação por cidade/interesse e "Enviar teste"); o push é o passo extra.
+> Requisitos na hora de fazer:
+> - **FCM é grátis** (sem custo por mensagem, sem limite). O custo real é só a
+>   infra de disparo e a Apple.
+> - **Web + Android:** ~US$ 0. Precisa do plano **Blaze** ativo (cartão
+>   cadastrado) para rodar a **Cloud Function** que envia/agenda; o uso cabe no
+>   nível grátis (2M execuções/mês). Pôr **alerta de orçamento** (~R$ 20).
+> - **iOS:** **Apple Developer Program US$ 99/ano** (necessário pra APNs e pra
+>   estar na App Store de qualquer jeito).
+> - Passos técnicos: habilitar Cloud Messaging; gerar **chave VAPID** (web);
+>   `firebase-messaging-sw.js` no site; plugin **@capacitor/push-notifications**
+>   + APNs (iOS) no build nativo; guardar os **tokens FCM** por usuário no
+>   Firestore; **Cloud Function** (Blaze) que lê `notifications` e dispara via
+>   FCM (agendada com Cloud Scheduler). O toggle "enviar como push" já existe no
+>   admin, marcado como "em breve" — é só ligar quando a function estiver no ar.
+
 - [ ] **Registrar o app Android no Firebase**
   1. Firebase Console → ⚙️ → **Seus apps → Adicionar app → Android**.
   2. Pacote: `com.daymatch.curitiba`.
