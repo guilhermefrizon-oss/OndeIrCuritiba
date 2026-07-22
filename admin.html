@@ -1220,13 +1220,9 @@ th.sortable:hover { color: var(--acc3); }
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
             Converter horários
           </button>
-          <button class="btn" onclick="downloadAllPhotosZip()" id="btnDownloadPhotos" title="Baixa todas as fotos do Storage num .zip com a pasta fotos/. Passo 1 pra parar de pagar Storage.">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            1· Baixar fotos (.zip)
-          </button>
-          <button class="btn" onclick="repointPhotosToLocal()" id="btnRepointPhotos" title="Troca os endereços das fotos no banco para a pasta fotos/. Passo 2: só depois de subir a pasta no projeto.">
+          <button class="btn" onclick="repointPhotosToLocal()" id="btnRepointPhotos" title="Troca os endereços das fotos no banco (Storage → pasta fotos/). Rode SÓ depois de já ter baixado a pasta fotos/ e dado push.">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-            2· Apontar p/ /fotos
+            Apontar fotos p/ /fotos
           </button>
           <button class="btn btn-primary" onclick="openAddModal()">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -2546,50 +2542,21 @@ function isStorageUrl(u) {
      u.includes('firebasestorage.app') ||
      u.includes('storage.googleapis.com'));
 }
+// Caminho do objeto dentro do bucket, a partir da URL de download.
+// .../o/places%2Fabc%2F0_123.jpg?alt=media  ->  places/abc/0_123.jpg
+function storageObjectPath(u) {
+  const m = /\/o\/([^?]+)/.exec(u);
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
-// Passo 1: baixa TODAS as fotos do Storage num .zip com a pasta fotos/{docId}/{i}.jpg.
-window.downloadAllPhotosZip = async () => {
-  const btn = document.getElementById('btnDownloadPhotos');
-  const orig = btn.innerHTML;
-  const targets = allPlaces.filter(p => Array.isArray(p.photos) && p.photos.some(isStorageUrl));
-  if (!targets.length) { showToast('Nenhuma foto hospedada no Storage pra baixar.', 'info'); return; }
-  if (!confirm(`Vou baixar as fotos de ${targets.length} lugar(es) num .zip com a pasta "fotos/".\n\nDepois: extraia essa pasta na RAIZ do projeto, dê push, e use o botão "2· Apontar p/ /fotos".\n\nPode levar um tempo. Continuar?`)) return;
-  btn.disabled = true;
-  const files = [];
-  let ok = 0, fail = 0, idx = 0;
-  for (const p of targets) {
-    idx++;
-    btn.textContent = `Baixando ${idx}/${targets.length}…`;
-    for (let i = 0; i < p.photos.length; i++) {
-      if (!isStorageUrl(p.photos[i])) continue;
-      try {
-        const res = await fetch(p.photos[i]);
-        if (!res.ok) throw new Error(res.status);
-        const data = new Uint8Array(await res.arrayBuffer());
-        files.push({ name: `fotos/${p._docId}/${i}.jpg`, data });
-        ok++;
-      } catch (e) { console.warn('baixar foto', p._docId, i, e.message); fail++; }
-    }
-  }
-  if (!files.length) {
-    btn.disabled = false; btn.innerHTML = orig;
-    showToast('Não consegui baixar nenhuma foto (veja o console).', 'error'); return;
-  }
-  btn.textContent = 'Gerando .zip…';
-  const url = URL.createObjectURL(makeZip(files));
-  const a = document.createElement('a');
-  a.href = url; a.download = 'fotos-daymatch.zip';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-  btn.disabled = false; btn.innerHTML = orig;
-  showToast(`Pronto! ${ok} foto(s) no zip${fail ? `, ${fail} falharam` : ''}. Extraia a pasta "fotos" na raiz do projeto e dê push.`, fail ? 'error' : 'success');
-};
-
-// Passo 2 (só depois de subir a pasta fotos/): troca os endereços no banco.
+// Troca os endereços das fotos no banco: Storage → "fotos/<mesmo caminho>".
+// Rodar SÓ depois de já ter baixado a pasta fotos/ (via gsutil) e dado push,
+// senão as fotos ficam quebradas até você subir. Só escreve no Firestore
+// (sem fetch), então não esbarra em CORS nem no plano.
 window.repointPhotosToLocal = async () => {
   const targets = allPlaces.filter(p => Array.isArray(p.photos) && p.photos.some(isStorageUrl));
   if (!targets.length) { showToast('Nenhuma foto do Storage pra apontar.', 'info'); return; }
-  if (!confirm(`Isto troca no banco os endereços das fotos de ${targets.length} lugar(es), de https://…Storage para "fotos/…".\n\n⚠️ Só rode DEPOIS de já ter subido a pasta "fotos" no projeto (push), senão as fotos ficam quebradas até você subir.\n\nContinuar?`)) return;
+  if (!confirm(`Isto troca no banco os endereços das fotos de ${targets.length} lugar(es), de https://…Storage para "fotos/…".\n\n⚠️ Só rode DEPOIS de já ter a pasta "fotos" no projeto e ter dado push, senão as fotos ficam quebradas até você subir.\n\nContinuar?`)) return;
   const btn = document.getElementById('btnRepointPhotos');
   const orig = btn.innerHTML;
   btn.disabled = true;
@@ -2598,7 +2565,11 @@ window.repointPhotosToLocal = async () => {
     for (const p of targets) {
       done++;
       btn.textContent = `Trocando ${done}/${targets.length}…`;
-      const mapped = p.photos.map((u, i) => isStorageUrl(u) ? `fotos/${p._docId}/${i}.jpg` : u);
+      const mapped = p.photos.map(u => {
+        if (!isStorageUrl(u)) return u;
+        const path = storageObjectPath(u);
+        return path ? `fotos/${path}` : u;   // fotos/places/<docId>/<arquivo>.jpg
+      });
       await setDoc(doc(db, 'places', p._docId), { photos: mapped, _updatedAt: serverTimestamp() }, { merge: true });
       p.photos = mapped;
     }
