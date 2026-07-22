@@ -1274,6 +1274,7 @@ th.sortable:hover { color: var(--acc3); }
                 <th>Bairro</th>
                 <th>Preço</th>
                 <th>Google ID</th>
+                <th>Fotos</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -1807,7 +1808,19 @@ service cloud.firestore {
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
+      <div style="margin-bottom:16px; padding:14px 16px; border:1px solid var(--acc-glow, var(--border)); border-radius:var(--r2); background:var(--bg3)">
+        <label class="form-label" style="display:flex; align-items:center; gap:6px">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Buscar no Google <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— preenche nome, endereço, bairro, horário e Place ID</span>
+        </label>
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <input class="form-input" id="gsearch_q" placeholder="ex: Lucca Cafés Especiais Batel" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();searchGooglePlace();}">
+          <button class="btn btn-primary" type="button" onclick="searchGooglePlace()" id="gsearchBtn">Buscar</button>
+        </div>
+        <div id="gsearch_results" style="margin-top:8px"></div>
+      </div>
       <div class="form-grid">
+        <input type="hidden" id="f_lat"><input type="hidden" id="f_lng">
         <div class="form-group full">
           <label class="form-label">Nome do lugar *</label>
           <input class="form-input" id="f_n" placeholder="ex: Terrazza 40">
@@ -3330,6 +3343,22 @@ window.filterPlaces = () => {
   renderTable();
 };
 
+// Badge de origem das fotos: local (/fotos, dentro do servidor), externa
+// (URL http de fora — Storage/Google) ou sem foto.
+function photosBadge(p) {
+  const ph = Array.isArray(p.photos) ? p.photos : [];
+  if (!ph.length) return '<span class="pid-chip" style="color:var(--text3)">— sem foto</span>';
+  const local = ph.filter(u => typeof u === 'string' && u.startsWith('fotos/')).length;
+  const ext   = ph.filter(u => typeof u === 'string' && /^https?:\/\//.test(u)).length;
+  if (ext > 0) {
+    return `<span class="pid-chip pid-missing" title="${ext} foto(s) de fora do servidor">${ic('alert',12)} Externa (${ext})</span>`;
+  }
+  if (local === ph.length) {
+    return `<span class="pid-chip pid-ok" title="Todas no /fotos (servidor interno)">${ic('check',12)} Local (${local})</span>`;
+  }
+  return `<span class="pid-chip" style="color:var(--text3)">${ph.length} foto(s)</span>`;
+}
+
 function renderTable() {
   const tbody = document.getElementById('placesTableBody');
   const start = (currentPage - 1) * PAGE_SIZE;
@@ -3369,6 +3398,7 @@ function renderTable() {
             : `<span class="pid-chip" style="color:var(--text3)">— sem ID</span>`
         }
       </td>
+      <td>${photosBadge(p)}</td>
       <td>
         <div class="actions">
           <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p._docId}')">${ic('edit',13)} Editar</button>
@@ -3433,6 +3463,10 @@ window.openEditModal = (docId) => {
   document.getElementById('f_pid').value= p.pid|| '';
   document.getElementById('f_bg').value = p.bg || '';
   document.getElementById('f_e').value  = p.e  || '';
+  document.getElementById('f_lat').value = (p.lat != null ? p.lat : '');
+  document.getElementById('f_lng').value = (p.lng != null ? p.lng : '');
+  document.getElementById('gsearch_q').value = '';
+  document.getElementById('gsearch_results').innerHTML = '';
   document.querySelectorAll('.emoji-opt').forEach(el => {
     el.classList.toggle('selected', el.textContent === p.e);
   });
@@ -3443,15 +3477,97 @@ window.openEditModal = (docId) => {
 };
 
 function clearForm() {
-  ['f_n','f_a','f_b','f_ig','f_pid','f_e'].forEach(id => {
-    document.getElementById(id).value = '';
+  ['f_n','f_a','f_b','f_ig','f_pid','f_e','f_lat','f_lng','gsearch_q'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
   });
+  const gr = document.getElementById('gsearch_results'); if (gr) gr.innerHTML = '';
   document.getElementById('f_p').value = '$$';
   document.getElementById('f_bg').value = 'cafe';
   renderHoursEditor(defaultHours());
   document.querySelectorAll('.cat-toggle').forEach(el => el.classList.remove('on'));
   document.querySelectorAll('.emoji-opt').forEach(el => el.classList.remove('selected'));
 }
+
+// ── Busca no Google (Places Text Search) → preenche o formulário ────
+let _googleResults = [];
+const _priceMap = {
+  PRICE_LEVEL_FREE:'$', PRICE_LEVEL_INEXPENSIVE:'$', PRICE_LEVEL_MODERATE:'$$',
+  PRICE_LEVEL_EXPENSIVE:'$$$', PRICE_LEVEL_VERY_EXPENSIVE:'$$$$'
+};
+
+window.searchGooglePlace = async () => {
+  const q = document.getElementById('gsearch_q').value.trim();
+  const box = document.getElementById('gsearch_results');
+  if (!q) { box.innerHTML = ''; return; }
+  const btn = document.getElementById('gsearchBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Buscando…';
+  box.innerHTML = '<span style="font-size:13px;color:var(--text3)">Buscando…</span>';
+  try {
+    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.regularOpeningHours,places.priceLevel'
+      },
+      body: JSON.stringify({ textQuery: q, languageCode: 'pt-BR', regionCode: 'BR' })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    _googleResults = data.places || [];
+    if (!_googleResults.length) { box.innerHTML = '<span style="font-size:13px;color:var(--text3)">Nada encontrado.</span>'; return; }
+    box.innerHTML = _googleResults.slice(0, 6).map((pl, i) =>
+      `<button type="button" onclick="pickGoogleResult(${i})" style="display:block;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-bottom:6px;cursor:pointer;color:var(--text)">
+        <div style="font-weight:700;font-size:14px">${escM(pl.displayName?.text || '—')}</div>
+        <div style="font-size:12px;color:var(--text3)">${escM(pl.formattedAddress || '')}</div>
+      </button>`).join('');
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = `<span style="font-size:13px;color:var(--yellow)">Erro na busca: ${escM(e.message)}. Confira se a chave do Google permite este site (referenciador) e a Places API (New).</span>`;
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+};
+
+const _pad2 = n => String(n).padStart(2, '0');
+function _googleHoursToGrid(roh) {
+  const grid = {}; WEEK_ORDER.forEach(k => grid[k] = { closed: true });
+  for (const per of (roh?.periods || [])) {
+    if (!per.open) continue;
+    const key = WEEK_ORDER[per.open.day];         // 0=domingo … 6=sábado
+    if (!key) continue;
+    grid[key] = {
+      closed: false,
+      open:  `${_pad2(per.open.hour || 0)}:${_pad2(per.open.minute || 0)}`,
+      close: per.close ? `${_pad2(per.close.hour || 0)}:${_pad2(per.close.minute || 0)}` : '23:59'
+    };
+  }
+  return grid;
+}
+function _extractAddress(comps) {
+  const get = t => { const c = (comps || []).find(x => (x.types || []).includes(t)); return c ? (c.longText || c.shortText || '') : ''; };
+  const route = get('route'), num = get('street_number');
+  const bairro = get('sublocality_level_1') || get('sublocality') || get('neighborhood') || '';
+  return { rua: route ? (num ? `${route}, ${num}` : route) : '', bairro };
+}
+
+window.pickGoogleResult = (i) => {
+  const pl = _googleResults[i]; if (!pl) return;
+  document.getElementById('f_n').value = pl.displayName?.text || '';
+  document.getElementById('f_pid').value = pl.id || '';
+  const { rua, bairro } = _extractAddress(pl.addressComponents);
+  document.getElementById('f_a').value = rua || pl.formattedAddress || '';
+  if (bairro) document.getElementById('f_b').value = bairro;
+  if (pl.priceLevel && _priceMap[pl.priceLevel]) document.getElementById('f_p').value = _priceMap[pl.priceLevel];
+  if (pl.location) {
+    document.getElementById('f_lat').value = pl.location.latitude ?? '';
+    document.getElementById('f_lng').value = pl.location.longitude ?? '';
+  }
+  if (pl.regularOpeningHours) renderHoursEditor(_googleHoursToGrid(pl.regularOpeningHours));
+  document.getElementById('gsearch_results').innerHTML =
+    '<span style="font-size:13px;color:var(--green)">✓ Preenchido pelo Google. Revise os campos, escolha as categorias e a cor, e salve. Depois use "Fotos: baixar novas".</span>';
+  showToast('Campos preenchidos! Revise e salve.', 'success');
+};
 
 // ── Editor de horário por dia ──────────────────────────────────────
 function renderHoursEditor(hours) {
@@ -3590,6 +3706,12 @@ window.savePlace = async () => {
     bg:  document.getElementById('f_bg').value,
     e:   document.getElementById('f_e').value.trim(),
   };
+
+  // Coordenadas (vindas da busca do Google) — guardadas p/ o mapa não precisar
+  // geocodificar de novo (economiza chamadas à API).
+  const _lat = parseFloat(document.getElementById('f_lat').value);
+  const _lng = parseFloat(document.getElementById('f_lng').value);
+  if (!isNaN(_lat) && !isNaN(_lng)) { data.lat = _lat; data.lng = _lng; }
 
   if (!editingId) {
     data._createdAt = serverTimestamp();
