@@ -938,8 +938,16 @@ pre {
   position: relative;
 }
 .cat-card:hover { border-color: var(--bg5); }
+.cat-card[draggable="true"] { cursor: grab; }
+.cat-card.dragging { opacity: .45; outline: 2px dashed var(--acc2); outline-offset: 2px; cursor: grabbing; }
+.cat-card-num {
+  position: absolute; top: 14px; right: 16px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 19px; font-weight: 800; letter-spacing: -.5px;
+  color: var(--text3); pointer-events: none;
+}
 .cat-card-emoji { font-size: 32px; line-height: 1; }
-.cat-card-name { font-family: 'Bricolage Grotesque', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.cat-card-name { font-family: 'Bricolage Grotesque', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); padding-right: 34px; }
 .cat-card-meta { font-size: 12px; color: var(--text3); }
 .cat-card-actions { display: flex; gap: 6px; margin-top: 4px; }
 
@@ -1413,7 +1421,7 @@ th.sortable:hover { color: var(--acc3); }
 
       <div class="alert-box info" style="max-width:700px">
         <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-        <div>Cada categoria tem um <strong>nome</strong>, <strong>emoji</strong> e <strong>cor do card</strong>. Assim que você salvar, ela aparece nos filtros do app e no formulário de lugares.</div>
+        <div>Cada categoria tem um <strong>nome</strong>, <strong>emoji</strong> e <strong>cor do card</strong>. <strong>Arraste os cards</strong> para mudar a ordem — o número <strong>#</strong> mostra a posição, e ela é salva sozinha nos filtros do app.</div>
       </div>
 
       <div id="catsGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:14px; max-width:900px">
@@ -2001,10 +2009,10 @@ service cloud.firestore {
           <div class="icon-row" id="catIconGrid"></div>
           <div class="form-hint">O ícone que aparece nos filtros do app.</div>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="fc_orderGroup" style="display:none">
           <label class="form-label">Ordem de exibição</label>
           <input class="form-input" id="fc_order" type="number" placeholder="ex: 1, 2, 3…" min="1">
-          <div class="form-hint">Número menor aparece primeiro nos filtros do app</div>
+          <div class="form-hint">A ordem agora é definida arrastando os cards na lista.</div>
         </div>
       </div>
     </div>
@@ -2644,17 +2652,78 @@ function renderCatsGrid() {
     grid.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div>Nenhuma categoria ainda</div></div>';
     return;
   }
-  grid.innerHTML = allCategoriesList.map(cat => `
-    <div class="cat-card">
+  grid.innerHTML = allCategoriesList.map((cat, i) => `
+    <div class="cat-card" draggable="true" data-id="${cat.id}">
+      <span class="cat-card-num">#${i + 1}</span>
       <div class="cat-card-emoji">${cat.icon ? ic(cat.icon, 28, 1.7) : catIcon(cat.name, 28, 1.7)}</div>
       <div class="cat-card-name">${cat.name}</div>
-      <div class="cat-card-meta">Ordem: ${cat.order || '—'}</div>
       <div class="cat-card-actions">
         <button class="btn btn-secondary btn-sm" onclick="openEditCatModal('${cat.id}')">${ic('edit',13)} Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCat('${cat.id}', '${(cat.name||'').replace(/'/g,"\\'")}')">${ic('trash',14)}</button>
       </div>
     </div>
   `).join('');
+  wireCatDragAndDrop();
+}
+
+// ── Drag & drop pra reordenar as categorias ─────────────────────────
+function renumberCatBadges() {
+  const grid = document.getElementById('catsGrid');
+  [...grid.querySelectorAll('.cat-card')].forEach((c, i) => {
+    const b = c.querySelector('.cat-card-num');
+    if (b) b.textContent = '#' + (i + 1);
+  });
+}
+
+function wireCatDragAndDrop() {
+  const grid = document.getElementById('catsGrid');
+  const cards = [...grid.querySelectorAll('.cat-card')];
+  cards.forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', card.dataset.id); } catch {}
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      commitCatOrder();
+    });
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const dragging = grid.querySelector('.dragging');
+      if (!dragging || dragging === card) return;
+      const rect = card.getBoundingClientRect();
+      const after = (e.clientX - rect.left) > rect.width / 2;
+      if (after) card.after(dragging); else card.before(dragging);
+      renumberCatBadges();
+    });
+  });
+}
+
+// Lê a ordem atual dos cards no DOM, renumera e salva o que mudou.
+async function commitCatOrder() {
+  const grid = document.getElementById('catsGrid');
+  const ids = [...grid.querySelectorAll('.cat-card')].map(c => c.dataset.id);
+  allCategoriesList.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+
+  const changed = [];
+  allCategoriesList.forEach((cat, i) => {
+    const newOrder = i + 1;
+    if (cat.order !== newOrder) { cat.order = newOrder; changed.push(cat); }
+  });
+  if (!changed.length) return;
+
+  try {
+    await Promise.all(changed.map(cat =>
+      setDoc(doc(db, 'categories', cat.id), { order: cat.order, _updatedAt: serverTimestamp() }, { merge: true })
+    ));
+    populateCatFilter();
+    showToast?.('Ordem atualizada.', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast?.('Não consegui salvar a ordem. Tente de novo.', 'error');
+    loadCategories(); // recarrega o estado real em caso de falha
+  }
 }
 
 function renderCatToggles() {
