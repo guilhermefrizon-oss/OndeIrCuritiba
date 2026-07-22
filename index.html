@@ -76,6 +76,90 @@
     </div>
   </div>
 
+  <!-- ── Tutorial de primeira vez (onboarding) ── -->
+  <div id="onboardingScreen" role="dialog" aria-label="Tutorial do app" aria-modal="true">
+    <div class="ob-bg" aria-hidden="true"></div>
+
+    <div class="ob-top">
+      <button class="ob-back" id="obBack" onclick="window.obPrev()" aria-label="Voltar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="ob-skip" id="obSkip" onclick="window.obFinish()">Pular</button>
+    </div>
+
+    <div class="ob-track" id="obTrack">
+
+      <!-- Slide 1 · Descobrir deslizando -->
+      <section class="ob-slide">
+        <div class="ob-art">
+          <svg viewBox="0 0 260 260" fill="none" aria-hidden="true">
+            <rect class="ob-soft2" x="60" y="66" width="140" height="150" rx="22" transform="rotate(-9 130 141)"/>
+            <rect class="ob-soft" x="60" y="58" width="140" height="150" rx="22" transform="rotate(6 130 133)"/>
+            <rect class="ob-card" x="60" y="46" width="140" height="154" rx="22"/>
+            <rect class="ob-line2" x="60" y="46" width="140" height="100" rx="22"/>
+            <circle class="ob-acc" cx="130" cy="96" r="27"/>
+            <path class="ob-ink" d="M130 109s-14-8-14-18a7.5 7.5 0 0 1 14-3 7.5 7.5 0 0 1 14 3c0 10-14 18-14 18z"/>
+            <rect class="ob-line" x="82" y="162" width="76" height="10" rx="5"/>
+            <rect class="ob-line3" x="82" y="180" width="46" height="8" rx="4"/>
+            <circle class="ob-acc" cx="222" cy="118" r="22"/>
+            <path class="ob-inkS" d="M215 118h13M222 112l7 6-7 6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle class="ob-mut" cx="38" cy="150" r="19"/>
+            <path class="ob-mutInk" d="M32 144l12 12M44 144l-12 12" stroke-width="2.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="ob-dots" data-i="0"><i></i><i></i><i></i></div>
+        <h2 class="ob-title">Descubra Curitiba<br>deslizando</h2>
+        <p class="ob-sub">Arraste os cards: para a direita em <b>Quero ir</b>, para a esquerda em <b>Hoje não</b>. É assim que você acha o próximo rolê.</p>
+      </section>
+
+      <!-- Slide 2 · Favoritos e mapa -->
+      <section class="ob-slide">
+        <div class="ob-art">
+          <svg viewBox="0 0 260 260" fill="none" aria-hidden="true">
+            <rect class="ob-soft" x="28" y="44" width="204" height="172" rx="26"/>
+            <path class="ob-strokeSoft" d="M28 118c42-16 74 12 112 0s72-16 92-4" stroke-width="3" stroke-linecap="round"/>
+            <path class="ob-strokeSoft" d="M96 44c-8 48 10 100 0 172" stroke-width="3" stroke-linecap="round"/>
+            <path class="ob-strokeSoft" d="M168 44c6 40-4 96 4 172" stroke-width="3" stroke-linecap="round"/>
+            <path class="ob-acc" d="M130 72a31 31 0 0 0-31 31c0 22 31 47 31 47s31-25 31-47a31 31 0 0 0-31-31z"/>
+            <circle class="ob-ink" cx="130" cy="103" r="12.5"/>
+            <path class="ob-mut" d="M72 150a17 17 0 0 0-17 17c0 12 17 26 17 26s17-14 17-26a17 17 0 0 0-17-17z"/>
+            <circle class="ob-hole" cx="72" cy="167" r="6.5"/>
+            <path class="ob-mut" d="M190 118a17 17 0 0 0-17 17c0 12 17 26 17 26s17-14 17-26a17 17 0 0 0-17-17z"/>
+            <circle class="ob-hole" cx="190" cy="135" r="6.5"/>
+          </svg>
+        </div>
+        <div class="ob-dots" data-i="1"><i></i><i></i><i></i></div>
+        <h2 class="ob-title">Favoritos e mapa<br>num só lugar</h2>
+        <p class="ob-sub">Salve o que curtir e veja tudo no mapa, com filtros por categoria, distância e horário de funcionamento.</p>
+      </section>
+
+      <!-- Slide 3 · Personalização e comunidade -->
+      <section class="ob-slide">
+        <div class="ob-art">
+          <svg viewBox="0 0 260 260" fill="none" aria-hidden="true">
+            <circle class="ob-soft" cx="130" cy="122" r="88"/>
+            <path class="ob-acc" d="M130 64l15 31 34 5-25 24 6 34-30-16-30 16 6-34-25-24 34-5z"/>
+            <path class="ob-inkS" d="M120 121l7 7 15-16" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="ob-line3" d="M196 68l4 9 9 4-9 4-4 9-4-9-9-4 9-4z"/>
+            <path class="ob-line3" d="M62 176l3.5 7.5 7.5 3.5-7.5 3.5-3.5 7.5-3.5-7.5-7.5-3.5 7.5-3.5z"/>
+            <circle class="ob-mut" cx="58" cy="80" r="13"/>
+            <path class="ob-mutInk" d="M58 74v12M52 80h12" stroke-width="2.6" stroke-linecap="round"/>
+            <circle class="ob-mut" cx="206" cy="168" r="13"/>
+            <path class="ob-mutInk" d="M200 168h12" stroke-width="2.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="ob-dots" data-i="2"><i></i><i></i><i></i></div>
+        <h2 class="ob-title">Feito do seu<br>jeito</h2>
+        <p class="ob-sub">Responda o quiz e receba sugestões que combinam com você. Avalie, comente e ganhe XP ajudando a comunidade.</p>
+      </section>
+
+    </div>
+
+    <div class="ob-foot">
+      <button class="ob-next" id="obNext" onclick="window.obNext()">Próximo</button>
+    </div>
+  </div>
+
   <!-- ── Top bar ── -->
   <div class="topbar">
     <button class="tb-btn" id="menuBtn" onclick="window.openAppMenu()" title="Menu" aria-label="Abrir menu">

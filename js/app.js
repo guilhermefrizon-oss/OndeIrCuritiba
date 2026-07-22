@@ -175,6 +175,7 @@ async function init() {
   applyDiscoverViewDOM(); // aplica a visualização salva (cards/lista)
   renderCard();
   renderProgress();
+  showOnboarding();           // tutorial na 1ª vez (fica por cima do welcome)
   showWelcomeScreen();
   hideSplash();               // cards prontos → tira a splash da logo
 
@@ -1721,6 +1722,51 @@ window.selectCity = (city, id) => {
   document.getElementById('cityLabel').textContent = city;
   document.querySelectorAll('.city-option').forEach(b => b.classList.toggle('active', b.id===id));
   window.dismissOverlay('citySheet');
+};
+
+// ── Tutorial de primeira vez (onboarding) ─────────────────────────
+const OB_KEY = 'cwb_onboarded_v1';
+let obIndex = 0;
+
+function showOnboarding() {
+  // Aparece só na primeira vez (por dispositivo/navegador).
+  if (localStorage.getItem(OB_KEY)) return false;
+  const screen = document.getElementById('onboardingScreen');
+  if (!screen) return false;
+  obIndex = 0;
+  obApply();
+  screen.classList.add('on');
+  return true;
+}
+
+function obApply() {
+  const screen = document.getElementById('onboardingScreen');
+  const track  = document.getElementById('obTrack');
+  const next   = document.getElementById('obNext');
+  if (!screen || !track) return;
+  track.style.transform = `translateX(-${obIndex * 33.3333}%)`;
+  screen.setAttribute('data-i', String(obIndex));
+  if (next) next.textContent = obIndex >= 2 ? 'Começar' : 'Próximo';
+}
+
+window.obNext = () => {
+  if (obIndex >= 2) { window.obFinish(); return; }
+  obIndex++; obApply();
+};
+window.obPrev = () => {
+  if (obIndex <= 0) return;
+  obIndex--; obApply();
+};
+window.obFinish = () => {
+  localStorage.setItem(OB_KEY, '1');
+  const screen = document.getElementById('onboardingScreen');
+  if (!screen) return;
+  screen.style.transition = 'opacity .3s';
+  screen.style.opacity = '0';
+  setTimeout(() => {
+    screen.classList.remove('on');
+    screen.style.opacity = ''; screen.style.transition = '';
+  }, 300);
 };
 
 // ── Welcome screen ─────────────────────────────────────────────────
