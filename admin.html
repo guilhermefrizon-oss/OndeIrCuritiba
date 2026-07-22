@@ -2660,10 +2660,23 @@ window.hdFetchAll = () => {
   _hdFetch(targets, document.getElementById('btnHdAll'));
 };
 
+// Recupera o manifesto: primeiro o da sessão; se não houver (ex.: página
+// recarregada), lê o fotos/_manifest.json já publicado no site. Assim NUNCA
+// é preciso rebaixar tudo só pra poder aplicar.
+async function _loadManifest() {
+  if (Object.keys(_hdManifest).length) return _hdManifest;
+  try {
+    const res = await fetch('fotos/_manifest.json?v=' + Date.now());
+    if (res.ok) { _hdManifest = await res.json(); return _hdManifest; }
+  } catch (e) { console.warn('manifest', e.message); }
+  return {};
+}
+
 // Depois do push da pasta fotos/: aponta os endereços no banco.
 window.applyHDPhotos = async () => {
-  const ids = Object.keys(_hdManifest);
-  if (!ids.length) { showToast('Baixe as fotos primeiro (botão "Fotos: baixar novas" ou "re-HD tudo").', 'info'); return; }
+  const manifest = await _loadManifest();
+  const ids = Object.keys(manifest);
+  if (!ids.length) { showToast('Não achei o manifesto das fotos. Baixe as fotos e dê push na pasta fotos/ antes.', 'info'); return; }
   if (!confirm(`Vou apontar no banco as fotos de ${ids.length} lugar(es) para a pasta fotos/.\n\n⚠️ Só clique depois de já ter dado PUSH na pasta fotos/, senão as fotos ficam quebradas até subir. Continuar?`)) return;
   const btn = document.getElementById('btnHdApply');
   const orig = btn.innerHTML; btn.disabled = true;
