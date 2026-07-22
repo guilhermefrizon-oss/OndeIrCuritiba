@@ -93,6 +93,7 @@ onAuthStateChanged(auth, async (user) => {
     await _migrateFavoritesIfNeeded(user);
     _loadCustomPhoto(user); // assíncrono, atualiza o avatar quando chega
     _recordUserMeta(user);  // registra o acesso p/ as métricas do admin
+    _recordActiveDay(user); // marca "abriu hoje" p/ o gráfico de aberturas
     _startPresence(user);   // heartbeat de "online agora"
   } else {
     _stopPresence();
@@ -136,6 +137,19 @@ function _startPresence(user) {
 function _stopPresence() {
   if (_presenceTimer) { clearInterval(_presenceTimer); _presenceTimer = null; }
   if (_onVisibility) { document.removeEventListener('visibilitychange', _onVisibility); _onVisibility = null; }
+}
+
+// Marca "abriu o app hoje" — 1 doc por usuário-por-dia em active_days. Grava
+// no máx. 1x por dia por dispositivo (guarda local), pra alimentar o gráfico
+// de aberturas por dia do admin sem gerar escritas à toa.
+async function _recordActiveDay(user) {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  try {
+    if (localStorage.getItem('cwb_active_day') === today) return;
+    await setDoc(doc(db, 'active_days', `${user.uid}_${today}`),
+      { uid: user.uid, date: today, at: new Date().toISOString() }, { merge: true });
+    localStorage.setItem('cwb_active_day', today);
+  } catch (e) { console.warn('_recordActiveDay:', e); }
 }
 
 // Foto efetiva do usuário: a que ela enviou > a do Google.
