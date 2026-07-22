@@ -181,6 +181,12 @@ body {
   margin-bottom: 22px;
 }
 
+.tool-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+.tool-card-ic { color: var(--acc3); opacity: .85; }
+.tool-card-t { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 15px; color: var(--text); }
+.tool-card-d { font-size: 13px; color: var(--text2); line-height: 1.5; flex: 1; }
+.tool-card .btn { margin-top: 8px; justify-content: center; width: 100%; }
+.tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; max-width: 860px; }
 .nav-section {
   font-size: 10px;
   font-weight: 700;
@@ -1159,6 +1165,10 @@ th.sortable:hover { color: var(--acc3); }
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Quiz
     </button>
+    <button class="nav-item" onclick="showPage('ferramentas')" id="nav-ferramentas">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      Ferramentas
+    </button>
 
     <div class="nav-section">Moderação</div>
     <button class="nav-item" onclick="showPage('corrections')" id="nav-corrections">
@@ -1212,22 +1222,6 @@ th.sortable:hover { color: var(--acc3); }
           <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap">
-          <button class="btn" onclick="hdFetchMissing()" id="btnHdMissing" title="Baixa do Google (em HD) as fotos dos lugares que NÃO estão locais: sem foto ou com foto externa (fora do servidor). Gera um .zip pra pasta fotos/.">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Fotos: baixar faltantes
-          </button>
-          <button class="btn" onclick="hdFetchAll()" id="btnHdAll" title="Re-baixa em ALTA RESOLUÇÃO as fotos de TODOS os lugares com Google ID (corrige a pixelização). Usa a API do Google (custo pequeno, uma vez).">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-            Fotos: re-HD tudo
-          </button>
-          <button class="btn" onclick="applyHDPhotos()" id="btnHdApply" title="Depois de já ter dado push na pasta fotos/, aponta os endereços das fotos no banco.">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-            Fotos: aplicar
-          </button>
-          <button class="btn" onclick="migrateHours()" id="btnMigrateHours" title="Preenche a grade de horário por dia dos lugares antigos a partir do texto — sem sobrescrever quem já tem">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-            Converter horários
-          </button>
           <button class="btn btn-primary" onclick="openAddModal()">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Lugar
@@ -1319,6 +1313,53 @@ th.sortable:hover { color: var(--acc3); }
       </div>
       <div id="reportsList">
         <div class="table-loading"><div class="spinner"></div>Carregando…</div>
+      </div>
+    </div>
+
+    <!-- ── Ferramentas Page ── -->
+    <div id="page-ferramentas" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Ferramentas</div>
+          <div class="page-subtitle">Manutenção de fotos e horários dos lugares.</div>
+        </div>
+      </div>
+
+      <div class="alert-box info" style="max-width:860px">
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        <div>As fotos ficam hospedadas de graça na pasta <strong>fotos/</strong> do projeto. O fluxo é: <strong>1)</strong> baixar o .zip aqui → <strong>2)</strong> extrair na raiz do projeto e me avisar pra dar o push → <strong>3)</strong> clicar em <strong>Aplicar</strong>. Na aba <strong>Lugares</strong>, a coluna “Fotos” mostra quem ainda não está local.</div>
+      </div>
+
+      <div class="section-label" style="margin-top:24px">Fotos</div>
+      <div class="tools-grid">
+        <div class="tool-card">
+          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <div class="tool-card-t">1 · Baixar faltantes</div>
+          <div class="tool-card-d">Baixa do Google (em HD) as fotos dos lugares que ainda <strong>não estão locais</strong> — sem foto ou com foto externa. Gera um .zip pra pasta fotos/. É o que você usa no dia a dia ao adicionar lugares.</div>
+          <button class="btn btn-primary" onclick="hdFetchMissing()" id="btnHdMissing">Baixar faltantes (.zip)</button>
+        </div>
+        <div class="tool-card">
+          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></div>
+          <div class="tool-card-t">Re-baixar tudo em HD</div>
+          <div class="tool-card-d">Refaz <strong>todas</strong> as fotos em alta resolução (corrige pixelização). Usa mais API do Google — rode só quando quiser um upgrade geral, não é do dia a dia.</div>
+          <button class="btn" onclick="hdFetchAll()" id="btnHdAll">Re-baixar tudo (.zip)</button>
+        </div>
+        <div class="tool-card">
+          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="tool-card-t">3 · Aplicar fotos</div>
+          <div class="tool-card-d">Passo final: depois que a pasta fotos/ já foi pro ar (push), aponta os endereços das fotos no banco. <strong>Só clique depois do push</strong>, senão as fotos ficam quebradas até subir.</div>
+          <button class="btn" onclick="applyHDPhotos()" id="btnHdApply">Aplicar no banco</button>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:28px">Horários</div>
+      <div class="tools-grid">
+        <div class="tool-card">
+          <div class="tool-card-ic"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+          <div class="tool-card-t">Converter horários</div>
+          <div class="tool-card-d">Preenche a grade de horário por dia dos lugares antigos a partir do texto — sem sobrescrever quem já tem a grade preenchida.</div>
+          <button class="btn" onclick="migrateHours()" id="btnMigrateHours">Converter horários</button>
+        </div>
       </div>
     </div>
 
@@ -4014,7 +4055,7 @@ window.openPlaceFromCorrection = (id) => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','corrections','reports','notifications','categories','quiz','metrics','rules'].forEach(p => {
+  ['places','corrections','reports','notifications','categories','quiz','ferramentas','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
