@@ -1362,6 +1362,11 @@ function _tsMillis(v) {
   return isNaN(t) ? 0 : t;
 }
 function _notifMatchesUser(n) {
+  // Notificação de teste: só aparece pros e-mails escolhidos (e logados).
+  if (Array.isArray(n.testEmails) && n.testEmails.length) {
+    const email = (window.currentUser?.email || '').toLowerCase();
+    return !!email && n.testEmails.includes(email);
+  }
   const type = n.targetType || 'all';
   if (type === 'all') return true;
   if (type === 'city') {

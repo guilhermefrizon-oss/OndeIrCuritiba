@@ -1352,11 +1352,25 @@ th.sortable:hover { color: var(--acc3); }
               <input type="checkbox" id="ntf_push" disabled> Enviar também como push no celular <span style="background:var(--bg4);color:var(--text3);font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px">em breve</span>
             </label>
           </div>
+
+          <div class="form-group full" style="border-top:1px solid var(--border);padding-top:16px;margin-top:2px">
+            <label class="form-label">Destinatários do teste</label>
+            <div id="ntf_testChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+            <div style="display:flex;gap:8px">
+              <input class="form-input" id="ntf_testAdd" type="email" placeholder="adicionar e-mail…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addTestEmail();}">
+              <button class="btn btn-secondary" onclick="addTestEmail()" type="button">Adicionar</button>
+            </div>
+            <div class="form-hint">O <strong>Enviar teste</strong> mostra a notificação só pra esses e-mails (quando logados no app). Os admins já vêm preenchidos — pode remover.</div>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:14px;margin-top:18px">
-          <button class="btn btn-primary" onclick="sendNotification()" id="ntfSendBtn">
+        <div style="display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="sendNotification(false)" id="ntfSendBtn">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             Enviar
+          </button>
+          <button class="btn btn-secondary" onclick="sendNotification(true)" id="ntfTestBtn">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            Enviar teste
           </button>
           <span id="ntf_status" style="font-size:13px;color:var(--text3)"></span>
         </div>
@@ -3587,6 +3601,8 @@ window.showPage = (page) => {
 
 // ── Notificações (envio para o app) ─────────────────────────────────
 let _notifCatsLoaded = false;
+let _notifTestLoaded = false;
+let _ntfTestEmails = [];
 
 async function initNotificationsPage() {
   onNtfTargetChange();
@@ -3601,8 +3617,52 @@ async function initNotificationsPage() {
       _notifCatsLoaded = true;
     } catch (e) { console.warn('categorias p/ notificação', e.message); }
   }
+  // Pré-preenche os destinatários do teste com os e-mails dos admins (uma vez).
+  if (!_notifTestLoaded) {
+    try {
+      const snap = await getDocs(collection(db, 'admins'));
+      _ntfTestEmails = snap.docs.map(d => d.id.toLowerCase());
+    } catch (e) {
+      console.warn('admins p/ teste', e.message);
+      const me = auth.currentUser?.email;
+      if (me) _ntfTestEmails = [me.toLowerCase()];
+    }
+    _notifTestLoaded = true;
+    renderTestChips();
+  }
   loadAdminNotifications();
 }
+
+function renderTestChips() {
+  const box = document.getElementById('ntf_testChips');
+  if (!box) return;
+  if (!_ntfTestEmails.length) {
+    box.innerHTML = '<span style="font-size:12px;color:var(--text3)">Nenhum destinatário — adicione ao menos um e-mail.</span>';
+    return;
+  }
+  box.innerHTML = _ntfTestEmails.map(email =>
+    `<span style="display:inline-flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:5px 8px 5px 12px;font-size:13px;color:var(--text)">
+      ${escM(email)}
+      <button type="button" onclick="removeTestEmail('${escM(email)}')" title="Remover" style="display:inline-flex;background:none;border:none;color:var(--text3);cursor:pointer;padding:2px;line-height:0">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </span>`).join('');
+}
+
+window.addTestEmail = () => {
+  const inp = document.getElementById('ntf_testAdd');
+  const email = (inp.value || '').trim().toLowerCase();
+  if (!email) return;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Digite um e-mail válido.'); return; }
+  if (!_ntfTestEmails.includes(email)) _ntfTestEmails.push(email);
+  inp.value = '';
+  renderTestChips();
+};
+
+window.removeTestEmail = (email) => {
+  _ntfTestEmails = _ntfTestEmails.filter(e => e !== email);
+  renderTestChips();
+};
 
 window.onNtfTargetChange = () => {
   const t = document.getElementById('ntf_target').value;
@@ -3624,23 +3684,27 @@ window.onNtfWhenChange = () => {
   }
 };
 
-window.sendNotification = async () => {
+window.sendNotification = async (isTest = false) => {
   const title = document.getElementById('ntf_title').value.trim();
   const body  = document.getElementById('ntf_body').value.trim();
   const target = document.getElementById('ntf_target').value;
   const when   = document.getElementById('ntf_when').value;
   const statusEl = document.getElementById('ntf_status');
-  const btn = document.getElementById('ntfSendBtn');
+  const btn = document.getElementById(isTest ? 'ntfTestBtn' : 'ntfSendBtn');
+  const fail = (msg) => { statusEl.style.color = 'var(--red, #e5484d)'; statusEl.textContent = msg; };
 
-  if (!title) { statusEl.style.color = 'var(--red, #e5484d)'; statusEl.textContent = 'Escreva um título.'; return; }
-  if (!body)  { statusEl.style.color = 'var(--red, #e5484d)'; statusEl.textContent = 'Escreva a mensagem.'; return; }
+  if (!title) { fail('Escreva um título.'); return; }
+  if (!body)  { fail('Escreva a mensagem.'); return; }
+  if (isTest && !_ntfTestEmails.length) { fail('Adicione ao menos um e-mail de teste.'); return; }
 
+  // Teste sempre sai na hora, só pros e-mails escolhidos. Envio normal
+  // respeita o alvo e o agendamento.
   let scheduledAt;
-  if (when === 'schedule') {
+  if (!isTest && when === 'schedule') {
     const v = document.getElementById('ntf_datetime').value;
-    if (!v) { statusEl.style.color = 'var(--red, #e5484d)'; statusEl.textContent = 'Escolha data e hora.'; return; }
+    if (!v) { fail('Escolha data e hora.'); return; }
     const d = new Date(v);
-    if (isNaN(d.getTime())) { statusEl.textContent = 'Data inválida.'; return; }
+    if (isNaN(d.getTime())) { fail('Data inválida.'); return; }
     scheduledAt = Timestamp.fromDate(d);
   } else {
     scheduledAt = Timestamp.fromDate(new Date());
@@ -3652,31 +3716,38 @@ window.sendNotification = async () => {
     targetCity:     target === 'city'     ? document.getElementById('ntf_city').value : null,
     targetInterest: target === 'interest' ? document.getElementById('ntf_interest').value : null,
     push: false, // reservado p/ quando o push nativo/web for ligado
+    isTest: !!isTest,
+    testEmails: isTest ? _ntfTestEmails.slice() : null,
     scheduledAt,
     createdAt: serverTimestamp(),
   };
 
   btn.disabled = true;
   statusEl.style.color = 'var(--text3)';
-  statusEl.textContent = 'Enviando…';
+  statusEl.textContent = isTest ? 'Enviando teste…' : 'Enviando…';
   try {
     await setDoc(doc(collection(db, 'notifications')), data);
     statusEl.style.color = 'var(--green, #46a758)';
-    statusEl.textContent = when === 'schedule' ? 'Agendada!' : 'Enviada!';
-    document.getElementById('ntf_title').value = '';
-    document.getElementById('ntf_body').value = '';
+    statusEl.textContent = isTest ? `Teste enviado para ${_ntfTestEmails.length} pessoa(s)!` : (when === 'schedule' ? 'Agendada!' : 'Enviada!');
+    if (!isTest) {
+      document.getElementById('ntf_title').value = '';
+      document.getElementById('ntf_body').value = '';
+    }
     loadAdminNotifications();
-    setTimeout(() => { statusEl.textContent = ''; }, 4000);
+    setTimeout(() => { statusEl.textContent = ''; }, 4500);
   } catch (e) {
     console.error(e);
-    statusEl.style.color = 'var(--red, #e5484d)';
-    statusEl.textContent = 'Erro ao enviar: ' + (e.message || e);
+    fail('Erro ao enviar: ' + (e.message || e));
   } finally {
     btn.disabled = false;
   }
 };
 
 function _ntfTargetLabel(n) {
+  if (n.isTest) {
+    const c = Array.isArray(n.testEmails) ? n.testEmails.length : 0;
+    return `Teste · ${c} e-mail${c !== 1 ? 's' : ''}`;
+  }
   if (n.targetType === 'city')     return 'Cidade: ' + String(n.targetCity || '').replace(', PR', '');
   if (n.targetType === 'interest') return 'Interesse: ' + (n.targetInterest || '—');
   return 'Todos';
@@ -3703,11 +3774,13 @@ window.loadAdminNotifications = async () => {
         const badge = isScheduled
           ? `<span style="background:rgba(139,111,46,.15);color:#c79a3e;font-size:11px;font-weight:700;padding:3px 9px;border-radius:8px">Agendada · ${dateStr}</span>`
           : `<span style="background:rgba(70,167,88,.13);color:#46a758;font-size:11px;font-weight:700;padding:3px 9px;border-radius:8px">Enviada · ${dateStr}</span>`;
+        const testTag = n.isTest
+          ? `<span style="background:rgba(120,120,240,.15);color:#8b8bf0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:8px">Teste</span>` : '';
         return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start">
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px">
               <span style="font-weight:700;color:var(--text)">${escM(n.title || 'Aviso')}</span>
-              ${badge}
+              ${testTag}${badge}
               <span style="font-size:11px;color:var(--text3)">${escM(_ntfTargetLabel(n))}</span>
             </div>
             <div style="font-size:13px;color:var(--text2);line-height:1.45;white-space:pre-wrap">${escM(n.body || '')}</div>
