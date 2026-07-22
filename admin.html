@@ -230,6 +230,7 @@ body {
   border: 1px solid var(--border);
   background: var(--bg3);
 }
+.user-meta { flex: 1; min-width: 0; overflow: hidden; }
 .user-avatar {
   width: 32px; height: 32px;
   border-radius: 50%;
@@ -1166,7 +1167,7 @@ th.sortable:hover { color: var(--acc3); }
 
     <div class="user-info">
       <div class="user-avatar" id="sidebarAvatar">?</div>
-      <div>
+      <div class="user-meta">
         <div class="user-name" id="sidebarName">—</div>
         <div class="user-role">Admin</div>
       </div>
@@ -2143,7 +2144,11 @@ onAuthStateChanged(auth, async user => {
     // Set user info in sidebar
     const nameEl = document.getElementById('sidebarName');
     const avatarEl = document.getElementById('sidebarAvatar');
-    nameEl.textContent = user.displayName || user.email;
+    const fullName = user.displayName || user.email || '';
+    const parts = fullName.trim().split(/\s+/);
+    const shortName = parts.length > 2 ? `${parts[0]} ${parts[parts.length - 1]}` : fullName;
+    nameEl.textContent = shortName;
+    nameEl.title = fullName; // nome completo no hover
     if (user.photoURL) {
       avatarEl.innerHTML = `<img src="${user.photoURL}" alt="">`;
     } else {
