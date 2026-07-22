@@ -1212,9 +1212,9 @@ th.sortable:hover { color: var(--acc3); }
           <div class="page-subtitle" id="placesSubtitle">Carregando…</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap">
-          <button class="btn" onclick="hdFetchMissing()" id="btnHdMissing" title="Baixa do Google, em alta resolução, as fotos dos lugares que ainda não têm foto local. Gera um .zip pra você colocar na pasta fotos/ do projeto.">
+          <button class="btn" onclick="hdFetchMissing()" id="btnHdMissing" title="Baixa do Google (em HD) as fotos dos lugares que NÃO estão locais: sem foto ou com foto externa (fora do servidor). Gera um .zip pra pasta fotos/.">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Fotos: baixar novas
+            Fotos: baixar faltantes
           </button>
           <button class="btn" onclick="hdFetchAll()" id="btnHdAll" title="Re-baixa em ALTA RESOLUÇÃO as fotos de TODOS os lugares com Google ID (corrige a pixelização). Usa a API do Google (custo pequeno, uma vez).">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
@@ -2657,11 +2657,17 @@ async function _hdFetch(targets, btn) {
   showToast(`${ok} lugar(es) baixados${semFoto ? `, ${semFoto} sem foto no Google` : ''}${fail ? `, ${fail} erro` : ''}. Extraia a pasta "fotos" na RAIZ do projeto, dê push, e clique em "Fotos: aplicar".`, fail ? 'error' : 'success');
 }
 
-// Só os lugares novos (com Google ID e sem foto local ainda).
+// Só os lugares que NÃO estão locais: com Google ID e sem foto local
+// (ou seja, sem foto nenhuma, ou com foto de fora do servidor).
 window.hdFetchMissing = () => {
   const targets = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_') && !isLocalPhotos(p));
-  if (!targets.length) { showToast('Nenhum lugar novo sem foto local. 🎉', 'info'); return; }
-  if (!confirm(`Baixar fotos (HD) de ${targets.length} lugar(es) novo(s)?\nUsa a API do Google (custo pequeno). Continuar?`)) return;
+  if (!targets.length) { showToast('Todos os lugares (com Google ID) já têm fotos locais. 🎉', 'info'); return; }
+  const semFoto = targets.filter(p => !(Array.isArray(p.photos) && p.photos.length)).length;
+  const externa = targets.length - semFoto;
+  const partes = [];
+  if (semFoto) partes.push(`${semFoto} sem foto`);
+  if (externa) partes.push(`${externa} com foto externa (fora do servidor)`);
+  if (!confirm(`Baixar fotos (HD) de ${targets.length} lugar(es) que ainda não estão locais:\n• ${partes.join('\n• ')}\n\nUsa a API do Google (custo pequeno). Continuar?`)) return;
   _hdFetch(targets, document.getElementById('btnHdMissing'));
 };
 
