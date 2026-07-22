@@ -2336,20 +2336,35 @@ window.removePhoto = (idx, e) => {
 // do NOSSO storage. Assim o app exibe os cards sem chamar (nem pagar) a API
 // do Google a cada visualização. URLs que já são do nosso Storage passam
 // direto (idempotente — re-salvar não re-baixa).
+// Reduz a imagem (máx ~800px, JPEG 72%) antes de subir. Fotos menores =
+// menos bytes armazenados E menos banda por download → menos custo.
+async function compressImageBlob(blob, maxDim = 800, quality = 0.72) {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    const out = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+    return (out && out.size < blob.size) ? out : blob;
+  } catch { return blob; }
+}
+
 async function hostPhoto(url, docId, index) {
   // Já hospedada por nós (ou qualquer origem que não seja a API do Google) → mantém.
   if (!url.includes('places.googleapis.com')) return url;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`download foto: ${res.status}`);
-  const blob = await res.blob();
-  const type = blob.type || 'image/jpeg';
-  const ext  = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
-  const path = `places/${docId}/${index}_${Date.now()}.${ext}`;
+  const raw  = await res.blob();
+  const blob = await compressImageBlob(raw);   // encolhe antes de subir
+  const path = `places/${docId}/${index}_${Date.now()}.jpg`;
   const sref = storageRef(storage, path);
   // cacheControl longo: o navegador/CDN guardam a imagem por 1 ano, então
   // re-visualizações do mesmo card NÃO baixam de novo do Storage. Isso derruba
   // o consumo de banda (a única cota que cresce com o tráfego) drasticamente.
-  await uploadBytes(sref, blob, { contentType: type, cacheControl: 'public, max-age=31536000, immutable' });
+  await uploadBytes(sref, blob, { contentType: 'image/jpeg', cacheControl: 'public, max-age=31536000, immutable' });
   return await getDownloadURL(sref);
 }
 

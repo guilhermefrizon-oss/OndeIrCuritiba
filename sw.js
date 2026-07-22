@@ -7,9 +7,9 @@
 // Requisições de OUTROS domínios (Firebase, Google Maps/Places, fotos) NÃO
 // são interceptadas — vão direto pra rede, como sempre.
 
-const CACHE = 'daymatch-v6';
-const PHOTO_CACHE = 'daymatch-photos-v1';   // fotos dos lugares (Google)
-const PHOTO_MAX = 150;                        // teto de fotos guardadas
+const CACHE = 'daymatch-v7';
+const PHOTO_CACHE = 'daymatch-photos-v2';   // fotos dos lugares (Google + Storage)
+const PHOTO_MAX = 300;                        // teto de fotos guardadas
 const CORE = ['./', './index.html', './css/styles.css', './site.webmanifest', './icon-192.png'];
 
 // É uma foto de lugar do Google? (endpoint de mídia da Places API ou o
@@ -17,7 +17,12 @@ const CORE = ['./', './index.html', './css/styles.css', './site.webmanifest', '.
 function isPhoto(url) {
   return url.hostname.endsWith('googleusercontent.com')
       || url.hostname.endsWith('ggpht.com')
-      || (url.hostname === 'places.googleapis.com' && url.pathname.includes('/media'));
+      || (url.hostname === 'places.googleapis.com' && url.pathname.includes('/media'))
+      // Fotos hospedadas no NOSSO Firebase Storage — cachear cache-first evita
+      // baixar de novo a cada visualização (a banda é o que gera custo).
+      || url.hostname.endsWith('firebasestorage.googleapis.com')
+      || url.hostname.endsWith('firebasestorage.app')
+      || url.hostname === 'storage.googleapis.com';
 }
 
 // Cache-first: se já baixou a foto antes, devolve na hora (sem rede).

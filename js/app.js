@@ -666,7 +666,10 @@ function prefetchUpcoming(count = 3) {
     if (!p || seen.has(p.id)) continue;
     seen.add(p.id);
     if (Array.isArray(p.photos) && p.photos.length) {
-      p.photos.slice(0, 3).forEach(preloadImage); // 1ª + próximas do card
+      // Só a CAPA das próximas cartas (as fotos internas carregam quando a
+      // pessoa abre o lugar). Pré-baixar todas gastava banda à toa com cartas
+      // que muitas vezes são puladas.
+      preloadImage(p.photos[0]);
     } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
       // Mesmo fetchAllPhotos (com cache) usado no card → não gera chamada
       // extra: só adianta a que aconteceria quando a carta chegar ao topo.
