@@ -8,7 +8,7 @@ import { getAdditionalUserInfo } from "https://www.gstatic.com/firebasejs/10.12.
 import { ic } from './icons.js';
 
 import {
-  db, doc, getDoc, setDoc, collection, getDocs, query
+  db, doc, getDoc, setDoc, collection, getDocs, query, orderBy
 } from './firebase.js';
 import { loadUserXp, getLevelInfo } from './xp.js';
 import { loadUserBadges, renderBadges } from './badges.js';
@@ -1335,6 +1335,148 @@ function _bindPhotoUploadGeneric(user, btnId, inputId, mediaId) {
 }
 
 // ── Menu sanduíche ─────────────────────────────────────────────────
+// ── Notificações (avisos do app) ───────────────────────────────────
+// Coleção pública `notifications` (escrita só admin). O app filtra por alvo
+// (todos/cidade/interesse) e por scheduledAt (só mostra depois da hora), e
+// guarda o "lido" por dispositivo no localStorage (sem custo, sem login).
+let _notifCache = null;
+let _notifCacheAt = 0;
+
+const _escN = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+function _notifReadSet() {
+  try { return new Set(JSON.parse(localStorage.getItem('cwb_notif_read') || '[]')); }
+  catch { return new Set(); }
+}
+function _notifMarkRead(ids) {
+  const set = _notifReadSet();
+  ids.forEach(id => set.add(id));
+  try { localStorage.setItem('cwb_notif_read', JSON.stringify([...set])); } catch {}
+}
+function _tsMillis(v) {
+  if (!v) return 0;
+  if (typeof v.toMillis === 'function') return v.toMillis();
+  if (typeof v.seconds === 'number') return v.seconds * 1000;
+  const t = new Date(v).getTime();
+  return isNaN(t) ? 0 : t;
+}
+function _notifMatchesUser(n) {
+  const type = n.targetType || 'all';
+  if (type === 'all') return true;
+  if (type === 'city') {
+    const city = localStorage.getItem('cwb_city') || 'Curitiba, PR';
+    return n.targetCity === city;
+  }
+  if (type === 'interest') {
+    let interests = [];
+    try { interests = JSON.parse(localStorage.getItem('cwb_interests') || '[]'); } catch {}
+    return Array.isArray(interests) && interests.includes(n.targetInterest);
+  }
+  return false;
+}
+
+async function loadNotifications(force = false) {
+  const now = Date.now();
+  if (!force && _notifCache && (now - _notifCacheAt) < 60000) return _notifCache;
+  try {
+    const snap = await getDocs(query(collection(db, 'notifications'), orderBy('scheduledAt', 'desc')));
+    _notifCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _notifCacheAt = now;
+    return _notifCache;
+  } catch (e) {
+    console.warn('notificações', e.message);
+    return _notifCache || [];
+  }
+}
+
+// Notificações já publicadas (scheduledAt <= agora) e com alvo compatível.
+function _visibleNotifs(all) {
+  const now = Date.now();
+  return all.filter(n => _tsMillis(n.scheduledAt || n.createdAt) <= now && _notifMatchesUser(n));
+}
+
+async function getUnreadNotifCount() {
+  const all = await loadNotifications();
+  const read = _notifReadSet();
+  return _visibleNotifs(all).filter(n => !read.has(n.id)).length;
+}
+
+window.refreshNotifBadge = async () => {
+  try {
+    const count = await getUnreadNotifCount();
+    const dot = document.getElementById('menuNotifDot');
+    if (dot) dot.style.display = count > 0 ? 'block' : 'none';
+    const mi = document.getElementById('amNotifCount');
+    if (mi) { mi.textContent = count > 99 ? '99+' : count; mi.style.display = count > 0 ? 'inline-flex' : 'none'; }
+  } catch {}
+};
+
+function _notifTimeLabel(ms) {
+  if (!ms) return '';
+  const diff = Date.now() - ms;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'agora';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'ontem';
+  if (d < 7) return `há ${d} dias`;
+  return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
+export async function openNotificationsScreen() {
+  const scr = _ensureScreen('notifScreen', 'pf-screen');
+  scr.innerHTML = `
+    <div class="pf-topbar">
+      <button class="pf-back" id="ntfBack" aria-label="Voltar">${_BACK_SVG}</button>
+      <span class="pf-title">Notificações</span>
+      <span class="pf-topbar-spacer"></span>
+    </div>
+    <div class="pf-scroll" id="ntfScroll">
+      <div class="ntf-empty"><div class="ntf-empty-ic">${ic('bell', 34, 1.4)}</div><div class="ntf-empty-sub">Carregando…</div></div>
+    </div>`;
+  scr.style.display = 'flex';
+  requestAnimationFrame(() => scr.classList.add('pf-visible'));
+  if (window.registerOverlay) window.registerOverlay('notifScreen', () => _hideScreen('notifScreen', 'pf-visible'));
+  const close = () => { if (window.dismissOverlay) window.dismissOverlay('notifScreen'); else _hideScreen('notifScreen', 'pf-visible'); };
+  document.getElementById('ntfBack').onclick = close;
+
+  const all = await loadNotifications(true);
+  const visible = _visibleNotifs(all)
+    .sort((a, b) => _tsMillis(b.scheduledAt || b.createdAt) - _tsMillis(a.scheduledAt || a.createdAt));
+  const read = _notifReadSet();
+  const scroll = document.getElementById('ntfScroll');
+  if (!scroll) return;
+
+  if (!visible.length) {
+    scroll.innerHTML = `
+      <div class="ntf-empty">
+        <div class="ntf-empty-ic">${ic('bell', 40, 1.3)}</div>
+        <div class="ntf-empty-title">Nenhuma notificação</div>
+        <div class="ntf-empty-sub">Novidades e avisos do Day Match aparecem aqui.</div>
+      </div>`;
+  } else {
+    scroll.innerHTML = visible.map(n => {
+      const unread = !read.has(n.id);
+      const ms = _tsMillis(n.scheduledAt || n.createdAt);
+      return `<div class="ntf-card${unread ? ' ntf-unread' : ''}">
+        <div class="ntf-card-top">
+          <span class="ntf-card-title">${_escN(n.title || 'Aviso')}</span>
+          <span class="ntf-card-time">${_notifTimeLabel(ms)}</span>
+        </div>
+        ${n.body ? `<div class="ntf-card-body">${_escN(n.body)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // Marca tudo como lido e limpa o badge.
+  _notifMarkRead(visible.map(n => n.id));
+  window.refreshNotifBadge?.();
+}
+window.openNotificationsScreen = openNotificationsScreen;
+
 export function openAppMenu() {
   const scr = _ensureScreen('appMenu', 'app-menu');
   const u = window.currentUser;
@@ -1360,6 +1502,10 @@ export function openAppMenu() {
       </button>
 
       <nav class="am-list">
+        <button class="am-item" data-act="notifs">
+          <span class="am-item-ic">${ic('bell', 20)}</span><span class="am-item-lbl">Notificações</span>
+          <span class="am-notif-count" id="amNotifCount" style="display:none">0</span><span class="am-item-ch">›</span>
+        </button>
         <button class="am-item" data-act="perfil">
           <span class="am-item-ic">${ic('user', 20)}</span><span class="am-item-lbl">Perfil</span><span class="am-item-ch">›</span>
         </button>
@@ -1388,6 +1534,8 @@ export function openAppMenu() {
   const close = () => { if (window.dismissOverlay) window.dismissOverlay('appMenu'); else _hideScreen('appMenu', 'am-visible'); };
   document.getElementById('amCloseBtn').onclick = close;
 
+  window.refreshNotifBadge?.(); // atualiza o contador de não-lidas no item
+
   document.getElementById('amUserBtn').onclick = () => {
     // Abre o perfil SOBRE o menu (voltar retorna ao menu). Evita fechar e
     // reabrir no mesmo tick, que causaria corrida no histórico do back.
@@ -1406,6 +1554,7 @@ export function openAppMenu() {
         if (lblEl) lblEl.textContent = nowDark ? 'Modo claro' : 'Modo escuro';
         return; // mantém o menu aberto
       }
+      if (act === 'notifs')   { openNotificationsScreen(); return; }
       if (act === 'privacy')  { close(); window.open('privacidade.html', '_blank', 'noopener'); return; }
       if (act === 'signout')  { close(); signOutUser(); return; }
       // Perfil/Estatísticas: abrem por cima do menu (drill-down).

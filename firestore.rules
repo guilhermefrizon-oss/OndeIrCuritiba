@@ -174,6 +174,15 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ── Notificações (avisos do app) ─────────────────────────────────
+    // Leitura pública (todo mundo pode ver os avisos); só admin cria, edita
+    // ou apaga. O app filtra no cliente por alvo (todos/cidade/interesse) e
+    // por scheduledAt (só mostra depois da hora agendada).
+    match /notifications/{id} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     // ── Padrão: nega o que não foi liberado acima ────────────────────
     match /{document=**} { allow read, write: if false; }
   }

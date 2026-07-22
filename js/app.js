@@ -196,6 +196,9 @@ async function init() {
   // Distância até o usuário (pede permissão só se ainda não decidiu)
   requestUserLocation();
 
+  // Badge de notificações não-lidas (pontinho no menu)
+  window.refreshNotifBadge?.();
+
   // Dica de swipe na primeira visita
   maybeShowSwipeHint();
 
@@ -1704,7 +1707,8 @@ window.closeAddrSheet = (e) => {
 };
 
 // ── City selector ──────────────────────────────────────────────────
-let currentCity = 'Curitiba, PR';
+let currentCity = localStorage.getItem('cwb_city') || 'Curitiba, PR';
+window.getCurrentCity = () => currentCity;
 window.openCitySheet  = () => {
   document.getElementById('citySheetBackdrop').style.display='flex';
   window.registerOverlay('citySheet', doCloseCitySheet);
@@ -1719,6 +1723,8 @@ window.closeCitySheet = (e) => {
 };
 window.selectCity = (city, id) => {
   currentCity = city;
+  try { localStorage.setItem('cwb_city', city); } catch {}
+  window.refreshNotifBadge?.();
   document.getElementById('cityLabel').textContent = city;
   document.querySelectorAll('.city-option').forEach(b => b.classList.toggle('active', b.id===id));
   window.dismissOverlay('citySheet');

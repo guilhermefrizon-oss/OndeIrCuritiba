@@ -1140,6 +1140,11 @@ th.sortable:hover { color: var(--acc3); }
       Denúncias
       <span class="nav-count" id="reportsCount" style="display:none">0</span>
     </button>
+    <button class="nav-item" onclick="showPage('notifications')" id="nav-notifications">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Notificações
+      <span class="nav-count" id="notifScheduledCount" style="display:none;background:#8b6f2e">0</span>
+    </button>
     <button class="nav-item" onclick="showPage('categories')" id="nav-categories">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Categorias
@@ -1279,6 +1284,86 @@ th.sortable:hover { color: var(--acc3); }
         </button>
       </div>
       <div id="reportsList">
+        <div class="table-loading"><div class="spinner"></div>Carregando…</div>
+      </div>
+    </div>
+
+    <!-- ── Notifications Page ── -->
+    <div id="page-notifications" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Notificações</div>
+          <div class="page-subtitle">Envie avisos e novidades. Aparecem na aba <strong>Notificações</strong> do menu do app.</div>
+        </div>
+        <button class="btn btn-secondary" onclick="loadAdminNotifications()">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+
+      <div class="alert-box info" style="max-width:760px">
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        <div>Estas são notificações <strong>dentro do app</strong> (aparecem na aba do menu, com pontinho de aviso). O envio como <strong>push no celular</strong> exige plano Blaze + Cloud Function + build nativo — por isso está marcado como “em breve”.</div>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px;max-width:760px;margin-bottom:28px">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">Título *</label>
+            <input class="form-input" id="ntf_title" maxlength="80" placeholder="ex: Novidade no Day Match!">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Mensagem *</label>
+            <textarea class="form-textarea" id="ntf_body" maxlength="300" placeholder="Escreva o aviso que as pessoas vão ver…"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Enviar para</label>
+            <select class="form-select" id="ntf_target" onchange="onNtfTargetChange()">
+              <option value="all">Todos</option>
+              <option value="city">Por cidade</option>
+              <option value="interest">Por interesse</option>
+            </select>
+          </div>
+          <div class="form-group" id="ntf_cityWrap" style="display:none">
+            <label class="form-label">Cidade</label>
+            <select class="form-select" id="ntf_city">
+              <option value="Curitiba, PR">Curitiba</option>
+              <option value="São José dos Pinhais, PR">São José dos Pinhais</option>
+              <option value="Pinhais, PR">Pinhais</option>
+            </select>
+          </div>
+          <div class="form-group" id="ntf_interestWrap" style="display:none">
+            <label class="form-label">Interesse (categoria)</label>
+            <select class="form-select" id="ntf_interest"><option value="">Carregando…</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quando</label>
+            <select class="form-select" id="ntf_when" onchange="onNtfWhenChange()">
+              <option value="now">Enviar agora</option>
+              <option value="schedule">Agendar</option>
+            </select>
+          </div>
+          <div class="form-group" id="ntf_scheduleWrap" style="display:none">
+            <label class="form-label">Data e hora</label>
+            <input class="form-input" type="datetime-local" id="ntf_datetime">
+          </div>
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:not-allowed">
+              <input type="checkbox" id="ntf_push" disabled> Enviar também como push no celular <span style="background:var(--bg4);color:var(--text3);font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px">em breve</span>
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:18px">
+          <button class="btn btn-primary" onclick="sendNotification()" id="ntfSendBtn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Enviar
+          </button>
+          <span id="ntf_status" style="font-size:13px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <div class="section-label">Enviadas e agendadas</div>
+      <div id="ntfAdminList" style="max-width:760px">
         <div class="table-loading"><div class="spinner"></div>Carregando…</div>
       </div>
     </div>
@@ -3487,7 +3572,7 @@ window.openPlaceFromCorrection = (id) => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','corrections','reports','categories','quiz','metrics','rules'].forEach(p => {
+  ['places','corrections','reports','notifications','categories','quiz','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
@@ -3496,7 +3581,158 @@ window.showPage = (page) => {
   if (page === 'quiz') loadQuizConfig();
   if (page === 'corrections') loadCorrections();
   if (page === 'reports') loadReports();
+  if (page === 'notifications') initNotificationsPage();
   closeSidebar(); // fecha a gaveta no mobile após navegar
+};
+
+// ── Notificações (envio para o app) ─────────────────────────────────
+let _notifCatsLoaded = false;
+
+async function initNotificationsPage() {
+  onNtfTargetChange();
+  onNtfWhenChange();
+  // Popula o seletor de interesse com as categorias (uma vez).
+  if (!_notifCatsLoaded) {
+    try {
+      const snap = await getDocs(collection(db, 'categories'));
+      const names = snap.docs.map(d => d.data().name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt'));
+      const sel = document.getElementById('ntf_interest');
+      if (sel) sel.innerHTML = names.map(n => `<option value="${escM(n)}">${escM(n)}</option>`).join('') || '<option value="">— sem categorias —</option>';
+      _notifCatsLoaded = true;
+    } catch (e) { console.warn('categorias p/ notificação', e.message); }
+  }
+  loadAdminNotifications();
+}
+
+window.onNtfTargetChange = () => {
+  const t = document.getElementById('ntf_target').value;
+  document.getElementById('ntf_cityWrap').style.display     = t === 'city' ? 'flex' : 'none';
+  document.getElementById('ntf_interestWrap').style.display = t === 'interest' ? 'flex' : 'none';
+};
+
+window.onNtfWhenChange = () => {
+  const when = document.getElementById('ntf_when').value;
+  const wrap = document.getElementById('ntf_scheduleWrap');
+  wrap.style.display = when === 'schedule' ? 'flex' : 'none';
+  if (when === 'schedule') {
+    const dt = document.getElementById('ntf_datetime');
+    if (dt && !dt.value) {
+      const d = new Date(Date.now() + 60 * 60 * 1000); // sugere +1h
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      dt.value = d.toISOString().slice(0, 16);
+    }
+  }
+};
+
+window.sendNotification = async () => {
+  const title = document.getElementById('ntf_title').value.trim();
+  const body  = document.getElementById('ntf_body').value.trim();
+  const target = document.getElementById('ntf_target').value;
+  const when   = document.getElementById('ntf_when').value;
+  const statusEl = document.getElementById('ntf_status');
+  const btn = document.getElementById('ntfSendBtn');
+
+  if (!title) { statusEl.style.color = 'var(--red, #e5484d)'; statusEl.textContent = 'Escreva um título.'; return; }
+  if (!body)  { statusEl.style.color = 'var(--red, #e5484d)'; statusEl.textContent = 'Escreva a mensagem.'; return; }
+
+  let scheduledAt;
+  if (when === 'schedule') {
+    const v = document.getElementById('ntf_datetime').value;
+    if (!v) { statusEl.style.color = 'var(--red, #e5484d)'; statusEl.textContent = 'Escolha data e hora.'; return; }
+    const d = new Date(v);
+    if (isNaN(d.getTime())) { statusEl.textContent = 'Data inválida.'; return; }
+    scheduledAt = Timestamp.fromDate(d);
+  } else {
+    scheduledAt = Timestamp.fromDate(new Date());
+  }
+
+  const data = {
+    title, body,
+    targetType: target,
+    targetCity:     target === 'city'     ? document.getElementById('ntf_city').value : null,
+    targetInterest: target === 'interest' ? document.getElementById('ntf_interest').value : null,
+    push: false, // reservado p/ quando o push nativo/web for ligado
+    scheduledAt,
+    createdAt: serverTimestamp(),
+  };
+
+  btn.disabled = true;
+  statusEl.style.color = 'var(--text3)';
+  statusEl.textContent = 'Enviando…';
+  try {
+    await setDoc(doc(collection(db, 'notifications')), data);
+    statusEl.style.color = 'var(--green, #46a758)';
+    statusEl.textContent = when === 'schedule' ? 'Agendada!' : 'Enviada!';
+    document.getElementById('ntf_title').value = '';
+    document.getElementById('ntf_body').value = '';
+    loadAdminNotifications();
+    setTimeout(() => { statusEl.textContent = ''; }, 4000);
+  } catch (e) {
+    console.error(e);
+    statusEl.style.color = 'var(--red, #e5484d)';
+    statusEl.textContent = 'Erro ao enviar: ' + (e.message || e);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+function _ntfTargetLabel(n) {
+  if (n.targetType === 'city')     return 'Cidade: ' + String(n.targetCity || '').replace(', PR', '');
+  if (n.targetType === 'interest') return 'Interesse: ' + (n.targetInterest || '—');
+  return 'Todos';
+}
+
+window.loadAdminNotifications = async () => {
+  const list = document.getElementById('ntfAdminList');
+  if (!list) return;
+  list.innerHTML = '<div class="table-loading"><div class="spinner"></div>Carregando…</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'notifications'), orderBy('scheduledAt', 'desc')));
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const now = Date.now();
+    let scheduledCount = 0;
+
+    if (!items.length) {
+      list.innerHTML = '<div style="color:var(--text3);font-size:14px;padding:8px 2px">Nenhuma notificação ainda.</div>';
+    } else {
+      list.innerHTML = items.map(n => {
+        const ms = n.scheduledAt && n.scheduledAt.toMillis ? n.scheduledAt.toMillis() : 0;
+        const isScheduled = ms > now;
+        if (isScheduled) scheduledCount++;
+        const dateStr = ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+        const badge = isScheduled
+          ? `<span style="background:rgba(139,111,46,.15);color:#c79a3e;font-size:11px;font-weight:700;padding:3px 9px;border-radius:8px">Agendada · ${dateStr}</span>`
+          : `<span style="background:rgba(70,167,88,.13);color:#46a758;font-size:11px;font-weight:700;padding:3px 9px;border-radius:8px">Enviada · ${dateStr}</span>`;
+        return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px">
+              <span style="font-weight:700;color:var(--text)">${escM(n.title || 'Aviso')}</span>
+              ${badge}
+              <span style="font-size:11px;color:var(--text3)">${escM(_ntfTargetLabel(n))}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text2);line-height:1.45;white-space:pre-wrap">${escM(n.body || '')}</div>
+          </div>
+          <button class="btn btn-secondary" style="padding:7px 10px;flex-shrink:0" onclick="deleteAdminNotification('${n.id}')" title="Apagar">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    const badgeEl = document.getElementById('notifScheduledCount');
+    if (badgeEl) { badgeEl.textContent = scheduledCount; badgeEl.style.display = scheduledCount > 0 ? 'inline-flex' : 'none'; }
+  } catch (e) {
+    console.error(e);
+    list.innerHTML = `<div class="alert-box warn" style="max-width:760px"><span></span><div>Erro ao carregar: ${escM(e.message || String(e))}. Confira se as regras do Firestore foram publicadas.</div></div>`;
+  }
+};
+
+window.deleteAdminNotification = async (id) => {
+  if (!confirm('Apagar esta notificação? Ela some do app para todo mundo.')) return;
+  try {
+    await deleteDoc(doc(db, 'notifications', id));
+    loadAdminNotifications();
+  } catch (e) { alert('Erro ao apagar: ' + (e.message || e)); }
 };
 
 // ── Métricas de engajamento ─────────────────────────────────────
