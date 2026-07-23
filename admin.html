@@ -1364,8 +1364,14 @@ th.sortable:hover { color: var(--acc3); }
         </div>
       </div>
 
-      <div class="section-label" style="margin-top:28px">Horários</div>
+      <div class="section-label" style="margin-top:28px">Localização e horários</div>
       <div class="tools-grid">
+        <div class="tool-card">
+          <div class="tool-step tool-step-opt">Manutenção</div>
+          <div class="tool-card-t">Preencher coordenadas</div>
+          <div class="tool-card-d">Busca no Google a localização (lat/lng) dos lugares que ainda não têm — é o que faz aparecer a <strong>distância em km</strong> no card pra todo mundo. Roda uma vez; salva direto no banco (sem push).</div>
+          <button class="btn btn-primary" onclick="backfillCoords()" id="btnBackfillCoords">Preencher coordenadas</button>
+        </div>
         <div class="tool-card">
           <div class="tool-step tool-step-opt">Manutenção</div>
           <div class="tool-card-t">Converter horários</div>
@@ -2781,6 +2787,34 @@ window.applyHDPhotos = async () => {
   } finally {
     btn.disabled = false; btn.innerHTML = orig;
   }
+};
+
+// Backfill de coordenadas: busca no Google a localização dos lugares que ainda
+// não têm lat/lng e grava no banco. É o que faz a distância (km) aparecer no
+// card pra todos os lugares. Grava direto no Firestore (sem push).
+window.backfillCoords = async () => {
+  const targets = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_') && (p.lat == null || p.lng == null));
+  if (!targets.length) { showToast('Todos os lugares com Google ID já têm coordenadas. 🎉', 'info'); return; }
+  if (!confirm(`Buscar no Google as coordenadas de ${targets.length} lugar(es) sem localização?\nUsa a API do Google (custo pequeno). Continuar?`)) return;
+  const btn = document.getElementById('btnBackfillCoords');
+  const orig = btn.innerHTML; btn.disabled = true;
+  let ok = 0, fail = 0, i = 0;
+  for (const p of targets) {
+    i++; btn.textContent = `Buscando ${i}/${targets.length}…`;
+    try {
+      const res = await fetch(`https://places.googleapis.com/v1/places/${p.pid}?fields=location&key=${GOOGLE_API_KEY}`,
+        { headers: { 'X-Goog-FieldMask': 'location' } });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const lat = data.location?.latitude, lng = data.location?.longitude;
+      if (lat == null || lng == null) { fail++; continue; }
+      await setDoc(doc(db, 'places', p._docId), { lat, lng, _updatedAt: serverTimestamp() }, { merge: true });
+      p.lat = lat; p.lng = lng;
+      ok++;
+    } catch (e) { console.warn('coord', p._docId, e.message); fail++; }
+  }
+  btn.disabled = false; btn.innerHTML = orig;
+  showToast(`Coordenadas: ${ok} preenchida(s)${fail ? `, ${fail} falha(s)` : ''}. A distância aparece no app após recarregar.`, fail ? 'error' : 'success');
 };
 
 window.closePhotoModal = () => {
