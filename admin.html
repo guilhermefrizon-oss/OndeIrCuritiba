@@ -2792,9 +2792,25 @@ window.applyHDPhotos = async () => {
 // Backfill de coordenadas: busca no Google a localização dos lugares que ainda
 // não têm lat/lng e grava no banco. É o que faz a distância (km) aparecer no
 // card pra todos os lugares. Grava direto no Firestore (sem push).
+async function _coordsFromPid(pid) {
+  const res = await fetch(`https://places.googleapis.com/v1/places/${pid}?fields=location&key=${GOOGLE_API_KEY}`,
+    { headers: { 'X-Goog-FieldMask': 'location' } });
+  if (!res.ok) throw new Error(res.status);
+  const d = await res.json();
+  return (d.location?.latitude != null) ? { lat: d.location.latitude, lng: d.location.longitude } : null;
+}
+async function _coordsFromAddress(addr) {
+  const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr + ', Curitiba, PR')}&key=${GOOGLE_API_KEY}`);
+  const d = await res.json();
+  const loc = d.results?.[0]?.geometry?.location;
+  return loc ? { lat: loc.lat, lng: loc.lng } : null;
+}
+
 window.backfillCoords = async () => {
-  const targets = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_') && (p.lat == null || p.lng == null));
-  if (!targets.length) { showToast('Todos os lugares com Google ID já têm coordenadas. 🎉', 'info'); return; }
+  // Todos que faltam coordenada e têm de onde tirar (Google ID ou endereço).
+  const targets = allPlaces.filter(p => (p.lat == null || p.lng == null) &&
+    ((p.pid && !p.pid.startsWith('ID_GOOGLE_')) || p.a));
+  if (!targets.length) { showToast('Todos os lugares já têm coordenadas. 🎉', 'info'); return; }
   if (!confirm(`Buscar no Google as coordenadas de ${targets.length} lugar(es) sem localização?\nUsa a API do Google (custo pequeno). Continuar?`)) return;
   const btn = document.getElementById('btnBackfillCoords');
   const orig = btn.innerHTML; btn.disabled = true;
@@ -2802,19 +2818,17 @@ window.backfillCoords = async () => {
   for (const p of targets) {
     i++; btn.textContent = `Buscando ${i}/${targets.length}…`;
     try {
-      const res = await fetch(`https://places.googleapis.com/v1/places/${p.pid}?fields=location&key=${GOOGLE_API_KEY}`,
-        { headers: { 'X-Goog-FieldMask': 'location' } });
-      if (!res.ok) throw new Error(res.status);
-      const data = await res.json();
-      const lat = data.location?.latitude, lng = data.location?.longitude;
-      if (lat == null || lng == null) { fail++; continue; }
-      await setDoc(doc(db, 'places', p._docId), { lat, lng, _updatedAt: serverTimestamp() }, { merge: true });
-      p.lat = lat; p.lng = lng;
+      let coords = null;
+      if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) coords = await _coordsFromPid(p.pid); // preciso
+      if (!coords && p.a) coords = await _coordsFromAddress(p.a);                          // fallback por endereço
+      if (!coords) { fail++; continue; }
+      await setDoc(doc(db, 'places', p._docId), { lat: coords.lat, lng: coords.lng, _updatedAt: serverTimestamp() }, { merge: true });
+      p.lat = coords.lat; p.lng = coords.lng;
       ok++;
     } catch (e) { console.warn('coord', p._docId, e.message); fail++; }
   }
   btn.disabled = false; btn.innerHTML = orig;
-  showToast(`Coordenadas: ${ok} preenchida(s)${fail ? `, ${fail} falha(s)` : ''}. A distância aparece no app após recarregar.`, fail ? 'error' : 'success');
+  showToast(`Coordenadas: ${ok} preenchida(s)${fail ? `, ${fail} falha(s)` : ''}. A distância e o mapa (sem chamar API) valem após recarregar.`, fail ? 'error' : 'success');
 };
 
 window.closePhotoModal = () => {
