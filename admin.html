@@ -3782,7 +3782,8 @@ window.savePlace = async () => {
   const _lng = parseFloat(document.getElementById('f_lng').value);
   if (!isNaN(_lat) && !isNaN(_lng)) { data.lat = _lat; data.lng = _lng; }
 
-  if (!editingId) {
+  const isNew = !editingId;
+  if (isNew) {
     data._createdAt = serverTimestamp();
     data.id = Date.now().toString();
   }
@@ -3791,9 +3792,23 @@ window.savePlace = async () => {
   try {
     const docId = editingId || data.id;
     await setDoc(doc(db, 'places', docId), data, { merge: true });
-    showToast(editingId ? 'Lugar atualizado!' : 'Lugar adicionado!', 'success');
-    closeModal();
-    loadPlaces();
+    loadPlaces();                       // atualiza a lista em segundo plano
+    if (isNew) {
+      // Não fecha: passa pro modo edição do MESMO lugar, já liberando o botão
+      // de Fotos — sem ter que fechar e reencontrar o lugar na lista.
+      editingId = docId;
+      data._docId = docId;
+      if (!allPlaces.some(p => p._docId === docId)) allPlaces.push(data); // p/ o photo modal achar o lugar
+      document.getElementById('modalTitle').textContent = 'Editar: ' + n;
+      const pidOk = data.pid && !data.pid.startsWith('ID_GOOGLE_');
+      document.getElementById('btnPhotos').style.display = pidOk ? 'flex' : 'none';
+      showToast(pidOk
+        ? 'Lugar criado! Agora clique em “Fotos” aqui embaixo pra selecionar.'
+        : 'Lugar criado! (adicione um Google Place ID pra puxar as fotos)', 'success');
+    } else {
+      showToast('Lugar atualizado!', 'success');
+      closeModal();
+    }
   } catch(e) {
     showToast('Erro ao salvar: ' + e.message, 'error');
   } finally {
