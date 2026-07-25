@@ -1441,6 +1441,12 @@ th.sortable:hover { color: var(--acc3); }
           <button class="btn btn-primary" onclick="backfillCoords()" id="btnBackfillCoords">Preencher coordenadas</button>
         </div>
         <div class="tool-card">
+          <div class="tool-step tool-step-opt">Correção</div>
+          <div class="tool-card-t">Corrigir pino errado</div>
+          <div class="tool-card-d">Refaz a localização de <strong>todos</strong> os lugares com Google ID usando o próprio ID (fonte exata). Use quando um pino cair no lugar errado — normalmente é coordenada que veio de busca por endereço e pegou outra unidade da mesma rede.</div>
+          <button class="btn" onclick="backfillCoords(true)" id="btnFixCoords">Corrigir pelo Google ID</button>
+        </div>
+        <div class="tool-card">
           <div class="tool-step tool-step-opt">Manutenção</div>
           <div class="tool-card-t">Converter horários</div>
           <div class="tool-card-d">Preenche a grade de horário por dia dos lugares antigos a partir do texto — sem sobrescrever quem já tem a grade preenchida.</div>
@@ -2867,20 +2873,27 @@ async function _coordsFromPid(pid) {
   const d = await res.json();
   return (d.location?.latitude != null) ? { lat: d.location.latitude, lng: d.location.longitude } : null;
 }
-async function _coordsFromAddress(addr) {
-  const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr + ', Curitiba, PR')}&key=${GOOGLE_API_KEY}`);
+async function _coordsFromAddress(addr, bairro) {
+  const q = [addr, bairro, 'Curitiba, PR'].filter(Boolean).join(', ');
+  const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}`);
   const d = await res.json();
   const loc = d.results?.[0]?.geometry?.location;
   return loc ? { lat: loc.lat, lng: loc.lng } : null;
 }
 
-window.backfillCoords = async () => {
-  // Todos que faltam coordenada e têm de onde tirar (Google ID ou endereço).
-  const targets = allPlaces.filter(p => (p.lat == null || p.lng == null) &&
-    ((p.pid && !p.pid.startsWith('ID_GOOGLE_')) || p.a));
-  if (!targets.length) { showToast('Todos os lugares já têm coordenadas. 🎉', 'info'); return; }
-  if (!confirm(`Buscar no Google as coordenadas de ${targets.length} lugar(es) sem localização?\nUsa a API do Google (custo pequeno). Continuar?`)) return;
-  const btn = document.getElementById('btnBackfillCoords');
+window.backfillCoords = async (force = false) => {
+  // force=false → só quem não tem coordenada.
+  // force=true  → REFAZ pelo Google Place ID (fonte exata) de quem tem ID,
+  //               corrigindo pontos errados que vieram de geocoding.
+  const targets = force
+    ? allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_'))
+    : allPlaces.filter(p => (p.lat == null || p.lng == null) &&
+        ((p.pid && !p.pid.startsWith('ID_GOOGLE_')) || p.a));
+  if (!targets.length) { showToast(force ? 'Nenhum lugar com Google ID.' : 'Todos os lugares já têm coordenadas. 🎉', 'info'); return; }
+  if (!confirm(force
+      ? `Refazer as coordenadas de ${targets.length} lugar(es) pelo Google Place ID?\nCorrige pinos que caíram no lugar errado. Sobrescreve o que estiver salvo. Continuar?`
+      : `Buscar no Google as coordenadas de ${targets.length} lugar(es) sem localização?\nUsa a API do Google (custo pequeno). Continuar?`)) return;
+  const btn = document.getElementById(force ? 'btnFixCoords' : 'btnBackfillCoords');
   const orig = btn.innerHTML; btn.disabled = true;
   let ok = 0, fail = 0, i = 0;
   for (const p of targets) {
@@ -2888,7 +2901,7 @@ window.backfillCoords = async () => {
     try {
       let coords = null;
       if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) coords = await _coordsFromPid(p.pid); // preciso
-      if (!coords && p.a) coords = await _coordsFromAddress(p.a);                          // fallback por endereço
+      if (!coords && !force && p.a) coords = await _coordsFromAddress(p.a, p.b);          // fallback por endereço
       if (!coords) { fail++; continue; }
       await setDoc(doc(db, 'places', p._docId), { lat: coords.lat, lng: coords.lng, _updatedAt: serverTimestamp() }, { merge: true });
       p.lat = coords.lat; p.lng = coords.lng;

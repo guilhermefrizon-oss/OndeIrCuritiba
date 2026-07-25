@@ -296,7 +296,7 @@ function buildMap(saved) {
         });
       } else {
         // Geocode from address
-        geocodeAddress(p.a + ', Curitiba, PR').then(coords => {
+        geocodeAddress([p.a, p.b, 'Curitiba, PR'].filter(Boolean).join(', ')).then(coords => {
           if (coords) { placeMarker(p, coords, null); }
         });
       }
@@ -620,7 +620,7 @@ function buildMainMap(places, mapEl, onOpenProfile) {
       else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
         fetchPlaceLatLng(p.pid).then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
       } else if (p.a) {
-        geocodeAddress(p.a + ', Curitiba, PR').then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
+        geocodeAddress([p.a, p.b, 'Curitiba, PR'].filter(Boolean).join(', ')).then(coords => { if (coords && myBuild === mainMapBuild) addMarker(p, coords); });
       }
     });
   });
