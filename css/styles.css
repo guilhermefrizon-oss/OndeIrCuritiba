@@ -22,8 +22,9 @@
   --acc2:  #4A4A44;
   --acc3:  #000000;
   --acc-ink: #FFFFFF;
-  --blue:  #2F55F0;   /* Cobalto Vibrante — cor da marca, só em detalhes */
+  --blue:  #4889F7;   /* Azul da logo (Day) — cor da marca, só em detalhes */
   --blue-ink: #FFFFFF;
+  --navy:  #012F59;   /* Azul escuro da logo (Match) */
   --text:  #14140F;
   --text2: #57564E;
   --text3: #9A988E;
@@ -52,8 +53,9 @@
   --acc2:  #B9B8AF;
   --acc3:  #FFFFFF;
   --acc-ink: #14140F;
-  --blue:  #2F55F0;   /* mesma cor da marca nos dois temas (conforme manual) */
+  --blue:  #4889F7;   /* mesma cor da marca nos dois temas (conforme manual) */
   --blue-ink: #FFFFFF;
+  --navy:  #E8F0FE;   /* no escuro, o "Match" precisa ser claro pra ler */
   --text:  #F2F2ED;
   --text2: #A6A59B;
   --text3: #5E5D54;
@@ -102,7 +104,9 @@ body {
 /* ── Top bar ─────────────────────────────────────────────────────── */
 .topbar { position: relative; padding: calc(env(safe-area-inset-top, 0px) + 6px) 18px 6px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .wordmark { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 6px); transform: translateX(-50%); font-size: 20px; font-weight: 800; letter-spacing: -0.8px; color: var(--text); line-height: 38px; pointer-events: none; }
-.wordmark em { color: var(--blue); font-style: normal; }
+/* Segue a logo: "Day" no azul claro, "Match" no azul escuro (claro no dark). */
+.wordmark { color: var(--blue) !important; }
+.wordmark em { color: var(--navy); font-style: normal; }
 .wordmark small { font-size: 13px; font-weight: 600; color: var(--text3); letter-spacing: 0; margin-left: 2px; vertical-align: middle; }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 
@@ -546,7 +550,8 @@ body {
 #splash.hide { opacity: 0; pointer-events: none; }
 .splash-brand { text-align: center; animation: splashIn .6s ease both; }
 .splash-logo { font-size: 40px; font-weight: 800; letter-spacing: -1.2px; color: var(--text); line-height: 1; }
-.splash-logo em { color: var(--blue); font-style: normal; }
+.splash-logo    { color: var(--blue); }
+.splash-logo em { color: var(--navy); font-style: normal; }
 .splash-sub { margin-top: 10px; font-size: 13px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: var(--text3); }
 .splash-dots { display: flex; gap: 7px; }
 .splash-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--acc); opacity: .3; animation: splashDot 1s ease-in-out infinite; }
