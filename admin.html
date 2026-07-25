@@ -2004,7 +2004,7 @@ service cloud.firestore {
         <div class="form-group">
           <label class="form-label">Google Place ID</label>
           <input class="form-input" id="f_pid" placeholder="ChIJ…">
-          <div class="form-hint">Encontre em <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" style="color:var(--acc2)">Place ID Finder</a></div>
+          <div class="form-hint" id="f_pidCheck">Encontre em <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" style="color:var(--acc2)">Place ID Finder</a></div>
         </div>
         <div class="form-group">
           <label class="form-label">Cor do card (bg)</label>
@@ -3663,6 +3663,7 @@ window.openEditModal = (docId) => {
   document.getElementById('f_e').value  = p.e  || '';
   document.getElementById('f_lat').value = (p.lat != null ? p.lat : '');
   document.getElementById('f_lng').value = (p.lng != null ? p.lng : '');
+  renderPidCheck(p);
   document.getElementById('gsearch_q').value = '';
   document.getElementById('gsearch_results').innerHTML = '';
   document.querySelectorAll('.emoji-opt').forEach(el => {
@@ -3674,11 +3675,32 @@ window.openEditModal = (docId) => {
   document.getElementById('modalBackdrop').classList.add('open');
 };
 
+// Mostra a localização SALVA e o Place ID com links de conferência — assim dá
+// pra ver na hora se o pino está no lugar certo e se o ID é da unidade certa.
+function renderPidCheck(p) {
+  const el = document.getElementById('f_pidCheck');
+  if (!el) return;
+  const finder = '<a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" style="color:var(--acc2)">Place ID Finder</a>';
+  if (!p) { el.innerHTML = 'Encontre em ' + finder; return; }
+  const bits = [];
+  if (p.lat != null && p.lng != null) {
+    bits.push(`<a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" style="color:var(--acc3);font-weight:700">📍 Ver o pino salvo</a> <span style="color:var(--text3)">(${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)})</span>`);
+  } else {
+    bits.push('<span style="color:var(--yellow)">Sem coordenada salva</span>');
+  }
+  if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+    bits.push(`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.n||'')}&query_place_id=${encodeURIComponent(p.pid)}" target="_blank" style="color:var(--acc3);font-weight:700">🔎 Conferir este Place ID no Google</a>`);
+  }
+  bits.push('Encontre em ' + finder);
+  el.innerHTML = bits.join('<br>');
+}
+
 function clearForm() {
   ['f_n','f_a','f_b','f_ig','f_pid','f_e','f_lat','f_lng','gsearch_q'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const gr = document.getElementById('gsearch_results'); if (gr) gr.innerHTML = '';
+  renderPidCheck(null);
   document.getElementById('f_p').value = '$$';
   document.getElementById('f_bg').value = 'cafe';
   renderHoursEditor(defaultHours());
