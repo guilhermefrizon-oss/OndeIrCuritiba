@@ -191,16 +191,18 @@ function renderList(saved, grid, onOpenProfile, onRemove) {
         </button>`;
       grid.appendChild(row);
 
-      // Load photo async
-      if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+      // Foto: a HOSPEDADA por nós (/fotos) vem primeiro. Antes tentava o
+      // Google antes e, como a busca paga está desligada, o thumb ficava
+      // cinza mesmo com o lugar tendo foto local.
+      if (Array.isArray(p.photos) && p.photos.length) {
+        const t = document.getElementById(`fthumb-${p.id}`);
+        if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.innerHTML = ''; }
+      } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
         fetchPlacePhoto(p.pid).then(url => {
           if (!url) return;
           const t = document.getElementById(`fthumb-${p.id}`);
           if (t) { t.style.backgroundImage = `url("${url}")`; t.innerHTML = ''; }
         });
-      } else if (Array.isArray(p.photos) && p.photos.length) {
-        const t = document.getElementById(`fthumb-${p.id}`);
-        if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.innerHTML = ''; }
       }
     });
   });

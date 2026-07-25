@@ -166,16 +166,16 @@ function renderResultGroup(label, places, container, onOpenProfile) {
       <div class="search-result-price">${p.p}</div>`;
     container.appendChild(row);
 
-    // Load photo
-    if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
+    // Foto: a hospedada por nós (/fotos) primeiro; Google só como fallback.
+    if (Array.isArray(p.photos) && p.photos.length) {
+      const t = document.getElementById(`sthumb-${p.id}`);
+      if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.innerHTML = ''; }
+    } else if (p.pid && !p.pid.startsWith('ID_GOOGLE_')) {
       fetchPlacePhoto(p.pid).then(url => {
         if (!url) return;
         const t = document.getElementById(`sthumb-${p.id}`);
         if (t) { t.style.backgroundImage = `url("${url}")`; t.innerHTML = ''; }
       });
-    } else if (Array.isArray(p.photos) && p.photos.length) {
-      const t = document.getElementById(`sthumb-${p.id}`);
-      if (t) { t.style.backgroundImage = `url("${p.photos[0]}")`; t.innerHTML = ''; }
     }
   });
 }
