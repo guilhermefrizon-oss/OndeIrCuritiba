@@ -12,7 +12,7 @@ import { fetchAllPhotos, fetchPlacePhoto } from './photos.js';
 import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { initQuiz, openQuiz } from './quiz.js';
-import { isOpenNow, isOpenDuring, getPlaceHours, PERIODS, WEEK_ORDER, DOW_KEYS, DAY_LABEL, fmtHM, todayHoursText } from './hours.js';
+import { isOpenNow, isOpenDuring, getPlaceHours, PERIODS, WEEK_ORDER, DOW_KEYS, DAY_LABEL, fmtHM, todayHoursText, nextOpenText } from './hours.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderCorrectionButton } from './corrections.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
@@ -351,9 +351,10 @@ function parseOpenNow(hoursStr) {
 function openBadgeHTML(p) {
   const open = isOpenNow(p);
   if (open === null) return '';
-  return open
-    ? '<span class="open-badge open">● Aberto agora</span>'
-    : '<span class="open-badge closed">● Fechado</span>';
+  if (open) return '<span class="open-badge open">● Aberto agora</span>';
+  // Fechado: mostra quando abre de novo, pra pessoa poder guardar pra depois.
+  const next = nextOpenText(p);
+  return `<span class="open-badge closed">● Fechado${next ? ` · ${next}` : ''}</span>`;
 }
 
 // ── Category row ───────────────────────────────────────────────────

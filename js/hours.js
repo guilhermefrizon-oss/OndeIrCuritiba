@@ -170,3 +170,24 @@ export function todayHoursText(p) {
   if (!e || e.closed || e.open == null || e.close == null) return 'Fechado hoje';
   return `Hoje ${fmtHM(e.open)} – ${fmtHM(e.close)}`;
 }
+
+// Quando abre de novo? Texto curto p/ o selo do card quando está fechado:
+// "abre 19h" (ainda hoje), "abre amanhã 8h30", "abre Sáb 20h".
+// Devolve '' se não der pra saber (sem grade) ou se não abrir na semana.
+export function nextOpenText(p, now = new Date()) {
+  const hours = getPlaceHours(p);
+  if (!hours) return '';
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const dow = now.getDay();
+  for (let d = 0; d < 8; d++) {
+    const iv = openIntervalsOnDay(hours, dow + d) || [];
+    // início mais cedo que ainda está por vir (hoje: depois de agora)
+    const cands = iv.map(([a]) => a).filter(a => d > 0 || a > nowMin).sort((x, y) => x - y);
+    if (!cands.length) continue;
+    const t = fmtHM(`${String(Math.floor(cands[0] / 60)).padStart(2, '0')}:${String(cands[0] % 60).padStart(2, '0')}`);
+    if (d === 0) return `abre ${t}`;
+    if (d === 1) return `abre amanhã ${t}`;
+    return `abre ${DAY_LABEL[DOW_KEYS[(dow + d) % 7]]} ${t}`;
+  }
+  return '';
+}
