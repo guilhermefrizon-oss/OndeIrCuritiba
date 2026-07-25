@@ -260,6 +260,15 @@ export const fsLoadCategories = async () => {
   } catch (e) { console.warn('fsLoadCategories:', e); return []; }
 };
 
+// Config do algoritmo do baralho (app_config/algorithm), editável no admin.
+// Se não existir ou falhar, o app cai no padrão embutido em app.js.
+export const fsLoadAlgoConfig = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app_config', 'algorithm'));
+    return snap.exists() ? snap.data() : null;
+  } catch (e) { console.warn('fsLoadAlgoConfig:', e); return null; }
+};
+
 // Um like conta por PESSOA + LUGAR + DIA: a lista "Quero ir" zera à
 // meia-noite, então querer ir hoje E amanhã são dois sinais de interesse —
 // e as métricas do admin devem refletir isso. O id do doc é `uid_AAAA-MM-DD`.

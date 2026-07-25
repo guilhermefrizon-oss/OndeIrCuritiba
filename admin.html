@@ -1167,6 +1167,10 @@ th.sortable:hover { color: var(--acc3); }
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Quiz
     </button>
+    <button class="nav-item" onclick="showPage('algoritmo')" id="nav-algoritmo">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+      Algoritmo
+    </button>
     <button class="nav-item" onclick="showPage('ferramentas')" id="nav-ferramentas">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
       Ferramentas
@@ -1315,6 +1319,64 @@ th.sortable:hover { color: var(--acc3); }
       </div>
       <div id="reportsList">
         <div class="table-loading"><div class="spinner"></div>Carregando…</div>
+      </div>
+    </div>
+
+    <!-- ── Algoritmo Page ── -->
+    <div id="page-algoritmo" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Algoritmo</div>
+          <div class="page-subtitle">Quais categorias aparecem mais no baralho, conforme a hora do dia.</div>
+        </div>
+        <button class="btn btn-primary" onclick="saveAlgoConfig()" id="btnSaveAlgo">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Salvar
+        </button>
+      </div>
+
+      <div class="alert-box info" style="max-width:860px">
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        <div>A ordem continua <strong>sempre aleatória</strong> (nunca repete igual). O que muda é a <strong>chance</strong>: categorias do horário atual aparecem bem mais no começo, e as outras seguem aparecendo de vez em quando — <strong>nenhum lugar some</strong> do baralho.</div>
+      </div>
+
+      <div id="algoNow" style="margin:16px 0; font-size:13px; color:var(--text2)"></div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;max-width:860px;margin-bottom:24px">
+        <label style="display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text);cursor:pointer;margin-bottom:16px">
+          <input type="checkbox" id="algo_enabled" checked> Priorizar por horário do dia
+        </label>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Peso do horário</label>
+            <input class="form-input" id="algo_boost" type="number" min="1" max="50" step="1">
+            <div class="form-hint">Quantas vezes mais chance p/ categorias da faixa atual. Maior = mais “na cara”.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Peso do interesse</label>
+            <input class="form-input" id="algo_interest" type="number" min="1" max="10" step="0.5">
+            <div class="form-hint">Multiplicador p/ categorias que a pessoa escolheu no perfil/quiz.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Peso base</label>
+            <input class="form-input" id="algo_base" type="number" min="0.1" max="10" step="0.1">
+            <div class="form-hint">Peso das demais categorias. Nunca zere — é o que mantém variedade.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Faixas de horário</div>
+      <div id="algoSlots" style="max-width:860px"></div>
+      <button class="btn btn-secondary" onclick="addAlgoSlot()" style="margin-top:6px">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova faixa
+      </button>
+
+      <div class="section-label" style="margin-top:28px">Simulação</div>
+      <div style="max-width:860px;margin-bottom:40px">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:10px">Veja a distribuição estimada das <strong>10 primeiras cartas</strong> em cada horário, com os pesos acima e os lugares cadastrados.</div>
+        <button class="btn" onclick="simulateAlgo()">Simular</button>
+        <div id="algoSim" style="margin-top:14px"></div>
       </div>
     </div>
 
@@ -4140,7 +4202,7 @@ window.openPlaceFromCorrection = (id) => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','corrections','reports','notifications','categories','quiz','ferramentas','metrics','rules'].forEach(p => {
+  ['places','corrections','reports','notifications','categories','quiz','algoritmo','ferramentas','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
@@ -4150,7 +4212,173 @@ window.showPage = (page) => {
   if (page === 'corrections') loadCorrections();
   if (page === 'reports') loadReports();
   if (page === 'notifications') initNotificationsPage();
+  if (page === 'algoritmo') loadAlgoConfig();
   closeSidebar(); // fecha a gaveta no mobile após navegar
+};
+
+// ── Algoritmo do baralho (app_config/algorithm) ─────────────────────
+const ALGO_DEFAULT = {
+  enabled: true, boost: 6, interestBoost: 2, base: 1,
+  slots: [
+    { id:'manha',  label:'Manhã',      start:360,  end:660,  cats:['Café da tarde','Brunchs'] },
+    { id:'almoco', label:'Almoço',     start:660,  end:900,  cats:['Alta gastronomia','Baratinho'] },
+    { id:'tarde',  label:'Café/tarde', start:900,  end:1050, cats:['Café da tarde','Brunchs'] },
+    { id:'noite',  label:'Noite',      start:1050, end:1440, cats:['Barzinho','Balada'] },
+    { id:'madrug', label:'Madrugada',  start:0,    end:360,  cats:['Balada','Barzinho'] },
+  ],
+};
+let algoCfg = null;
+// exposto no window: os handlers inline dos campos das faixas mexem nele
+Object.defineProperty(window, 'algoCfg', { get: () => algoCfg, set: (v) => { algoCfg = v; }, configurable: true });
+
+const m2t = (m) => `${String(Math.floor((m%1440)/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+const t2m = (t) => { const [h,mi] = String(t||'0:0').split(':').map(Number); return (h*60 + (mi||0)); };
+// Os handlers inline (onchange/onclick no HTML) rodam no escopo global —
+// precisam enxergar estes do módulo.
+window.t2m = t2m;
+window.showAlgoNow = () => showAlgoNow();
+
+async function loadAlgoConfig() {
+  try {
+    const snap = await getDoc(doc(db, 'app_config', 'algorithm'));
+    algoCfg = snap.exists() ? { ...ALGO_DEFAULT, ...snap.data() } : { ...ALGO_DEFAULT };
+  } catch (e) { console.warn('algo:', e.message); algoCfg = { ...ALGO_DEFAULT }; }
+  if (!Array.isArray(algoCfg.slots) || !algoCfg.slots.length) algoCfg.slots = ALGO_DEFAULT.slots;
+  document.getElementById('algo_enabled').checked = algoCfg.enabled !== false;
+  document.getElementById('algo_boost').value    = algoCfg.boost ?? 6;
+  document.getElementById('algo_interest').value = algoCfg.interestBoost ?? 2;
+  document.getElementById('algo_base').value     = algoCfg.base ?? 1;
+  if (!allCategoriesList.length) { try { await loadCategories(); } catch(e){} }
+  renderAlgoSlots();
+  showAlgoNow();
+}
+
+function currentAlgoSlot(cfg, mins) {
+  return (cfg.slots || []).find(s => {
+    const a = Number(s.start), b = Number(s.end);
+    return (a <= b) ? (mins >= a && mins < b) : (mins >= a || mins < b);
+  }) || null;
+}
+
+function showAlgoNow() {
+  const el = document.getElementById('algoNow');
+  if (!el) return;
+  const now = new Date();
+  const mins = now.getHours()*60 + now.getMinutes();
+  const s = currentAlgoSlot(algoCfg, mins);
+  el.innerHTML = s
+    ? `Agora (${m2t(mins)}) está na faixa <strong style="color:var(--acc3)">${escM(s.label)}</strong> — aparecem mais: ${(s.cats||[]).map(c => `<span class="cat-chip">${escM(c)}</span>`).join(' ') || '<em>nenhuma categoria escolhida</em>'}`
+    : `Agora (${m2t(mins)}) <strong>nenhuma faixa</strong> cobre este horário — o baralho fica totalmente aleatório.`;
+}
+
+function renderAlgoSlots() {
+  const box = document.getElementById('algoSlots');
+  const cats = allCategoriesList.map(c => c.name);
+  box.innerHTML = (algoCfg.slots || []).map((s, i) => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:12px">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+        <div class="form-group" style="flex:1;min-width:160px">
+          <label class="form-label">Nome da faixa</label>
+          <input class="form-input" value="${escM(s.label||'')}" onchange="algoCfg.slots[${i}].label=this.value; showAlgoNow()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Das</label>
+          <input class="form-input" type="time" value="${m2t(Number(s.start)||0)}" onchange="algoCfg.slots[${i}].start=t2m(this.value); showAlgoNow()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Até</label>
+          <input class="form-input" type="time" value="${m2t(Number(s.end)||0)}" onchange="algoCfg.slots[${i}].end=t2m(this.value); showAlgoNow()">
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeAlgoSlot(${i})" title="Remover faixa">${ic('trash',14)}</button>
+      </div>
+      <label class="form-label">Categorias que aparecem mais nesta faixa</label>
+      <div class="cat-toggle-grid" style="margin-top:6px">
+        ${cats.map(c => `<button type="button" class="cat-toggle${(s.cats||[]).includes(c)?' on':''}" onclick="toggleAlgoCat(${i}, this)" data-cat="${escM(c)}">${escM(c)}</button>`).join('')}
+      </div>
+    </div>`).join('') || '<div style="color:var(--text3);font-size:14px">Nenhuma faixa — o baralho fica 100% aleatório.</div>';
+}
+
+window.toggleAlgoCat = (i, btn) => {
+  const c = btn.dataset.cat;
+  const list = algoCfg.slots[i].cats = algoCfg.slots[i].cats || [];
+  const at = list.indexOf(c);
+  if (at >= 0) list.splice(at, 1); else list.push(c);
+  btn.classList.toggle('on');
+  showAlgoNow();
+};
+window.addAlgoSlot = () => {
+  algoCfg.slots.push({ id: 'slot_' + Date.now(), label: 'Nova faixa', start: 720, end: 840, cats: [] });
+  renderAlgoSlots();
+};
+window.removeAlgoSlot = (i) => {
+  if (!confirm('Remover esta faixa de horário?')) return;
+  algoCfg.slots.splice(i, 1);
+  renderAlgoSlots(); showAlgoNow();
+};
+
+window.saveAlgoConfig = async () => {
+  const btn = document.getElementById('btnSaveAlgo');
+  btn.disabled = true;
+  const data = {
+    enabled: document.getElementById('algo_enabled').checked,
+    boost:   parseFloat(document.getElementById('algo_boost').value) || 6,
+    interestBoost: parseFloat(document.getElementById('algo_interest').value) || 2,
+    base:    parseFloat(document.getElementById('algo_base').value) || 1,
+    slots:   (algoCfg.slots || []).map(s => ({
+      id: s.id || ('slot_' + Math.random().toString(36).slice(2)),
+      label: s.label || 'Faixa', start: Number(s.start) || 0, end: Number(s.end) || 0,
+      cats: Array.isArray(s.cats) ? s.cats : [],
+    })),
+    _updatedAt: serverTimestamp(),
+  };
+  try {
+    await setDoc(doc(db, 'app_config', 'algorithm'), data, { merge: true });
+    algoCfg = { ...algoCfg, ...data };
+    showToast('Algoritmo salvo! Vale no app na próxima abertura.', 'success');
+  } catch (e) {
+    showToast('Erro ao salvar: ' + e.message, 'error');
+  } finally { btn.disabled = false; }
+};
+
+// Simulação: roda o mesmo sorteio ponderado do app com os lugares reais.
+window.simulateAlgo = () => {
+  const host = document.getElementById('algoSim');
+  if (!allPlaces.length) { host.innerHTML = '<div style="color:var(--text3);font-size:13px">Carregue a aba Lugares primeiro.</div>'; return; }
+  const cfg = {
+    enabled: document.getElementById('algo_enabled').checked,
+    boost: parseFloat(document.getElementById('algo_boost').value) || 6,
+    interestBoost: parseFloat(document.getElementById('algo_interest').value) || 2,
+    base: parseFloat(document.getElementById('algo_base').value) || 1,
+    slots: algoCfg.slots,
+  };
+  const catsOfP = p => Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+  const wShuffle = (items, wf) => {
+    const pool = items.map(it => ({ it, w: Math.max(0.0001, wf(it)) }));
+    const out = []; let t = pool.reduce((s,x)=>s+x.w,0);
+    while (pool.length) { let r = Math.random()*t, i=0; while (i<pool.length-1 && (r-=pool[i].w)>0) i++; out.push(pool[i].it); t-=pool[i].w; pool.splice(i,1); }
+    return out;
+  };
+  const hours = [{h:8,l:'08:00'},{h:12.5,l:'12:30'},{h:16,l:'16:00'},{h:20,l:'20:00'},{h:2,l:'02:00'}];
+  const rows = hours.map(({h,l}) => {
+    const mins = Math.round(h*60);
+    const slot = cfg.enabled ? currentAlgoSlot(cfg, mins) : null;
+    const sc = new Set(slot?.cats || []);
+    const N = 200, count = {};
+    for (let k=0;k<N;k++) {
+      wShuffle(allPlaces, p => sc.size && catsOfP(p).some(c=>sc.has(c)) ? cfg.boost : cfg.base)
+        .slice(0,10).forEach(p => { const c = catsOfP(p)[0] || '—'; count[c]=(count[c]||0)+1; });
+    }
+    const tot = Object.values(count).reduce((a,b)=>a+b,0) || 1;
+    const top = Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    return `<div style="margin-bottom:12px">
+      <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:5px">${l} ${slot?`— <span style="color:var(--acc3)">${escM(slot.label)}</span>`:'— <span style="color:var(--text3)">sem faixa</span>'}</div>
+      <div style="display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
+        ${top.map(([c,n],i)=>`<div title="${escM(c)}: ${(n/tot*100).toFixed(0)}%" style="width:${n/tot*100}%;background:hsl(${(i*57)%360} 55% 45%);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;overflow:hidden;white-space:nowrap">${n/tot>0.10?escM(c):''}</div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">${top.map(([c,n])=>`${escM(c)} ${(n/tot*100).toFixed(0)}%`).join(' · ')}</div>
+    </div>`;
+  }).join('');
+  host.innerHTML = rows;
 };
 
 // ── Notificações (envio para o app) ─────────────────────────────────

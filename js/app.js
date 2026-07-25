@@ -1,6 +1,6 @@
 // ── app.js ────────────────────────────────────────────────────────
 import {
-  fsLoadPlaces, fsLoadCategories,
+  fsLoadPlaces, fsLoadCategories, fsLoadAlgoConfig,
   fsLoadAll, fsSave, fsRemove, fsIncrementLike, fsRemoveLike,
   fsWantToday, fsLoadWantToday, fsRemoveWantToday,
   fsSkip, fsLoadSkipped, fsUnskip, fsClearSkipped,
@@ -75,20 +75,74 @@ function getUserInterests() {
   catch { return []; }
 }
 
-// Ordem do baralho: SEMPRE embaralhada (ordem diferente a cada abertura).
-// Se a pessoa tem interesses, os lugares dessas categorias vêm primeiro
-// (também embaralhados entre si) — sem esconder os demais. Sem interesses,
-// é só aleatório.
-function orderDeck(places) {
-  const shuffled = shuffle(places);
-  const interests = getUserInterests();
-  if (!interests.length) return shuffled;
-  const match = [], rest = [];
-  for (const p of shuffled) {
-    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
-    (cats.some(c => interests.includes(c)) ? match : rest).push(p);
+// ── Algoritmo do baralho ───────────────────────────────────────────
+// Ordem SEMPRE aleatória, mas *ponderada*: no horário de café aparecem mais
+// cafés, na hora do almoço mais restaurantes, à noite mais bares/baladas —
+// sem esconder as outras categorias (só saem com menos frequência).
+// A configuração vem do admin (app_config/algorithm); o padrão abaixo é o
+// fallback caso ainda não exista nada salvo.
+const DEFAULT_ALGO = {
+  enabled: true,
+  boost: 6,          // peso de quem casa com o horário
+  interestBoost: 2,  // multiplicador extra p/ interesses da pessoa
+  base: 1,           // peso de todo o resto (nunca some do baralho)
+  slots: [
+    { id:'manha',  label:'Manhã',      start:360,  end:660,  cats:['Café da tarde','Brunchs','Cafés | Ao ar livre','Cafés | Abertos no Domingo'] },
+    { id:'almoco', label:'Almoço',     start:660,  end:900,  cats:['Alta gastronomia','Baratinho','Vegano','Comida Árabe','Lámen','Izakayas'] },
+    { id:'tarde',  label:'Café/tarde', start:900,  end:1050, cats:['Café da tarde','Brunchs','Cafés | Ao ar livre','Instagramável'] },
+    { id:'noite',  label:'Noite',      start:1050, end:1440, cats:['Barzinho','Balada','Rooftops','Alta gastronomia','Dates','Izakayas'] },
+    { id:'madrug', label:'Madrugada',  start:0,    end:360,  cats:['Balada','Barzinho'] },
+  ],
+};
+let ALGO = DEFAULT_ALGO;
+window.setAlgoConfig = (cfg) => { if (cfg && Array.isArray(cfg.slots)) ALGO = { ...DEFAULT_ALGO, ...cfg }; };
+
+// Faixa de horário atual (minutos desde a meia-noite). Suporta faixa que
+// cruza a meia-noite (ex.: 22h → 4h).
+function currentSlot(now = new Date()) {
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const slots = Array.isArray(ALGO.slots) ? ALGO.slots : [];
+  return slots.find(s => {
+    const a = Number(s.start), b = Number(s.end);
+    return (a <= b) ? (mins >= a && mins < b) : (mins >= a || mins < b);
+  }) || null;
+}
+
+// Sorteio ponderado sem reposição: peso maior = mais chance de vir antes,
+// mas continua aleatório a cada abertura (nunca é uma ordem fixa).
+function weightedShuffle(items, weightOf) {
+  const pool = items.map(it => ({ it, w: Math.max(0.0001, weightOf(it)) }));
+  const out = [];
+  let total = pool.reduce((s, x) => s + x.w, 0);
+  while (pool.length) {
+    let r = Math.random() * total, i = 0;
+    while (i < pool.length - 1 && (r -= pool[i].w) > 0) i++;
+    out.push(pool[i].it);
+    total -= pool[i].w;
+    pool.splice(i, 1);
   }
-  return [...match, ...rest];
+  return out;
+}
+
+function orderDeck(places) {
+  const interests = getUserInterests();
+  const slot = ALGO.enabled === false ? null : currentSlot();
+  const slotCats = new Set(slot?.cats || []);
+
+  // Sem config de horário nem interesses → aleatório puro (como antes).
+  if (!slotCats.size && !interests.length) return shuffle(places);
+
+  const base   = Number(ALGO.base) || 1;
+  const boost  = Number(ALGO.boost) || 6;
+  const iBoost = Number(ALGO.interestBoost) || 2;
+
+  return weightedShuffle(places, p => {
+    const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+    let w = base;
+    if (slotCats.size && cats.some(c => slotCats.has(c))) w = boost;      // combina com o horário
+    if (interests.length && cats.some(c => interests.includes(c))) w *= iBoost; // gosto da pessoa
+    return w;
+  });
 }
 
 // ── Init ───────────────────────────────────────────────────────────
@@ -140,7 +194,13 @@ async function init() {
   // bloqueado, offline), não deixa o spinner "Carregando lugares…" para
   // sempre — mostra um aviso com botão de tentar de novo.
   const TIMEOUT = Symbol('timeout');
-  const loadData = Promise.all([fsLoadCategories(), fsLoadPlaces()]);
+  // Config do algoritmo entra no mesmo lote: precisa estar pronta antes de
+  // montar o baralho (senão a 1ª ordem sairia com o padrão).
+  const loadData = Promise.all([
+    fsLoadCategories(),
+    fsLoadPlaces(),
+    fsLoadAlgoConfig().catch(() => null),
+  ]);
   const result = await Promise.race([
     loadData,
     new Promise(res => setTimeout(() => res(TIMEOUT), 20000)),
@@ -153,8 +213,9 @@ async function init() {
     return;
   }
 
-  const [cats, places] = result;
+  const [cats, places, algoCfg] = result;
   loader.remove();
+  if (algoCfg) window.setAlgoConfig(algoCfg);
 
   if (cats.length) {
     CATS = ['Todos', ...cats.map(c => c.name)];
