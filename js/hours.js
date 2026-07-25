@@ -151,3 +151,22 @@ export function defaultHours(open = '12:00', close = '23:00') {
   WEEK_ORDER.forEach(k => { h[k] = { closed:false, open, close }; });
   return h;
 }
+
+// Texto curto do horário de HOJE (usado nas listas: Quero ir, Favoritos,
+// Busca). A semana inteira fica no perfil. Sem horário interpretável, cai
+// no texto livre antigo (p.h) — mas cortado, pra não vazar no card.
+export function fmtHM(hhmm) {
+  const [h, m] = String(hhmm).split(':');
+  return (m === '00' || m === undefined) ? `${+h}h` : `${+h}h${m}`;
+}
+
+export function todayHoursText(p) {
+  const hours = getPlaceHours(p);
+  if (!hours) {
+    const raw = (p.h || '').trim();
+    return raw.length > 42 ? raw.slice(0, 40).trim() + '…' : raw;
+  }
+  const e = hours[DOW_KEYS[new Date().getDay()]];
+  if (!e || e.closed || e.open == null || e.close == null) return 'Fechado hoje';
+  return `Hoje ${fmtHM(e.open)} – ${fmtHM(e.close)}`;
+}

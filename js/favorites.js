@@ -2,6 +2,7 @@
 import { fetchPlacePhoto } from './photos.js';
 import { ic, catIcon, catIconName, iconPath } from './icons.js';
 import { fsRemove } from './store.js';
+import { todayHoursText, isOpenNow } from './hours.js';
 
 const GOOGLE_API_KEY = 'AIzaSyDIiBLGHZ_zgo-wKaHNK7qa4O-C_EZJJuY';
 
@@ -181,7 +182,7 @@ function renderList(saved, grid, onOpenProfile, onRemove) {
         <div class="saved-thumb bg-${p.bg}" id="fthumb-${p.id}">${catIcon(p.c, 22, 1.7)}</div>
         <div style="flex:1;min-width:0;">
           <div class="saved-name">${p.n}</div>
-          <div class="saved-meta">${p.b} · ${p.h}</div>
+          <div class="saved-meta">${p.b} · ${todayHoursText(p)}${isOpenNow(p) ? ' <span class="open-dot" title="Aberto agora"></span>' : ''}</div>
         </div>
         <div class="saved-price">${p.p}</div>
         <button class="fav-remove-btn" title="Remover" onclick="event.stopPropagation();window._removeFav('${p.id}')">

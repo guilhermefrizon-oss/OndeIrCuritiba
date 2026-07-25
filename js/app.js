@@ -12,7 +12,7 @@ import { fetchAllPhotos, fetchPlacePhoto } from './photos.js';
 import { renderFavorites, toggleFavView, renderFavMap } from './favorites.js';
 import { initSearch, openSearch } from './search.js';
 import { initQuiz, openQuiz } from './quiz.js';
-import { isOpenNow, isOpenDuring, getPlaceHours, PERIODS, WEEK_ORDER, DOW_KEYS, DAY_LABEL } from './hours.js';
+import { isOpenNow, isOpenDuring, getPlaceHours, PERIODS, WEEK_ORDER, DOW_KEYS, DAY_LABEL, fmtHM, todayHoursText } from './hours.js';
 import { renderCommentsSection, unsubscribeComments } from './comments.js';
 import { renderCorrectionButton } from './corrections.js';
 import { renderRatingBlock, loadRating } from './ratings.js';
@@ -1181,20 +1181,8 @@ function doSave(p) {
 // Mostra o horário dia a dia (padronizado), com o dia de HOJE destacado.
 // Se o lugar não tiver horário estruturado nem texto interpretável,
 // cai no texto livre antigo (p.h).
-function fmtHM(hhmm) {
-  const [h, m] = String(hhmm).split(':');
-  return (m === '00' || m === undefined) ? `${+h}h` : `${+h}h${m}`;
-}
-
-// Texto curto pro card: só o horário de HOJE (a semana inteira fica no
-// perfil). Se não der pra interpretar o horário, mostra o texto antigo.
-function todayHoursText(p) {
-  const hours = getPlaceHours(p);
-  if (!hours) return p.h || '';
-  const e = hours[DOW_KEYS[new Date().getDay()]];
-  if (!e || e.closed || e.open == null || e.close == null) return 'Fechado hoje';
-  return `Hoje ${fmtHM(e.open)} – ${fmtHM(e.close)}`;
-}
+// fmtHM e todayHoursText agora vêm de hours.js (fonte única — as listas de
+// Quero ir, Favoritos e Busca mostram o horário no mesmo formato).
 
 function hoursCardHTML(p) {
   const hours = getPlaceHours(p);
