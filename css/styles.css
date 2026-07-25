@@ -103,12 +103,10 @@ body {
 
 /* ── Top bar ─────────────────────────────────────────────────────── */
 .topbar { position: relative; padding: calc(env(safe-area-inset-top, 0px) + 6px) 18px 6px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-.wordmark { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 6px); transform: translateX(-50%); height: 38px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-/* Logo em imagem no topo (variante clara p/ o tema escuro). */
-.wordmark-img { height: 32px; width: auto; display: block; }
-.wordmark-img.dark  { display: none; }
-[data-theme="dark"] .wordmark-img.light { display: none; }
-[data-theme="dark"] .wordmark-img.dark  { display: block; }
+.wordmark { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 6px); transform: translateX(-50%); font-size: 20px; font-weight: 800; letter-spacing: -0.8px; line-height: 38px; pointer-events: none; }
+/* Segue a logo: "Day" no azul claro, "Match" no azul escuro (claro no dark). */
+.wordmark { color: var(--blue); }
+.wordmark em { color: var(--navy); font-style: normal; }
 .wordmark small { font-size: 13px; font-weight: 600; color: var(--text3); letter-spacing: 0; margin-left: 2px; vertical-align: middle; }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 
