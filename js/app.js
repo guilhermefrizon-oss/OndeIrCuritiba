@@ -86,6 +86,7 @@ const DEFAULT_ALGO = {
   boost: 6,          // peso de quem casa com o horário
   interestBoost: 2,  // multiplicador extra p/ interesses da pessoa
   base: 1,           // peso de todo o resto (nunca some do baralho)
+  balance: true,     // divide o peso pelo tamanho da categoria (ver orderDeck)
   slots: [
     { id:'manha',  label:'Manhã',      start:360,  end:660,  cats:['Café da tarde','Brunchs','Cafés | Ao ar livre','Cafés | Abertos no Domingo'] },
     { id:'almoco', label:'Almoço',     start:660,  end:900,  cats:['Alta gastronomia','Baratinho','Vegano','Comida Árabe','Lámen','Izakayas'] },
@@ -135,11 +136,30 @@ function orderDeck(places) {
   const base   = Number(ALGO.base) || 1;
   const boost  = Number(ALGO.boost) || 6;
   const iBoost = Number(ALGO.interestBoost) || 2;
+  const balance = ALGO.balance !== false;
+
+  // Quantos lugares há em cada categoria. Sem isso, a categoria com MAIS
+  // lugares cadastrados domina o topo (ex.: 30 barzinhos x 5 "Dates" → só
+  // aparece barzinho). Dividindo o peso pelo tamanho da categoria, as
+  // categorias da faixa dividem o espaço por igual, independente do acervo.
+  const counts = {};
+  if (balance) {
+    for (const p of places) {
+      const cs = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+      for (const c of cs) counts[c] = (counts[c] || 0) + 1;
+    }
+  }
 
   return weightedShuffle(places, p => {
     const cats = Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
-    let w = base;
-    if (slotCats.size && cats.some(c => slotCats.has(c))) w = boost;      // combina com o horário
+    const inSlot = slotCats.size && cats.some(c => slotCats.has(c));
+    let w = inSlot ? boost : base;
+    if (balance && cats.length) {
+      // entra pela categoria mais "rara" que ele tem (dá variedade)
+      const rel = inSlot ? cats.filter(c => slotCats.has(c)) : cats;
+      const n = Math.min(...rel.map(c => counts[c] || 1));
+      w = w / Math.max(1, n);
+    }
     if (interests.length && cats.some(c => interests.includes(c))) w *= iBoost; // gosto da pessoa
     return w;
   });

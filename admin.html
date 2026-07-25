@@ -1343,8 +1343,14 @@ th.sortable:hover { color: var(--acc3); }
       <div id="algoNow" style="margin:16px 0; font-size:13px; color:var(--text2)"></div>
 
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;max-width:860px;margin-bottom:24px">
-        <label style="display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text);cursor:pointer;margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text);cursor:pointer;margin-bottom:10px">
           <input type="checkbox" id="algo_enabled" checked> Priorizar por horário do dia
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text);cursor:pointer;margin-bottom:16px">
+          <input type="checkbox" id="algo_balance" checked style="margin-top:3px">
+          <span>Equilibrar categorias
+            <span style="display:block;font-size:12px;color:var(--text3);font-weight:400">Sem isso, a categoria com mais lugares cadastrados domina o topo (ex.: 30 barzinhos × 5 “Dates” → quase só barzinho).</span>
+          </span>
         </label>
         <div class="form-grid">
           <div class="form-group">
@@ -4218,7 +4224,7 @@ window.showPage = (page) => {
 
 // ── Algoritmo do baralho (app_config/algorithm) ─────────────────────
 const ALGO_DEFAULT = {
-  enabled: true, boost: 6, interestBoost: 2, base: 1,
+  enabled: true, boost: 6, interestBoost: 2, base: 1, balance: true,
   slots: [
     { id:'manha',  label:'Manhã',      start:360,  end:660,  cats:['Café da tarde','Brunchs'] },
     { id:'almoco', label:'Almoço',     start:660,  end:900,  cats:['Alta gastronomia','Baratinho'] },
@@ -4245,6 +4251,7 @@ async function loadAlgoConfig() {
   } catch (e) { console.warn('algo:', e.message); algoCfg = { ...ALGO_DEFAULT }; }
   if (!Array.isArray(algoCfg.slots) || !algoCfg.slots.length) algoCfg.slots = ALGO_DEFAULT.slots;
   document.getElementById('algo_enabled').checked = algoCfg.enabled !== false;
+  document.getElementById('algo_balance').checked = algoCfg.balance !== false;
   document.getElementById('algo_boost').value    = algoCfg.boost ?? 6;
   document.getElementById('algo_interest').value = algoCfg.interestBoost ?? 2;
   document.getElementById('algo_base').value     = algoCfg.base ?? 1;
@@ -4321,6 +4328,7 @@ window.saveAlgoConfig = async () => {
   btn.disabled = true;
   const data = {
     enabled: document.getElementById('algo_enabled').checked,
+    balance: document.getElementById('algo_balance').checked,
     boost:   parseFloat(document.getElementById('algo_boost').value) || 6,
     interestBoost: parseFloat(document.getElementById('algo_interest').value) || 2,
     base:    parseFloat(document.getElementById('algo_base').value) || 1,
@@ -4346,12 +4354,15 @@ window.simulateAlgo = () => {
   if (!allPlaces.length) { host.innerHTML = '<div style="color:var(--text3);font-size:13px">Carregue a aba Lugares primeiro.</div>'; return; }
   const cfg = {
     enabled: document.getElementById('algo_enabled').checked,
+    balance: document.getElementById('algo_balance').checked,
     boost: parseFloat(document.getElementById('algo_boost').value) || 6,
     interestBoost: parseFloat(document.getElementById('algo_interest').value) || 2,
     base: parseFloat(document.getElementById('algo_base').value) || 1,
     slots: algoCfg.slots,
   };
   const catsOfP = p => Array.isArray(p.cats) ? p.cats : (p.c ? [p.c] : []);
+  const counts = {};
+  if (cfg.balance) for (const p of allPlaces) for (const c of catsOfP(p)) counts[c] = (counts[c]||0)+1;
   const wShuffle = (items, wf) => {
     const pool = items.map(it => ({ it, w: Math.max(0.0001, wf(it)) }));
     const out = []; let t = pool.reduce((s,x)=>s+x.w,0);
@@ -4365,8 +4376,16 @@ window.simulateAlgo = () => {
     const sc = new Set(slot?.cats || []);
     const N = 200, count = {};
     for (let k=0;k<N;k++) {
-      wShuffle(allPlaces, p => sc.size && catsOfP(p).some(c=>sc.has(c)) ? cfg.boost : cfg.base)
-        .slice(0,10).forEach(p => { const c = catsOfP(p)[0] || '—'; count[c]=(count[c]||0)+1; });
+      wShuffle(allPlaces, p => {
+        const cats = catsOfP(p);
+        const inSlot = sc.size && cats.some(c => sc.has(c));
+        let w = inSlot ? cfg.boost : cfg.base;
+        if (cfg.balance && cats.length) {
+          const rel = inSlot ? cats.filter(c => sc.has(c)) : cats;
+          w = w / Math.max(1, Math.min(...rel.map(c => counts[c] || 1)));
+        }
+        return w;
+      }).slice(0,10).forEach(p => { const c = catsOfP(p)[0] || '—'; count[c]=(count[c]||0)+1; });
     }
     const tot = Object.values(count).reduce((a,b)=>a+b,0) || 1;
     const top = Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0,6);
