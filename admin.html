@@ -1441,6 +1441,12 @@ th.sortable:hover { color: var(--acc3); }
           <button class="btn btn-primary" onclick="backfillCoords()" id="btnBackfillCoords">Preencher coordenadas</button>
         </div>
         <div class="tool-card">
+          <div class="tool-step tool-step-opt">Diagnóstico</div>
+          <div class="tool-card-t">Conferir Place IDs</div>
+          <div class="tool-card-d">Compara o <strong>endereço cadastrado</strong> com o endereço do <strong>Google Place ID</strong> de cada lugar e lista as divergências — pega casos de ID de outra unidade da mesma rede (pino no lugar errado).</div>
+          <button class="btn btn-primary" onclick="auditPlaceIds()" id="btnAuditPid">Conferir Place IDs</button>
+        </div>
+        <div class="tool-card">
           <div class="tool-step tool-step-opt">Correção</div>
           <div class="tool-card-t">Corrigir pino errado</div>
           <div class="tool-card-d">Refaz a localização de <strong>todos</strong> os lugares com Google ID usando o próprio ID (fonte exata). Use quando um pino cair no lugar errado — normalmente é coordenada que veio de busca por endereço e pegou outra unidade da mesma rede.</div>
@@ -1453,6 +1459,7 @@ th.sortable:hover { color: var(--acc3); }
           <button class="btn" onclick="migrateHours()" id="btnMigrateHours">Converter horários</button>
         </div>
       </div>
+      <div id="auditPidResult" style="max-width:860px;margin-top:18px"></div>
     </div>
 
     <!-- ── Notifications Page ── -->
@@ -2880,6 +2887,61 @@ async function _coordsFromAddress(addr, bairro) {
   const loc = d.results?.[0]?.geometry?.location;
   return loc ? { lat: loc.lat, lng: loc.lng } : null;
 }
+
+// Auditoria: o Place ID salvo aponta pro mesmo endereço cadastrado? Pega
+// casos de ID de outra unidade da mesma rede (pino no lugar errado).
+const _norm = (s) => String(s || '').toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/\b(rua|r|avenida|av|alameda|al|travessa|tv|praca|rodovia)\b\.?/g, ' ')
+  .replace(/[^a-z0-9]+/g, ' ').trim();
+
+function _addrMatches(cadastrado, doGoogle) {
+  const a = _norm(cadastrado), b = _norm(doGoogle);
+  if (!a || !b) return true;                       // sem dado → não acusa
+  const numA = (a.match(/\b\d{1,5}\b/) || [])[0];
+  const numB = (b.match(/\b\d{1,5}\b/) || [])[0];
+  const wordsA = a.split(' ').filter(w => w.length > 3 && !/^\d+$/.test(w));
+  const hitName = wordsA.length ? wordsA.some(w => b.includes(w)) : true;
+  const hitNum  = (numA && numB) ? numA === numB : true;
+  return hitName && hitNum;
+}
+
+window.auditPlaceIds = async () => {
+  const targets = allPlaces.filter(p => p.pid && !p.pid.startsWith('ID_GOOGLE_') && p.a);
+  const host = document.getElementById('auditPidResult');
+  if (!targets.length) { host.innerHTML = '<div style="color:var(--text3);font-size:13px">Nenhum lugar com Google ID e endereço.</div>'; return; }
+  if (!confirm(`Conferir o Place ID de ${targets.length} lugar(es)?\nUsa a API do Google (1 consulta por lugar, custo pequeno). Continuar?`)) return;
+  const btn = document.getElementById('btnAuditPid');
+  const orig = btn.innerHTML; btn.disabled = true;
+  const bad = []; let fail = 0, i = 0;
+  for (const p of targets) {
+    i++; btn.textContent = `Conferindo ${i}/${targets.length}…`;
+    try {
+      const res = await fetch(`https://places.googleapis.com/v1/places/${p.pid}?fields=formattedAddress,displayName&key=${GOOGLE_API_KEY}`,
+        { headers: { 'X-Goog-FieldMask': 'formattedAddress,displayName' } });
+      if (!res.ok) throw new Error(res.status);
+      const d = await res.json();
+      const gAddr = d.formattedAddress || '';
+      if (!_addrMatches(p.a, gAddr)) bad.push({ p, gAddr, gName: d.displayName?.text || '' });
+    } catch (e) { console.warn('audit', p._docId, e.message); fail++; }
+  }
+  btn.disabled = false; btn.innerHTML = orig;
+  if (!bad.length) {
+    host.innerHTML = `<div class="alert-box info"><span>✓</span><div>Nenhuma divergência encontrada${fail ? ` (${fail} não deu pra conferir)` : ''}. Os Place IDs batem com os endereços.</div></div>`;
+    return;
+  }
+  host.innerHTML = `<div class="alert-box warn" style="margin-bottom:12px"><span>⚠</span><div><strong>${bad.length} lugar(es)</strong> com Place ID que não bate com o endereço cadastrado${fail ? ` (${fail} não deu pra conferir)` : ''}. Abra cada um e use a <strong>busca do Google</strong> no topo do cadastro pra escolher a unidade certa.</div></div>` +
+    bad.map(({ p, gAddr, gName }) => `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px">${escM(p.n || '—')}</div>
+        <div style="font-size:13px;color:var(--text2)">Cadastrado: <strong>${escM(p.a)}</strong>${p.b ? ' · ' + escM(p.b) : ''}</div>
+        <div style="font-size:13px;color:var(--yellow)">Place ID aponta p/: <strong>${escM(gAddr)}</strong>${gName ? ` <span style="color:var(--text3)">(${escM(gName)})</span>` : ''}</div>
+        <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal('${p._docId}')">Abrir cadastro</button>
+          <a class="btn btn-secondary btn-sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.n||'')}&query_place_id=${encodeURIComponent(p.pid)}" target="_blank">Ver o ID no Google</a>
+        </div>
+      </div>`).join('');
+};
 
 window.backfillCoords = async (force = false) => {
   // force=false → só quem não tem coordenada.
