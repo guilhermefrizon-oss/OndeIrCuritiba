@@ -3217,39 +3217,50 @@ window.publishPlacePhotos = async () => {
   const orig = btn.innerHTML; btn.disabled = true;
   try {
     const paths = [];
+    const puladas = [];
     for (let i = 0; i < selectedPhotos.length; i++) {
       btn.textContent = `Publicando ${i + 1}/${selectedPhotos.length}…`;
       const src = selectedPhotos[i];
-      console.log(`[publicar] foto ${i + 1}/${selectedPhotos.length}:`, src.slice(0, 80));
-      let blob;
+      console.log(`[publicar] foto ${i + 1}/${selectedPhotos.length}:`, src.slice(0, 90));
+      let blob = null;
       if (src.startsWith('data:')) {
         blob = await (await fetch(src)).blob();                    // nossa foto / comentário
       } else if (src.startsWith('fotos/')) {
         paths.push(src); continue;                                  // já está publicada
+      } else if (src.includes('firebasestorage.googleapis.com') || src.includes('firebasestorage.app')) {
+        // Link antigo do Storage (bucket esvaziado): não dá mais pra ler.
+        puladas.push(i + 1); console.warn('[publicar] link morto do Storage, pulada:', i + 1);
+        continue;
       } else {
-        // Foto do Google: o fetch direto é barrado por CORS, mas a imagem já
-        // é exibida na tela — então lemos os pixels via <img> + canvas.
+        // Foto do Google: fetch é barrado por CORS → lê os pixels via canvas.
         try {
           const r = await fetch(src);
           if (!r.ok) throw new Error('HTTP ' + r.status);
           blob = await r.blob();
         } catch (e) {
-          blob = await imgToBlob(src);                              // caminho que funciona
+          try { blob = await imgToBlob(src); }
+          catch (e2) { puladas.push(i + 1); console.warn('[publicar] não deu pra ler a foto', i + 1, e2.message); continue; }
         }
       }
+      if (!blob) { puladas.push(i + 1); continue; }
       blob = await compressImageBlob(blob, 1200, 0.82);
-      const path = `fotos/places/${photoPlaceDocId}/${i}.jpg`;
-      await ghPutFile(path, blob, `fotos: ${photoPlaceDocId} #${i}`);
+      const path = `fotos/places/${photoPlaceDocId}/${paths.length}.jpg`;
+      await ghPutFile(path, blob, `fotos: ${photoPlaceDocId} #${paths.length}`);
       console.log('[publicar] ok:', path);
       paths.push(path);
     }
+    if (!paths.length) {
+      throw new Error('nenhuma das fotos pôde ser lida. As antigas do Storage não existem mais — escolha fotos do Google abaixo ou use "Enviar do computador".');
+    }
     // aponta no banco (o GitHub Pages leva ~1 min pra publicar)
-    const oldPos = selectedPhotos.map(u => selectedPos[u] || '50% 50%');
-    await setDoc(doc(db, 'places', photoPlaceDocId), { photos: paths, photosPos: oldPos, _updatedAt: serverTimestamp() }, { merge: true });
+    const pos = paths.map(() => '50% 50%');
+    await setDoc(doc(db, 'places', photoPlaceDocId), { photos: paths, photosPos: pos, _updatedAt: serverTimestamp() }, { merge: true });
     const place = allPlaces.find(x => x._docId === photoPlaceDocId);
-    if (place) { place.photos = [...paths]; place.photosPos = [...oldPos]; }
+    if (place) { place.photos = [...paths]; place.photosPos = [...pos]; }
     renderTable();
-    showToast(`${paths.length} foto(s) publicadas! O GitHub leva ~1 min pra deixar no ar.`, 'success');
+    showToast(
+      `${paths.length} foto(s) publicadas!${puladas.length ? ` ${puladas.length} pulada(s) — eram links antigos do Storage.` : ''} O GitHub leva ~1 min pra deixar no ar.`,
+      puladas.length ? 'info' : 'success');
     closePhotoModal();
   } catch (e) {
     console.error(e);
