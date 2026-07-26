@@ -3235,6 +3235,25 @@ function imgToBlob(url, maxDim = 1600, quality = 0.9) {
   });
 }
 
+// Baixa uma foto do Google Places de forma que o navegador aceite:
+// 1) pede o endereço final com skipHttpRedirect=true (evita o redirect que
+//    derruba o CORS); 2) baixa desse endereço (lh3), com canvas de reserva.
+async function googlePhotoBlob(mediaUrl) {
+  const u = new URL(mediaUrl);
+  u.searchParams.set('skipHttpRedirect', 'true');
+  const meta = await fetch(u.toString());
+  if (!meta.ok) throw new Error('metadados da foto: HTTP ' + meta.status);
+  const { photoUri } = await meta.json();
+  if (!photoUri) throw new Error('a API não devolveu o endereço da foto');
+  try {
+    const r = await fetch(photoUri);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.blob();
+  } catch (e) {
+    return await imgToBlob(photoUri);   // reserva: lê os pixels via canvas
+  }
+}
+
 // Blob → base64 puro (sem o prefixo data:)
 function _blobToB64(blob) {
   return new Promise((res, rej) => {
@@ -3301,15 +3320,12 @@ window.publishPlacePhotos = async () => {
         // então ela é MANTIDA como está (não some do lugar).
         paths.push(src); mantidas++; continue;
       } else {
-        // Foto do Google: fetch é barrado por CORS → lê os pixels via canvas.
-        try {
-          const r = await fetch(src);
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          blob = await r.blob();
-        } catch (e) {
-          try { blob = await imgToBlob(src); }
-          catch (e2) { puladas.push(i + 1); console.warn('[publicar] não deu pra ler a foto', i + 1, e2.message); continue; }
-        }
+        // Foto do Google: o /media responde com REDIRECT e o redirect perde os
+        // cabeçalhos de CORS — por isso fetch e canvas falhavam. Com
+        // skipHttpRedirect=true a API devolve o endereço final (lh3...), que
+        // aceita leitura de outro site.
+        try { blob = await googlePhotoBlob(src); }
+        catch (e2) { puladas.push(i + 1); console.warn('[publicar] não deu pra ler a foto', i + 1, e2.message); continue; }
       }
       if (!blob) { puladas.push(i + 1); continue; }
       blob = await compressImageBlob(blob, 1200, 0.82);
