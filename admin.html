@@ -1426,42 +1426,10 @@ th.sortable:hover { color: var(--acc3); }
 
       <div class="alert-box info" style="max-width:860px">
         <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.15em"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-        <div>As fotos ficam hospedadas de graça na pasta <strong>fotos/</strong> do projeto. O fluxo é: <strong>1)</strong> baixar o .zip aqui → <strong>2)</strong> extrair na raiz do projeto e me avisar pra dar o push → <strong>3)</strong> clicar em <strong>Aplicar</strong>. Na aba <strong>Lugares</strong>, a coluna “Fotos” mostra quem ainda não está local.</div>
+        <div>As fotos são publicadas direto no cadastro do lugar (aba <strong>Lugares</strong> → editar → <strong>Fotos</strong> → <strong>Publicar fotos</strong>). Aqui ficam só correções pontuais de localização e horário.</div>
       </div>
 
-      <div class="section-label" style="margin-top:24px">Fotos · passo a passo</div>
-      <div class="tools-grid">
-        <div class="tool-card">
-          <div class="tool-step">Passo 1</div>
-          <div class="tool-card-t">Baixar faltantes</div>
-          <div class="tool-card-d">Baixa do Google (em HD) as fotos dos lugares que ainda <strong>não estão locais</strong> — sem foto ou com foto externa. Gera um <strong>.zip</strong> pra pasta fotos/. É o que você usa no dia a dia ao adicionar lugares.</div>
-          <button class="btn btn-primary" onclick="hdFetchMissing()" id="btnHdMissing">Baixar faltantes (.zip)</button>
-        </div>
-        <div class="tool-card">
-          <div class="tool-step">Passo 2</div>
-          <div class="tool-card-t">Subir a pasta fotos/</div>
-          <div class="tool-card-d">Extraia o .zip e coloque a pasta <strong>fotos/</strong> na raiz do projeto. Depois <strong>me avise no chat</strong> — eu faço o commit/push pro GitHub (é onde as fotos ficam hospedadas de graça).</div>
-          <div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:8px">Esse passo é comigo — não tem botão.</div>
-        </div>
-        <div class="tool-card">
-          <div class="tool-step">Passo 3</div>
-          <div class="tool-card-t">Aplicar no banco</div>
-          <div class="tool-card-d">Só <strong>depois</strong> do push: aponta os endereços das fotos no banco. Se clicar antes de eu subir, as fotos ficam quebradas até subir.</div>
-          <button class="btn btn-primary" onclick="applyHDPhotos()" id="btnHdApply">Aplicar no banco</button>
-        </div>
-      </div>
-
-      <div class="section-label" style="margin-top:28px">Fotos · extras (uso raro)</div>
-      <div class="tools-grid">
-        <div class="tool-card">
-          <div class="tool-step tool-step-opt">Opcional</div>
-          <div class="tool-card-t">Re-baixar tudo em HD</div>
-          <div class="tool-card-d">Refaz <strong>todas</strong> as fotos em alta resolução de uma vez (corrige pixelização geral). Usa mais API do Google — só quando quiser um upgrade completo. Depois segue o Passo 2 e 3 normalmente.</div>
-          <button class="btn" onclick="hdFetchAll()" id="btnHdAll">Re-baixar tudo (.zip)</button>
-        </div>
-      </div>
-
-      <div class="section-label" style="margin-top:28px">Localização e horários</div>
+      <div class="section-label" style="margin-top:24px">Localização e horários</div>
       <div class="tools-grid">
         <div class="tool-card">
           <div class="tool-step tool-step-opt">Manutenção</div>
@@ -2174,10 +2142,6 @@ service cloud.firestore {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closePhotoModal()">Cancelar</button>
-      <button class="btn btn-secondary" id="btnZipPhotos" onclick="downloadPhotosZip()" title="Baixa as fotos selecionadas num .zip organizado por lugar (backup local)">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Baixar ZIP
-      </button>
       <button class="btn btn-primary" id="btnSavePhotos" onclick="publishPlacePhotos()" title="Publica as fotos escolhidas direto na pasta /fotos do repositório e já aponta no banco.">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 14v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><polyline points="7 9 12 4 17 9"/><line x1="12" y1="4" x2="12" y2="16"/></svg>
         Publicar fotos
@@ -2726,36 +2690,6 @@ function slugify(s) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'lugar';
 }
 
-window.downloadPhotosZip = async () => {
-  if (!selectedPhotos.length) { showToast('Selecione ao menos uma foto', 'error'); return; }
-  const btn = document.getElementById('btnZipPhotos');
-  const orig = btn.innerHTML;
-  btn.disabled = true;
-  const slug = slugify(document.getElementById('f_n').value.trim());
-  try {
-    const files = [];
-    for (let i = 0; i < selectedPhotos.length; i++) {
-      btn.textContent = `Baixando ${i + 1}/${selectedPhotos.length}…`;
-      const res = await fetch(selectedPhotos[i]);
-      if (!res.ok) throw new Error(`foto ${i + 1}: ${res.status}`);
-      const data = new Uint8Array(await res.arrayBuffer());
-      const type = res.headers.get('content-type') || 'image/jpeg';
-      const ext  = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
-      files.push({ name: `${slug}/${i + 1}.${ext}`, data });
-    }
-    const url = URL.createObjectURL(makeZip(files));
-    const a = document.createElement('a');
-    a.href = url; a.download = `${slug}.zip`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    showToast(`ZIP de ${files.length} foto(s) baixado!`, 'success');
-  } catch(e) {
-    showToast('Erro ao baixar ZIP: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = orig;
-  }
-};
 
 // ── Migração das fotos: Storage → pasta /fotos (hospedagem grátis) ──
 function isStorageUrl(u) {
@@ -3160,9 +3094,14 @@ window.clearGhToken = () => { localStorage.removeItem('gh_token'); showToast('To
 function renderGhStatus() {
   const el = document.getElementById('ghStatus');
   if (!el) return;
-  el.innerHTML = ghToken()
-    ? `<span style="color:var(--green)">✓ Token configurado</span> · <a onclick="testGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">testar conexão</a> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer">trocar</a> · <a onclick="clearGhToken()" style="color:var(--text3);cursor:pointer">remover</a>`
-    : `<span style="color:var(--yellow)">Token do GitHub não configurado</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">configurar</a>`;
+  // Quando está tudo certo, não polui a tela: só aparece se faltar configurar.
+  if (ghToken()) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+  } else {
+    el.style.display = '';
+    el.innerHTML = `<span style="color:var(--yellow)">⚠ Falta configurar o acesso pra publicar fotos</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">configurar</a>`;
+  }
 }
 
 // Testa só o token/conexão — separa "problema no GitHub" de "problema na foto".
@@ -3185,6 +3124,28 @@ window.testGhToken = async () => {
     showToast('Não consegui nem falar com a api.github.com — bloqueador de anúncios, VPN ou extensão? Tente em janela anônima.', 'error');
   }
 };
+
+// Lê uma imagem de outro domínio via <img> + canvas. Contorna o CORS do
+// fetch nas fotos do Google (a imagem já carrega na tela, então dá pra
+// redesenhar num canvas e extrair os bytes).
+function imgToBlob(url, maxDim = 1600, quality = 0.9) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width  = Math.max(1, Math.round(img.naturalWidth * scale));
+        c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b => b ? resolve(b) : reject(new Error('canvas vazio')), 'image/jpeg', quality);
+      } catch (e) { reject(new Error('imagem protegida (CORS)')); }
+    };
+    img.onerror = () => reject(new Error('não consegui carregar a imagem'));
+    img.src = url;
+  });
+}
 
 // Blob → base64 puro (sem o prefixo data:)
 function _blobToB64(blob) {
@@ -3246,12 +3207,14 @@ window.publishPlacePhotos = async () => {
       } else if (src.startsWith('fotos/')) {
         paths.push(src); continue;                                  // já está publicada
       } else {
+        // Foto do Google: o fetch direto é barrado por CORS, mas a imagem já
+        // é exibida na tela — então lemos os pixels via <img> + canvas.
         try {
-          const r = await fetch(src);                               // foto do Google
+          const r = await fetch(src);
           if (!r.ok) throw new Error('HTTP ' + r.status);
           blob = await r.blob();
         } catch (e) {
-          throw new Error(`não consegui baixar a foto ${i + 1} do Google (${e.message}). Baixe no navegador e use "Enviar do computador".`);
+          blob = await imgToBlob(src);                              // caminho que funciona
         }
       }
       blob = await compressImageBlob(blob, 1200, 0.82);
