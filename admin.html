@@ -1202,6 +1202,10 @@ th.sortable:hover { color: var(--acc3); }
     </button>
 
     <div class="nav-section">Sistema</div>
+    <button class="nav-item" onclick="showPage('usuarios')" id="nav-usuarios">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      Usuários
+    </button>
     <button class="nav-item" onclick="showPage('metrics')" id="nav-metrics">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Métricas
@@ -1348,6 +1352,25 @@ th.sortable:hover { color: var(--acc3); }
       </div>
       <div id="fotosComList" style="margin-top:18px">
         <div style="color:var(--text3);font-size:14px">Clique em <strong>Buscar fotos</strong> pra varrer os comentários.</div>
+      </div>
+    </div>
+
+    <!-- ── Usuários Page ── -->
+    <div id="page-usuarios" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Usuários</div>
+          <div class="page-subtitle">Quem entrou, quem voltou e quem sumiu — pra saber com quem conversar.</div>
+        </div>
+        <button class="btn btn-secondary" onclick="loadUsersPage()" id="btnLoadUsers">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+      <div id="usersSummary" class="kpi-row four" style="margin-bottom:8px"></div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:18px">“Voltou” = abriu o app em pelo menos 2 dias diferentes. Só conta quem faz login.</div>
+      <div id="usersList">
+        <div style="color:var(--text3);font-size:14px">Clique em <strong>Atualizar</strong> pra carregar.</div>
       </div>
     </div>
 
@@ -4653,7 +4676,7 @@ window.openPlaceFromCorrection = (id) => {
 
 // ── Navigation ──────────────────────────────────────────────────
 window.showPage = (page) => {
-  ['places','corrections','reports','fotoscom','notifications','categories','quiz','algoritmo','ferramentas','metrics','rules'].forEach(p => {
+  ['places','corrections','reports','fotoscom','notifications','categories','quiz','algoritmo','ferramentas','usuarios','metrics','rules'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
@@ -4664,6 +4687,7 @@ window.showPage = (page) => {
   if (page === 'reports') loadReports();
   if (page === 'notifications') initNotificationsPage();
   if (page === 'algoritmo') loadAlgoConfig();
+  if (page === 'usuarios') loadUsersPage();
   closeSidebar(); // fecha a gaveta no mobile após navegar
 };
 
@@ -5275,6 +5299,117 @@ window.recalibrateLikeCounters = async () => {
     permErr ? 'error' : 'success'
   );
 };
+
+// ── Aba Usuários: uma linha por pessoa, pra acompanhar o teste ──────
+window.loadUsersPage = async () => {
+  const host = document.getElementById('usersList');
+  const sum  = document.getElementById('usersSummary');
+  const btn  = document.getElementById('btnLoadUsers');
+  btn.disabled = true;
+  host.innerHTML = '<div class="table-loading"><div class="spinner"></div>Carregando…</div>';
+  try {
+    const [snapU, snapAD] = await Promise.all([
+      getDocs(collection(db, 'users_meta')),
+      getDocs(collection(db, 'active_days')).catch(() => ({ docs: [] })),
+    ]);
+    const users = snapU.docs.map(d => ({ uid: d.id, ...d.data() }));
+    // dias ativos por usuário
+    const diasPorUid = {};
+    snapAD.docs.forEach(d => {
+      const a = d.data();
+      if (!a?.uid || !a?.date) return;
+      (diasPorUid[a.uid] = diasPorUid[a.uid] || new Set()).add(a.date);
+    });
+    // atividade: favoritos, quero ir e comentários por usuário
+    const [fav, want, com] = await Promise.all([
+      _countBy('saves'), _countBy('likes'), _countComments(),
+    ]);
+
+    if (!users.length) { host.innerHTML = '<div style="color:var(--text3)">Nenhum usuário ainda.</div>'; sum.innerHTML=''; btn.disabled=false; return; }
+
+    const agora = Date.now();
+    const linhas = users.map(u => {
+      const dias = diasPorUid[u.uid] ? diasPorUid[u.uid].size : 0;
+      const criado = u.createdAt ? new Date(u.createdAt).getTime() : 0;
+      const visto  = u.lastSeen  ? new Date(u.lastSeen).getTime()  : 0;
+      return {
+        u, dias, criado, visto,
+        favs: fav[u.uid] || 0, wants: want[u.uid] || 0, coms: com[u.uid] || 0,
+        voltou: dias >= 2,
+        sumiu: dias <= 1 && visto && (agora - visto) > 3 * 86400000,
+      };
+    }).sort((a, b) => b.visto - a.visto);
+
+    const voltaram = linhas.filter(l => l.voltou).length;
+    const salvaram = linhas.filter(l => l.favs + l.wants > 0).length;
+    const sumiram  = linhas.filter(l => l.sumiu).length;
+    sum.innerHTML = `
+      <div class="kpi" style="--c:#7c5cff"><div class="kpi-n">${linhas.length}</div><div class="kpi-l">Pessoas no total</div></div>
+      <div class="kpi" style="--c:#199e70"><div class="kpi-n">${voltaram}</div><div class="kpi-l">Voltaram (2+ dias)</div></div>
+      <div class="kpi" style="--c:#3987e5"><div class="kpi-n">${salvaram}</div><div class="kpi-l">Salvaram algum lugar</div></div>
+      <div class="kpi" style="--c:#c98500"><div class="kpi-n">${sumiram}</div><div class="kpi-l">Sumiram (3+ dias)</div></div>`;
+
+    const fmtD = t => t ? new Date(t).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) : '—';
+    const desde = t => {
+      if (!t) return '—';
+      const h = Math.floor((agora - t) / 3600000);
+      if (h < 1) return 'agora há pouco';
+      if (h < 24) return `há ${h}h`;
+      const d = Math.floor(h / 24);
+      return d === 1 ? 'ontem' : `há ${d} dias`;
+    };
+    host.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Pessoa</th><th>Entrou</th><th>Último acesso</th><th>Dias ativos</th><th>Quero ir</th><th>Favoritos</th><th>Comentários</th><th></th></tr></thead>
+      <tbody>${linhas.map(l => `
+        <tr${l.sumiu ? ' style="opacity:.65"' : ''}>
+          <td>
+            <div class="place-name">${escM(l.u.name || '—')}</div>
+            <div class="place-addr">${escM(l.u.email || '')}</div>
+          </td>
+          <td style="color:var(--text2);font-size:13px">${fmtD(l.criado)}</td>
+          <td style="color:var(--text2);font-size:13px">${desde(l.visto)}</td>
+          <td><strong>${l.dias}</strong></td>
+          <td>${l.wants || '—'}</td>
+          <td>${l.favs || '—'}</td>
+          <td>${l.coms || '—'}</td>
+          <td>${l.voltou
+              ? '<span class="pid-chip pid-ok">voltou</span>'
+              : l.sumiu ? '<span class="pid-chip pid-missing">sumiu</span>' : '<span class="pid-chip" style="color:var(--text3)">novo</span>'}</td>
+        </tr>`).join('')}</tbody></table></div>`;
+  } catch (e) {
+    console.error(e);
+    host.innerHTML = `<div class="alert-box warn"><span>⚠</span><div>Não consegui ler: ${escM(e.message)}. Publique as regras atualizadas do Firestore.</div></div>`;
+  } finally { btn.disabled = false; }
+};
+
+// Conta docs por usuário nas subcoleções espelho (saves/likes por lugar).
+async function _countBy(col) {
+  const out = {};
+  if (!allPlaces.length) { try { await loadPlaces(); } catch (e) {} }
+  const CH = 10;
+  for (let i = 0; i < allPlaces.length; i += CH) {
+    await Promise.all(allPlaces.slice(i, i + CH).map(async p => {
+      try {
+        const s = await getDocs(collection(db, col, String(p.id ?? p._docId), 'users'));
+        s.docs.forEach(d => { const uid = d.id.split('_')[0]; out[uid] = (out[uid] || 0) + 1; });
+      } catch (e) {}
+    }));
+  }
+  return out;
+}
+async function _countComments() {
+  const out = {};
+  const CH = 10;
+  for (let i = 0; i < allPlaces.length; i += CH) {
+    await Promise.all(allPlaces.slice(i, i + CH).map(async p => {
+      try {
+        const s = await getDocs(collection(db, 'comments', String(p.id ?? p._docId), 'items'));
+        s.docs.forEach(d => { const uid = d.data()?.userId; if (uid) out[uid] = (out[uid] || 0) + 1; });
+      } catch (e) {}
+    }));
+  }
+  return out;
+}
 
 // ── Métricas de usuários ────────────────────────────────────────
 // Lê users_meta/{uid} — 1 doc por usuário, escrito pelo app a cada login.
