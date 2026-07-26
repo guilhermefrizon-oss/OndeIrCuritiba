@@ -2423,15 +2423,14 @@ window.openPhotoModal = async () => {
   const place = allPlaces.find(x => x._docId === editingId);
   const normalizeKey = (url) => (typeof url === 'string' && url.includes('places.googleapis.com'))
     ? url.replace(/([?&])key=[^&]*/, '$1key=' + GOOGLE_API_KEY) : url;
-  // Descarta links antigos do Firebase Storage: o bucket foi esvaziado, então
-  // eles já não abrem pra ninguém (só aparecem aqui por cache). Assim a
-  // seleção começa limpa e dá pra ir SOMANDO fotos sem ter que mexer no resto.
-  const _todas = Array.isArray(place?.photos) ? place.photos.map(normalizeKey) : [];
-  const _mortas = _todas.filter(u => typeof u === 'string' &&
-    (u.includes('firebasestorage.googleapis.com') || u.includes('firebasestorage.app')));
-  selectedPhotos = _todas.filter(u => !_mortas.includes(u));
-  if (_mortas.length) {
-    setTimeout(() => showToast(`${_mortas.length} foto(s) antiga(s) do Storage foram descartadas (não existem mais). Escolha novas e publique.`, 'info'), 400);
+  // Mantém tudo que está salvo (inclusive fotos ainda no Storage). O Storage
+  // bloqueia LER os pixels de outro site (CORS), então elas não podem ser
+  // republicadas daqui — mas continuam válidas e aparecendo no app.
+  selectedPhotos = Array.isArray(place?.photos) ? place.photos.map(normalizeKey) : [];
+  const _noStorage = selectedPhotos.filter(u => typeof u === 'string' &&
+    (u.includes('firebasestorage.googleapis.com') || u.includes('firebasestorage.app'))).length;
+  if (_noStorage) {
+    setTimeout(() => showToast(`${_noStorage} foto(s) ainda estão no Storage antigo — elas seguem funcionando, mas não dá pra republicá-las daqui (CORS).`, 'info'), 400);
   }
   // Enquadramento salvo (paralelo a photos) → mapa por url
   selectedPos = {};
@@ -3227,6 +3226,7 @@ window.publishPlacePhotos = async () => {
   try {
     const paths = [];
     const puladas = [];
+    let mantidas = 0;
     for (let i = 0; i < selectedPhotos.length; i++) {
       btn.textContent = `Publicando ${i + 1}/${selectedPhotos.length}…`;
       const src = selectedPhotos[i];
@@ -3237,9 +3237,9 @@ window.publishPlacePhotos = async () => {
       } else if (src.startsWith('fotos/')) {
         paths.push(src); continue;                                  // já está publicada
       } else if (src.includes('firebasestorage.googleapis.com') || src.includes('firebasestorage.app')) {
-        // Link antigo do Storage (bucket esvaziado): não dá mais pra ler.
-        puladas.push(i + 1); console.warn('[publicar] link morto do Storage, pulada:', i + 1);
-        continue;
+        // Foto ainda no Storage antigo: o CORS impede reler os pixels daqui,
+        // então ela é MANTIDA como está (não some do lugar).
+        paths.push(src); mantidas++; continue;
       } else {
         // Foto do Google: fetch é barrado por CORS → lê os pixels via canvas.
         try {
@@ -3261,7 +3261,7 @@ window.publishPlacePhotos = async () => {
       paths.push(path);
     }
     if (!paths.length) {
-      throw new Error('nenhuma das fotos pôde ser lida. As antigas do Storage não existem mais — escolha fotos do Google abaixo ou use "Enviar do computador".');
+      throw new Error('nenhuma foto pôde ser publicada. Escolha fotos do Google abaixo ou use "Enviar do computador".');
     }
     // aponta no banco (o GitHub Pages leva ~1 min pra publicar)
     // Mantém o enquadramento das que já estavam publicadas.
@@ -3271,7 +3271,7 @@ window.publishPlacePhotos = async () => {
     if (place) { place.photos = [...paths]; place.photosPos = [...pos]; }
     renderTable();
     showToast(
-      `${paths.length} foto(s) publicadas!${puladas.length ? ` ${puladas.length} pulada(s) — eram links antigos do Storage.` : ''} O GitHub leva ~1 min pra deixar no ar.`,
+      `Pronto! ${paths.length} foto(s) no lugar${mantidas ? ` (${mantidas} mantida(s) do Storage antigo)` : ''}${puladas.length ? `, ${puladas.length} não deu pra ler` : ''}. O GitHub leva ~1 min pra deixar no ar.`,
       puladas.length ? 'info' : 'success');
     closePhotoModal();
   } catch (e) {
