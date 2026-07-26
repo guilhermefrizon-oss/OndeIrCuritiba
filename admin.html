@@ -3161,9 +3161,30 @@ function renderGhStatus() {
   const el = document.getElementById('ghStatus');
   if (!el) return;
   el.innerHTML = ghToken()
-    ? `<span style="color:var(--green)">✓ Token configurado</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer">trocar</a> · <a onclick="clearGhToken()" style="color:var(--text3);cursor:pointer">remover</a>`
+    ? `<span style="color:var(--green)">✓ Token configurado</span> · <a onclick="testGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">testar conexão</a> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer">trocar</a> · <a onclick="clearGhToken()" style="color:var(--text3);cursor:pointer">remover</a>`
     : `<span style="color:var(--yellow)">Token do GitHub não configurado</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">configurar</a>`;
 }
+
+// Testa só o token/conexão — separa "problema no GitHub" de "problema na foto".
+window.testGhToken = async () => {
+  const token = ghToken();
+  if (!token) { showToast('Configure o token primeiro.', 'error'); return; }
+  showToast('Testando…', 'info');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if (res.ok) {
+      const d = await res.json();
+      const perm = d.permissions?.push ? 'com permissão de escrita' : 'SEM permissão de escrita';
+      showToast(`Conectado em ${d.full_name} (${perm}).`, d.permissions?.push ? 'success' : 'error');
+    } else if (res.status === 401) showToast('Token inválido ou expirado.', 'error');
+    else if (res.status === 404) showToast('Token não enxerga o repositório OndeIrCuritiba.', 'error');
+    else showToast(`GitHub respondeu ${res.status}.`, 'error');
+  } catch (e) {
+    showToast('Não consegui nem falar com a api.github.com — bloqueador de anúncios, VPN ou extensão? Tente em janela anônima.', 'error');
+  }
+};
 
 // Blob → base64 puro (sem o prefixo data:)
 function _blobToB64(blob) {
@@ -3186,12 +3207,21 @@ async function ghPutFile(path, blob, msg) {
   try {
     const cur = await fetch(`${api}?ref=${GH_BRANCH}`, { headers });
     if (cur.ok) sha = (await cur.json()).sha;
-  } catch (e) {}
+  } catch (e) { console.warn('[gh] checar existente falhou:', e.message); }
   const body = { message: msg, content: await _blobToB64(blob), branch: GH_BRANCH };
   if (sha) body.sha = sha;
-  const res = await fetch(api, { method: 'PUT', headers, body: JSON.stringify(body) });
+  let res;
+  try {
+    res = await fetch(api, { method: 'PUT', headers, body: JSON.stringify(body) });
+  } catch (e) {
+    // fetch que nem chega no servidor: rede, bloqueador ou CORS
+    throw new Error('não consegui falar com a API do GitHub (bloqueador de anúncios/VPN? tente em janela anônima)');
+  }
   if (!res.ok) {
     const t = await res.text();
+    if (res.status === 401) throw new Error('token do GitHub inválido ou expirado');
+    if (res.status === 403) throw new Error('token sem permissão "Contents: Read and write" neste repositório');
+    if (res.status === 404) throw new Error('repositório não encontrado — o token tem acesso ao OndeIrCuritiba?');
     throw new Error(`GitHub ${res.status}: ${t.slice(0, 140)}`);
   }
   return true;
@@ -3209,19 +3239,25 @@ window.publishPlacePhotos = async () => {
     for (let i = 0; i < selectedPhotos.length; i++) {
       btn.textContent = `Publicando ${i + 1}/${selectedPhotos.length}…`;
       const src = selectedPhotos[i];
+      console.log(`[publicar] foto ${i + 1}/${selectedPhotos.length}:`, src.slice(0, 80));
       let blob;
       if (src.startsWith('data:')) {
         blob = await (await fetch(src)).blob();                    // nossa foto / comentário
       } else if (src.startsWith('fotos/')) {
         paths.push(src); continue;                                  // já está publicada
       } else {
-        const r = await fetch(src);                                 // foto do Google
-        if (!r.ok) throw new Error('baixar foto ' + (i + 1) + ': ' + r.status);
-        blob = await r.blob();
+        try {
+          const r = await fetch(src);                               // foto do Google
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          blob = await r.blob();
+        } catch (e) {
+          throw new Error(`não consegui baixar a foto ${i + 1} do Google (${e.message}). Baixe no navegador e use "Enviar do computador".`);
+        }
       }
       blob = await compressImageBlob(blob, 1200, 0.82);
       const path = `fotos/places/${photoPlaceDocId}/${i}.jpg`;
       await ghPutFile(path, blob, `fotos: ${photoPlaceDocId} #${i}`);
+      console.log('[publicar] ok:', path);
       paths.push(path);
     }
     // aponta no banco (o GitHub Pages leva ~1 min pra publicar)
