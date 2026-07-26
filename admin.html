@@ -2149,7 +2149,8 @@ service cloud.firestore {
           </button>
         </div>
       </div>
-      <div class="form-hint" style="margin:-4px 0 16px">As fotos são reduzidas (máx. 1200px) e entram no .zip pra pasta <strong>fotos/</strong> — nada vai pro Storage pago.</div>
+      <div class="form-hint" style="margin:-4px 0 6px">As fotos são reduzidas (máx. 1200px) e publicadas direto na pasta <strong>fotos/</strong> do repositório — nada vai pro Storage pago.</div>
+      <div class="form-hint" id="ghStatus" style="margin:0 0 16px"></div>
 
       <!-- Fotos vindas dos comentários (comunidade) -->
       <div id="communityPhotosWrap" style="display:none;margin-bottom:18px">
@@ -2177,9 +2178,9 @@ service cloud.firestore {
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Baixar ZIP
       </button>
-      <button class="btn btn-primary" id="btnSavePhotos" onclick="exportPlacePhotos()" title="Gera o .zip com as fotos escolhidas pra pasta fotos/. Depois é só extrair, dar push e usar 'Fotos: aplicar'.">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Gerar .zip destas fotos
+      <button class="btn btn-primary" id="btnSavePhotos" onclick="publishPlacePhotos()" title="Publica as fotos escolhidas direto na pasta /fotos do repositório e já aponta no banco.">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 14v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><polyline points="7 9 12 4 17 9"/><line x1="12" y1="4" x2="12" y2="16"/></svg>
+        Publicar fotos
       </button>
     </div>
   </div>
@@ -2451,6 +2452,7 @@ window.openPhotoModal = async () => {
   }
   renderSelectedPhotos();
   loadCommunityPhotos(place?.id || editingId);   // fotos vindas dos comentários
+  renderGhStatus();
 
   // Busca todas as fotos do Google
   try {
@@ -3137,6 +3139,105 @@ window.pickCommunityPhoto = (i) => {
   selectedPhotos.push(url);
   renderSelectedPhotos();
   showToast('Foto do comentário adicionada.', 'success');
+};
+
+// ── Publicação direta no GitHub (pasta /fotos) ─────────────────────
+// Commita cada foto no repositório via API do GitHub — sem zip, sem push
+// manual. O token fica SÓ no navegador (localStorage), nunca no repositório.
+const GH_OWNER = 'guilhermefrizon-oss';
+const GH_REPO  = 'OndeIrCuritiba';
+const GH_BRANCH = 'main';
+
+function ghToken() { return localStorage.getItem('gh_token') || ''; }
+window.setGhToken = () => {
+  const atual = ghToken();
+  const t = prompt('Cole aqui o token do GitHub (fine-grained, com permissão Contents: Read and write neste repositório).\n\nEle fica salvo só neste navegador.', atual ? '••••••••' : '');
+  if (t === null) return;
+  if (t && t !== '••••••••') { localStorage.setItem('gh_token', t.trim()); showToast('Token salvo neste navegador.', 'success'); }
+  renderGhStatus();
+};
+window.clearGhToken = () => { localStorage.removeItem('gh_token'); showToast('Token removido.', 'info'); renderGhStatus(); };
+function renderGhStatus() {
+  const el = document.getElementById('ghStatus');
+  if (!el) return;
+  el.innerHTML = ghToken()
+    ? `<span style="color:var(--green)">✓ Token configurado</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer">trocar</a> · <a onclick="clearGhToken()" style="color:var(--text3);cursor:pointer">remover</a>`
+    : `<span style="color:var(--yellow)">Token do GitHub não configurado</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">configurar</a>`;
+}
+
+// Blob → base64 puro (sem o prefixo data:)
+function _blobToB64(blob) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result).split(',')[1]);
+    fr.onerror = rej;
+    fr.readAsDataURL(blob);
+  });
+}
+
+// Cria/atualiza um arquivo no repositório.
+async function ghPutFile(path, blob, msg) {
+  const token = ghToken();
+  if (!token) throw new Error('Token do GitHub não configurado.');
+  const api = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
+  const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' };
+  // Se o arquivo já existe, precisa do sha pra sobrescrever.
+  let sha;
+  try {
+    const cur = await fetch(`${api}?ref=${GH_BRANCH}`, { headers });
+    if (cur.ok) sha = (await cur.json()).sha;
+  } catch (e) {}
+  const body = { message: msg, content: await _blobToB64(blob), branch: GH_BRANCH };
+  if (sha) body.sha = sha;
+  const res = await fetch(api, { method: 'PUT', headers, body: JSON.stringify(body) });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`GitHub ${res.status}: ${t.slice(0, 140)}`);
+  }
+  return true;
+}
+
+// Publica as fotos escolhidas do lugar direto no /fotos e já aponta no banco.
+window.publishPlacePhotos = async () => {
+  if (!photoPlaceDocId) { showToast('Salve o lugar primeiro.', 'error'); return; }
+  if (!selectedPhotos.length) { showToast('Selecione ao menos uma foto.', 'error'); return; }
+  if (!ghToken()) { showToast('Configure o token do GitHub primeiro.', 'error'); setGhToken(); return; }
+  const btn = document.getElementById('btnSavePhotos');
+  const orig = btn.innerHTML; btn.disabled = true;
+  try {
+    const paths = [];
+    for (let i = 0; i < selectedPhotos.length; i++) {
+      btn.textContent = `Publicando ${i + 1}/${selectedPhotos.length}…`;
+      const src = selectedPhotos[i];
+      let blob;
+      if (src.startsWith('data:')) {
+        blob = await (await fetch(src)).blob();                    // nossa foto / comentário
+      } else if (src.startsWith('fotos/')) {
+        paths.push(src); continue;                                  // já está publicada
+      } else {
+        const r = await fetch(src);                                 // foto do Google
+        if (!r.ok) throw new Error('baixar foto ' + (i + 1) + ': ' + r.status);
+        blob = await r.blob();
+      }
+      blob = await compressImageBlob(blob, 1200, 0.82);
+      const path = `fotos/places/${photoPlaceDocId}/${i}.jpg`;
+      await ghPutFile(path, blob, `fotos: ${photoPlaceDocId} #${i}`);
+      paths.push(path);
+    }
+    // aponta no banco (o GitHub Pages leva ~1 min pra publicar)
+    const oldPos = selectedPhotos.map(u => selectedPos[u] || '50% 50%');
+    await setDoc(doc(db, 'places', photoPlaceDocId), { photos: paths, photosPos: oldPos, _updatedAt: serverTimestamp() }, { merge: true });
+    const place = allPlaces.find(x => x._docId === photoPlaceDocId);
+    if (place) { place.photos = [...paths]; place.photosPos = [...oldPos]; }
+    renderTable();
+    showToast(`${paths.length} foto(s) publicadas! O GitHub leva ~1 min pra deixar no ar.`, 'success');
+    closePhotoModal();
+  } catch (e) {
+    console.error(e);
+    showToast('Erro ao publicar: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
 };
 
 // ── Exporta as fotos escolhidas deste lugar pro .zip (pasta fotos/) ──
