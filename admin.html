@@ -2423,7 +2423,16 @@ window.openPhotoModal = async () => {
   const place = allPlaces.find(x => x._docId === editingId);
   const normalizeKey = (url) => (typeof url === 'string' && url.includes('places.googleapis.com'))
     ? url.replace(/([?&])key=[^&]*/, '$1key=' + GOOGLE_API_KEY) : url;
-  selectedPhotos = Array.isArray(place?.photos) ? place.photos.map(normalizeKey) : [];
+  // Descarta links antigos do Firebase Storage: o bucket foi esvaziado, então
+  // eles já não abrem pra ninguém (só aparecem aqui por cache). Assim a
+  // seleção começa limpa e dá pra ir SOMANDO fotos sem ter que mexer no resto.
+  const _todas = Array.isArray(place?.photos) ? place.photos.map(normalizeKey) : [];
+  const _mortas = _todas.filter(u => typeof u === 'string' &&
+    (u.includes('firebasestorage.googleapis.com') || u.includes('firebasestorage.app')));
+  selectedPhotos = _todas.filter(u => !_mortas.includes(u));
+  if (_mortas.length) {
+    setTimeout(() => showToast(`${_mortas.length} foto(s) antiga(s) do Storage foram descartadas (não existem mais). Escolha novas e publique.`, 'info'), 400);
+  }
   // Enquadramento salvo (paralelo a photos) → mapa por url
   selectedPos = {};
   if (Array.isArray(place?.photosPos)) {
@@ -3244,8 +3253,10 @@ window.publishPlacePhotos = async () => {
       }
       if (!blob) { puladas.push(i + 1); continue; }
       blob = await compressImageBlob(blob, 1200, 0.82);
-      const path = `fotos/places/${photoPlaceDocId}/${paths.length}.jpg`;
-      await ghPutFile(path, blob, `fotos: ${photoPlaceDocId} #${paths.length}`);
+      // Nome único: evita sobrescrever uma foto já publicada quando você
+      // ADICIONA uma nova (ex.: tirar a 1ª e somar uma do comentário).
+      const path = `fotos/places/${photoPlaceDocId}/${Date.now()}-${i}.jpg`;
+      await ghPutFile(path, blob, `fotos: ${photoPlaceDocId} (+1)`);
       console.log('[publicar] ok:', path);
       paths.push(path);
     }
@@ -3253,7 +3264,8 @@ window.publishPlacePhotos = async () => {
       throw new Error('nenhuma das fotos pôde ser lida. As antigas do Storage não existem mais — escolha fotos do Google abaixo ou use "Enviar do computador".');
     }
     // aponta no banco (o GitHub Pages leva ~1 min pra publicar)
-    const pos = paths.map(() => '50% 50%');
+    // Mantém o enquadramento das que já estavam publicadas.
+    const pos = paths.map(p => selectedPos[p] || '50% 50%');
     await setDoc(doc(db, 'places', photoPlaceDocId), { photos: paths, photosPos: pos, _updatedAt: serverTimestamp() }, { merge: true });
     const place = allPlaces.find(x => x._docId === photoPlaceDocId);
     if (place) { place.photos = [...paths]; place.photosPos = [...pos]; }
