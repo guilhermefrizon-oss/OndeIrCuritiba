@@ -1749,6 +1749,21 @@ th.sortable:hover { color: var(--acc3); }
       </div>
 
       <div class="rules-card">
+        <h3>Publicar fotos (GitHub)</h3>
+        <p style="font-size:14px; color:var(--text2); margin-bottom:14px; line-height:1.6">
+          Acesso usado pra <strong>publicar as fotos dos lugares</strong> direto na pasta <code>fotos/</code> do site.
+          É configurado <strong>uma vez só</strong> e vale pra todos os lugares. Fica salvo apenas neste navegador —
+          nunca vai pro repositório. Se você trocar de computador, precisa configurar de novo lá.
+        </p>
+        <div id="ghStatusPage" style="font-size:14px; margin-bottom:12px"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="setGhToken()">Configurar acesso</button>
+          <button class="btn btn-secondary" onclick="testGhToken()">Testar conexão</button>
+          <button class="btn btn-secondary" onclick="clearGhToken()">Remover</button>
+        </div>
+      </div>
+
+      <div class="rules-card">
         <h3>Admins com acesso ao painel</h3>
         <p style="font-size:14px; color:var(--text2); margin-bottom:14px; line-height:1.6">Quem pode entrar e editar. Adicione ou remova por e-mail (precisa ser conta Google). O <strong>primeiro</strong> admin é criado uma vez no Console; daqui pra frente, é tudo por aqui.</p>
         <div id="adminsList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px">
@@ -3092,15 +3107,20 @@ window.setGhToken = () => {
 };
 window.clearGhToken = () => { localStorage.removeItem('gh_token'); showToast('Token removido.', 'info'); renderGhStatus(); };
 function renderGhStatus() {
+  const tem = !!ghToken();
+  // No modal do lugar: só aparece se FALTAR configurar (não polui a tela).
   const el = document.getElementById('ghStatus');
-  if (!el) return;
-  // Quando está tudo certo, não polui a tela: só aparece se faltar configurar.
-  if (ghToken()) {
-    el.style.display = 'none';
-    el.innerHTML = '';
-  } else {
-    el.style.display = '';
-    el.innerHTML = `<span style="color:var(--yellow)">⚠ Falta configurar o acesso pra publicar fotos</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">configurar</a>`;
+  if (el) {
+    el.style.display = tem ? 'none' : '';
+    el.innerHTML = tem ? '' :
+      `<span style="color:var(--yellow)">⚠ Falta configurar o acesso pra publicar fotos</span> · <a onclick="setGhToken()" style="color:var(--acc3);cursor:pointer;font-weight:700">configurar</a>`;
+  }
+  // Na aba Regras & Admins: status completo (é onde se configura).
+  const pg = document.getElementById('ghStatusPage');
+  if (pg) {
+    pg.innerHTML = tem
+      ? '<span style="color:var(--green);font-weight:700">✓ Acesso configurado neste navegador</span> — dá pra publicar fotos em qualquer lugar.'
+      : '<span style="color:var(--yellow);font-weight:700">Ainda não configurado</span> — o botão “Publicar fotos” não vai funcionar até configurar.';
   }
 }
 
@@ -4614,7 +4634,7 @@ window.showPage = (page) => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
     document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
   });
-  if (page === 'rules') loadAdmins();
+  if (page === 'rules') { loadAdmins(); renderGhStatus(); }
   if (page === 'metrics') loadMetrics();
   if (page === 'quiz') loadQuizConfig();
   if (page === 'corrections') loadCorrections();
